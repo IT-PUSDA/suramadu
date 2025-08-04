@@ -42,43 +42,43 @@ if (empty($_SESSION['admin'])) {
                     $act = $_REQUEST['act'];
                     switch ($act) {
                         case 'tsm':
-                            include(BASE_PATH . '/src/transaksi_surat_masuk.php');
+                            include(BASE_PATH . '/src/SuratMasuk/transaksi_surat_masuk.php');
                             break;
                         case 'ctk':
-                            include(BASE_PATH . '/src/cetak_disposisi.php');
+                            include(BASE_PATH . '/src/Disposisi/cetak_disposisi.php');
                             break;
                         case 'ctk_ter':
-                            include(BASE_PATH . '/src/cetak_terusan.php');
+                            include(BASE_PATH . '/src/Utils/cetak_terusan.php');
                             break;
                         case 'tsk':
-                            include(BASE_PATH . '/src/transaksi_surat_keluar.php');
+                            include(BASE_PATH . '/src/SuratKeluar/transaksi_surat_keluar.php');
                             break;
                         case 'not':
-                            include(BASE_PATH . '/src/transaksi_nota_dinas.php');
+                            include(BASE_PATH . '/src/NotaDinas/transaksi_nota_dinas.php');
                             break;
                         case 'asm':
-                            include(BASE_PATH . '/src/agenda_surat_masuk.php');
+                            include(BASE_PATH . '/src/SuratMasuk/agenda_surat_masuk.php');
                             break;
                         case 'ask':
-                            include(BASE_PATH . '/src/agenda_surat_keluar.php');
+                            include(BASE_PATH . '/src/SuratKeluar/agenda_surat_keluar.php');
                             break;
                         case 'tdl':
-                            include(BASE_PATH . '/src/transaksi_tindak_lanjut.php');
+                            include(BASE_PATH . '/src/Utils/transaksi_tindak_lanjut.php');
                             break;
                         case 'ref':
-                            include(BASE_PATH . '/src/referensi.php');
+                            include(BASE_PATH . '/src/Pengaturan/referensi.php');
                             break;
                         case 'sett':
-                            include(BASE_PATH . '/src/pengaturan.php');
+                            include(BASE_PATH . '/src/Pengaturan/pengaturan.php');
                             break;
                         case 'pro':
-                            include(BASE_PATH . '/src/profil.php');
+                            include(BASE_PATH . '/src/User/profil.php');
                             break;
                         case 'gsm':
-                            include(BASE_PATH . '/src/galeri_sm.php');
+                            include(BASE_PATH . '/src/SuratMasuk/galeri_sm.php');
                             break;
                         case 'gsk':
-                            include(BASE_PATH . '/src/galeri_sk.php');
+                            include(BASE_PATH . '/src/SuratKeluar/galeri_sk.php');
                             break;
                     }
                 } else {
@@ -114,7 +114,7 @@ if (empty($_SESSION['admin'])) {
                         if ($_SESSION['admin'] == 4) {
                             $id_user = $_SESSION['id_user'];
                             $count1 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_masuk join tbl_disposisi on tbl_surat_masuk.id_surat=tbl_disposisi.id_surat
-					where tbl_disposisi.id_tujuan='$id_user' "));
+    					where tbl_disposisi.id_tujuan='$id_user' "));
                         } else {
                             $count1 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_masuk"));
                         }
@@ -142,14 +142,14 @@ if (empty($_SESSION['admin'])) {
                         ?>
 
                         <!-- Info Statistic START
-            <div class="col s12 m4">
-                <div class="card cyan">
-                    <div class="card-content">
-                        <span class="card-title white-text"><i class="material-icons md-36">mail</i> Jumlah Surat Masuk</span>
-                        <a href="?page=tsm"><?php echo '<h5 class="white-text link">' . $count1 . ' Surat Masuk</h5>'; ?></a>
+                <div class="col s12 m4">
+                    <div class="card cyan">
+                        <div class="card-content">
+                            <span class="card-title white-text"><i class="material-icons md-36">mail</i> Jumlah Surat Masuk</span>
+                            <a href="?page=tsm"><?php echo '<h5 class="white-text link">' . $count1 . ' Surat Masuk</h5>'; ?></a>
+                        </div>
                     </div>
-                </div>
-            </div> -->
+                </div> -->
 
                         <div class="col s12 m4">
                             <div class="card lime darken-1">
@@ -160,25 +160,25 @@ if (empty($_SESSION['admin'])) {
                             </div>
                         </div>
                         <!--
-			<div class="col s12 m4">
-                <div class="card yellow darken-1">
-                    <div class="card-content">
-                        <span class="card-title white-text"><i class="material-icons md-36">drafts</i> Jumlah Nota Dinas</span>
-                        <a href="index.php?page=admin&act=not"><?php echo '<h5 class="white-text link">' . $count6 . ' Nota Dinas</h5>'; ?></a>
+    			<div class="col s12 m4">
+                    <div class="card yellow darken-1">
+                        <div class="card-content">
+                            <span class="card-title white-text"><i class="material-icons md-36">drafts</i> Jumlah Nota Dinas</span>
+                            <a href="index.php?page=admin&act=not"><?php echo '<h5 class="white-text link">' . $count6 . ' Nota Dinas</h5>'; ?></a>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-          
-            <div class="col s12 m4">
-                <div class="card deep-orange">
-                    <div class="card-content">
-                        <span class="card-title white-text"><i class="material-icons md-36">class</i> Jumlah Klasifikasi Surat</span>
-                        <a href="index.php?page=admin&act=ref"><?php echo '<h5 class="white-text link">' . $count4 . ' Klasifikasi Surat</h5>'; ?></a>
+    
+              
+                <div class="col s12 m4">
+                    <div class="card deep-orange">
+                        <div class="card-content">
+                            <span class="card-title white-text"><i class="material-icons md-36">class</i> Jumlah Klasifikasi Surat</span>
+                            <a href="index.php?page=admin&act=ref"><?php echo '<h5 class="white-text link">' . $count4 . ' Klasifikasi Surat</h5>'; ?></a>
+                        </div>
                     </div>
                 </div>
-            </div>
-			-->
+    			-->
 
                         <?php
                         if ($_SESSION['id_user'] == 1 || $_SESSION['admin'] == 3) { ?>
