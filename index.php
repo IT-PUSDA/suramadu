@@ -17,5 +17,5 @@ if (file_exists($page_path) && strpos(realpath($page_path), BASE_PATH . '/src') 
     // page not found, maybe show a 404 page
     // for now, just redirect to login
     http_response_code(404);
-    require(BASE_PATH . '/src/login.php');
+    require(BASE_PATH . '/src/Auth/login.php');
 }
