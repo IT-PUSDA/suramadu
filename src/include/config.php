@@ -1,0 +1,21 @@
+<?php
+$host = "localhost";
+$username = "root";
+$password = "root";
+$database = "ams_native";
+
+// Google API configuration 
+define('GOOGLE_CLIENT_ID', '105436136720-d3ju2cmh6erit721munbiftu0l5ah1jf.apps.googleusercontent.com');
+define('GOOGLE_CLIENT_SECRET', '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');
+define('GOOGLE_OAUTH_SCOPE', 'https://www.googleapis.com/auth/calendar');
+define('REDIRECT_URI', 'http://localhost/ams/gcal/google_calendar_event_sync.php');
+
+$googleOauthURL = 'https://accounts.google.com/o/oauth2/auth?scope=' . urlencode(GOOGLE_OAUTH_SCOPE) . '&redirect_uri=' . REDIRECT_URI . '&response_type=code&client_id=' . GOOGLE_CLIENT_ID . '&access_type=online';
+
+
+$config = mysqli_connect($host, $username, $password, $database);
+
+
+if (!$config) {
+    die("Koneksi database gagal: " . mysqli_connect_error());
+}
