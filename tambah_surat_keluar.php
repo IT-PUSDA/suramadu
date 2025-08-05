@@ -1,6 +1,26 @@
-<script src="assets/js/moment-with-locales.js"></script>
 <script src="assets/js/jquery-1.11.3.min.js"></script>
-<script src="assets/js/bootstrap-datetimepicker.js"></script>
+<script src="assets/js/materialize.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var elems = document.querySelectorAll('.datepicker');
+    var instances = M.Datepicker.init(elems, {
+        format: 'yyyy-mm-dd',
+        autoClose: true,
+        showClearBtn: true
+    });
+
+    // Tutup datepicker saat input kehilangan fokus
+    elems.forEach(function(el, idx) {
+        el.addEventListener('blur', function() {
+            // Pastikan instance ada dan datepicker sedang terbuka
+            if (instances[idx] && instances[idx].isOpen) {
+                instances[idx].close();
+            }
+        });
+    });
+});
+</script>
+
 <?php
     //cek session
     if(empty($_SESSION['admin'])){
@@ -60,6 +80,7 @@
             <div class="row jarak-form">
 
                 <!-- Form START -->
+
                 <form class="col s12" method="POST" action="?page=tsk&act=add1" enctype="multipart/form-data">
 
                     <!-- Row in form START -->
@@ -184,10 +205,5 @@
 
             </div>
             <!-- Row form END -->
-
-<?php
-        
+        <?php
     }
-	
-?>
-
