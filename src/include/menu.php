@@ -37,7 +37,7 @@
                             <ul>
                                 <li><a href="index.php?page=admin&act=pro">Profil</a></li>
                                 <li><a href="index.php?page=admin&act=pro&sub=pass">Ubah Password</a></li>
-                                <li><a href="index.php?page=logout">Logout</a></li>
+                                <li><a href="index.php?page=Auth/logout">Logout</a></li>
                             </ul>
                         </div>
                     </li>
@@ -179,7 +179,7 @@
                 <li><a href="index.php?page=admin&act=pro">Profil</a></li>
                 <li><a href="index.php?page=admin&act=pro&sub=pass">Ubah Password</a></li>
                 <li class="divider"></li>
-                <li><a href="index.php?page=logout"><i class="material-icons">settings_power</i> Logout</a></li>
+                <li><a href="index.php?page=Auth/logout"><i class="material-icons">settings_power</i> Logout</a></li>
             </ul>
         </ul>
         <!-- Menu on large screen END -->
