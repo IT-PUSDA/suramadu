@@ -3,7 +3,7 @@ ob_start();
 //cek session
 // session_start(); // Dihapus karena sudah dimulai di public/index.php
 
-if (empty($_SESSION['admin'])) {
+if (!isset($_SESSION['admin'])) {
     $_SESSION['err'] = '<center>Anda harus login terlebih dahulu!</center>';
     header("Location: index.php");
     die();

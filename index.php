@@ -2,6 +2,8 @@
 session_start();
 ob_start();
 
+// session_destroy();
+
 // Define a base path constant
 define('BASE_PATH', dirname(__FILE__));
 

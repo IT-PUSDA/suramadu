@@ -1,6 +1,6 @@
 <?php
 ob_start();
-// session_start(); // Dihapus karena sudah dimulai di public/index.php
+
 
 //cek session
 if (isset($_SESSION['admin'])) {
@@ -253,8 +253,6 @@ require(BASE_PATH . '/src/include/config.php');
 
                             if (mysqli_num_rows($query) > 0) {
                                 list($id_user, $username, $nama, $nip, $admin) = mysqli_fetch_array($query);
-
-                                // session_start(); // Dihapus, sesi sudah aktif
 
                                 //buat session
                                 $_SESSION['id_user'] = $id_user;
