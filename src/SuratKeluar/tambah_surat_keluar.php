@@ -71,7 +71,7 @@ if (empty($_SESSION['admin'])) {
                         unset($_SESSION['tgl_suratk']);
                     }
                     ?>
-                    <label for="tglx">Tanggal Surat</label>
+                    <label for="tgl_surat">Tanggal Surat</label>
                 </div>
                 <div class="input-field col s6 tooltipped" data-position="top" data-tooltip="Diambil dari data referensi kode klasifikasi">
                     <i class="material-icons prefix md-prefix">bookmark</i>
@@ -165,16 +165,15 @@ if (empty($_SESSION['admin'])) {
                         </div>
                     </div>
                 </div>
-                <!-- Row in form END -->
+            </div>
+            <!-- Row in form END -->
 
-                <div class="row">
-                    <div class="col 6">
-                        <button type="submit" name="submit1" class="btn-large blue waves-effect waves-light">LANJUT <i class="material-icons">done</i></button>
-                    </div>
-                    <div class="col 6">
-                        <a href="index.php?page=admin&act=tsk" class="btn-large deep-orange waves-effect waves-light">BATAL <i class="material-icons">clear</i></a>
-                    </div>
+            <div class="row">
+                <div class="col s12">
+                    <button type="submit" name="submit1" class="btn-large blue waves-effect waves-light" style="margin-right: 1rem;">LANJUT <i class="material-icons">done</i></button>
+                    <a href="index.php?page=admin&act=tsk" class="btn-large deep-orange waves-effect waves-light">BATAL <i class="material-icons">clear</i></a>
                 </div>
+            </div>
 
         </form>
         <!-- Form END -->

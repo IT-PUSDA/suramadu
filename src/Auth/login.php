@@ -212,7 +212,7 @@ require(BASE_PATH . '/src/include/config.php');
                         <!-- Logo and title START -->
                         <div class="col s12">
                             <div class="card-content">
-                                <h5 class="center" id="title">Aplikasi Penomeran Surat Keluar</h5>
+                                <h5 class="center" id="title">Aplikasi Penomoran Surat Keluar</h5>
                                 <?php
                                 if (!empty($data['logo'])) {
                                     echo '<img id="logo" src="upload/' . $data['logo'] . '"/>';

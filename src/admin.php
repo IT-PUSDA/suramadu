@@ -1,5 +1,8 @@
 <?php
 ob_start();
+// TAMBAHKAN BARIS INI UNTUK MEMUAT KONFIGURASI DATABASE
+require(BASE_PATH . '/src/include/config.php');
+
 //cek session
 // session_start(); // Dihapus karena sudah dimulai di public/index.php
 
