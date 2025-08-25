@@ -145,7 +145,7 @@ if (empty($_SESSION['admin'])) {
                     <div class="file-field input-field tooltipped" data-position="top" data-tooltip="Jika tidak ada file/scan gambar surat, biarkan kosong">
                         <div class="btn light-green darken-1">
                             <span>File</span>
-                            <input type="file" id="file" name="file" accept=".pdf">
+                            <input type="file" id="file" name="file" accept=".pdf" required>
                         </div>
                         <div class="file-path-wrapper">
                             <input class="file-path validate" type="text" placeholder="Upload file/scan gambar surat keluar">
