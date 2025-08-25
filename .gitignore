@@ -36,6 +36,7 @@ Thumbs.db
 /upload/surat_keluar
 /uploads/
 /files/
+/src/include/config.php
 
 # Configuration files (if they contain sensitive data)
 config.php
