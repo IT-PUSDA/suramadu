@@ -33,6 +33,7 @@ Thumbs.db
 /cache/
 
 # Upload directories
+/upload/
 /uploads/
 /files/
 
