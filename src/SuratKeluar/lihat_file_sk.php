@@ -26,15 +26,26 @@ if (isset($_GET['id_surat']) && !empty($_GET['id_surat'])) {
             $file_path = realpath(__DIR__ . '/../../upload/surat_keluar') . '/' . $file;
 
             if (file_exists($file_path)) {
-                // Mengatur header agar browser tahu ini adalah file PDF
-                header('Content-Type: application/pdf');
-                header('Content-Disposition: inline; filename="' . basename($file_path) . '"');
+                // Mendapatkan ekstensi file
+                $file_extension = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+
+                // Membersihkan semua output buffer yang mungkin ada untuk mencegah data rusak
+                @ob_end_clean();
+
+                // Mengatur header berdasarkan tipe file
+                if ($file_extension == 'pdf') {
+                    // Jika PDF, tampilkan di browser
+                    header('Content-Type: application/pdf');
+                    header('Content-Disposition: inline; filename="' . basename($file_path) . '"');
+                } else {
+                    // Jika bukan PDF, paksa unduh
+                    header('Content-Type: application/octet-stream');
+                    header('Content-Disposition: attachment; filename="' . basename($file_path) . '"');
+                }
+                
                 header('Content-Transfer-Encoding: binary');
                 header('Accept-Ranges: bytes');
                 header('Content-Length: ' . filesize($file_path));
-                
-                // Membersihkan semua output buffer yang mungkin ada untuk mencegah data rusak
-                @ob_end_clean();
                 
                 // Membaca dan mengirimkan isi file ke browser
                 readfile($file_path);
