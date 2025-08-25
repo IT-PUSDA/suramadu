@@ -122,17 +122,21 @@ if (empty($_SESSION['admin'])) {
                                 </div>';
                             }
                             ?>
-                            <div class="table-responsive">
+                                     <div class="table-responsive">
                                 <table class="striped highlight responsive-table" id="tbl">
                                     <thead class="blue lighten-4" id="head">
                                         <tr>
-                                            <th width="10%" class="center-align"><i class="material-icons tiny">assignment</i><br/><span class="table-header">No. Agenda</span><br/><small>Kode</small></th>
-                                            <th width="31%"><i class="material-icons tiny">description</i><br/><span class="table-header">Isi Ringkas</span><br/><small>File</small></th>
-                                            <th width="24%"><i class="material-icons tiny">business</i><br/><span class="table-header">Tujuan</span><br/><small>Perihal</small></th>
-                                            <th width="19%" class="center-align"><i class="material-icons tiny">date_range</i><br/><span class="table-header">No. Surat</span><br/><small>Tgl Surat</small></th>
+                                            <th width="10%" class="center-align">No. Agenda<br/><small>Kode</small></th>
+                                            <th width="31%">Isi Ringkas<br/><small>File</small></th>
+                                            <th width="24%">Tujuan<br/><small>Perihal</small></th>
+                                            <th width="19%" class="center-align">No. Surat<br/><small>Tgl Surat</small></th>
                                             <th width="16%" class="center-align">
-                                                <i class="material-icons tiny">settings</i><br/><span class="table-header">Tindakan</span>
-                                                <span class="right tooltipped" data-position="left" data-tooltip="Atur jumlah data yang ditampilkan"><a class="modal-trigger" href="#modal"><i class="material-icons" style="color: #333;">settings</i></a></span>
+                                                <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+                                                    Tindakan
+                                                    <a class="modal-trigger tooltipped" href="#modal" data-position="left" data-tooltip="Atur jumlah data">
+                                                        <i class="material-icons" style="color: #333;">settings</i>
+                                                    </a>
+                                                </div>
                                             </th>
                                         </tr>
                                     </thead>
@@ -156,23 +160,36 @@ if (empty($_SESSION['admin'])) {
 
                                         if (mysqli_num_rows($query) > 0) {
                                             while ($row = mysqli_fetch_array($query)) {
+                                                // GANTI SELURUH BLOK ECHO DI BAWAH INI
                                                 echo '
-                                                <tr>
-                                                    <td class="center-align">' . $row['no_agenda'] . '<br/><hr/>' . $row['kode'] . '</td>
-                                                    <td>' . substr($row['isi'], 0, 200) . '<br/><br/><strong>File :</strong>';
+                                                <tr style="vertical-align: top;">
+                                                    <td class="center-align">' . $row['no_agenda'] . '<hr class="grey lighten-3"/>' . $row['kode'] . '</td>
+                                                    <td>' . (empty($row['isi']) ? '-' : substr($row['isi'], 0, 200));
+                                                
                                                 if (!empty($row['file'])) {
-                                                    echo ' <strong><a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank"><i class="material-icons" style="font-size: 1rem;">picture_as_pdf</i> ' . $row['file'] . '</a></strong>';
-                                                } else {
-                                                    echo ' <em>Tidak ada file yang diupload</em>';
+                                                    echo '<br/><br/><strong>File : </strong>
+                                                          <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank">
+                                                              <i class="material-icons" style="font-size: 1rem; vertical-align: middle; color: #ff9800;">attachment</i> <span style="color: #ff9800; text-decoration: underline;">' . $row['file'] . '</span>
+                                                          </a>';
                                                 }
+
                                                 echo '</td>
-                                                    <td>' . $row['tujuan'] . '<br/><hr/>' . $row['perihal'] . '</td>
-                                                    <td class="center-align">' . $row['no_surat'] . '<br/><hr/>' . indoDate($row['tgl_surat']) . '</td>
+                                                    <td>' . $row['tujuan'] . '<br/><small class="grey-text">' . $row['perihal'] . '</small></td>
+                                                    <td class="center-align">' . $row['no_surat'] . '<hr class="grey lighten-3"/>' . indoDate($row['tgl_surat']) . '</td>
                                                     <td class="center-align">
-                                                        <a class="btn-floating-small blue waves-effect waves-light" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons">edit</i></a>
-                                                        <a class="btn-floating-small deep-orange waves-effect waves-light" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');"><i class="material-icons">delete</i></a>
+                                                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; padding-top: 5px;">
+                                                            <a class="btn waves-effect waves-light blue tooltipped" data-position="top" data-tooltip="Edit" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '" style="width: 80px; display: flex; align-items: center; justify-content: center;">
+                                                                <i class="material-icons" style="font-size: 1.2rem;">edit</i>
+                                                                <strong style="color:white; margin-left: 4px;">EDIT</strong>
+                                                            </a>
+                                                            <a class="btn waves-effect waves-light deep-orange tooltipped" data-position="top" data-tooltip="Hapus" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');" style="width: 80px; display: flex; align-items: center; justify-content: center;">
+                                                                <i class="material-icons" style="font-size: 1.2rem;">delete</i>
+                                                                <strong style="color:white; margin-left: 4px;">DEL</strong>
+                                                            </a>
+                                                        </div>
                                                     </td>
                                                 </tr>';
+                                                // AKHIR BLOK ECHO YANG DIGANTI
                                             }
                                         } else {
                                             echo '<tr><td colspan="5" class="center-align"><div class="card-panel grey lighten-4" style="margin: 20px;">';
