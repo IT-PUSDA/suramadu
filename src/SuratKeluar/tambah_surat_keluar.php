@@ -131,6 +131,15 @@ if (empty($_SESSION['admin'])) {
                             <option value="104.3">Irigasi</option>
                             <option value="104.4">SWP</option>
                             <option value="104.5">Binfat</option>
+                            <option value="104.6">UPT Kediri</option>
+                            <option value="104.7">Korwil Malang</option>
+                            <option value="104.8">Korwil Surabaya</option>
+                            <option value="104.9">UPT Bojonegoro</option>
+                            <option value="104.10">Korwil Madiun</option>
+                            <option value="104.11">UPT Bondowoso</option>
+                            <option value="104.12">UPT Lumajang</option>
+                            <option value="104.13">UPT Pasuruan</option>
+                            <option value="104.14">UPT Madura</option>
                         </select>
                     </div>
                     <?php
