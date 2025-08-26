@@ -14,6 +14,7 @@ if (empty($_SESSION['admin'])) {
                   </script>';
     } else {
 
+        // Bagian ini menangani sub-halaman seperti tambah, edit, hapus
         if (isset($_REQUEST['sub'])) {
             $sub = $_REQUEST['sub'];
             switch ($sub) {
@@ -32,10 +33,9 @@ if (empty($_SESSION['admin'])) {
             }
         } else {
 
-            $query = mysqli_query($config, "SELECT surat_keluar FROM tbl_sett");
-            list($surat_keluar) = mysqli_fetch_array($query);
-
-            //pagging
+            // Pengaturan untuk paginasi (jumlah data per halaman)
+            $query_sett = mysqli_query($config, "SELECT surat_keluar FROM tbl_sett");
+            list($surat_keluar) = mysqli_fetch_array($query_sett);
             $limit = $surat_keluar;
             $pg = @$_GET['pg'];
             if (empty($pg)) {
@@ -56,9 +56,8 @@ if (empty($_SESSION['admin'])) {
             }
 ?>
 
-            <!-- Row Start -->
+            <!-- Tampilan Header Halaman -->
             <div class="row">
-                <!-- Secondary Nav START -->
                 <div class="col s12">
                     <div class="z-depth-1">
                         <nav class="secondary-nav">
@@ -67,9 +66,8 @@ if (empty($_SESSION['admin'])) {
                                     <ul class="left">
                                         <li class="waves-effect waves-light hide-on-small-only"><a href="index.php?page=admin&act=tsk" class="judul"><i class="material-icons">drafts</i> Surat Keluar</a></li>
                                         <li class="waves-effect waves-light">
-                                            <?php if ($_SESSION['admin'] != 2) {
-                                                echo '<a href="index.php?page=admin&act=tsk&sub=add"><i class="material-icons md-24">add_circle</i> Tambah Data</a>';
-                                            } ?>
+                                            <!-- Tombol Tambah Data: Tampil untuk semua level admin -->
+                                            <a href="index.php?page=admin&act=tsk&sub=add"><i class="material-icons md-24">add_circle</i> Tambah Data</a>
                                         </li>
                                     </ul>
                                 </div>
@@ -86,10 +84,9 @@ if (empty($_SESSION['admin'])) {
                         </nav>
                     </div>
                 </div>
-                <!-- Secondary Nav END -->
             </div>
-            <!-- Row END -->
 
+            <!-- Notifikasi Sukses -->
             <?php
             if (isset($_SESSION['succAdd'])) {
                 $succAdd = $_SESSION['succAdd'];
@@ -108,7 +105,7 @@ if (empty($_SESSION['admin'])) {
             }
             ?>
 
-            <!-- Row form Start -->
+            <!-- Tampilan Tabel Data -->
             <div class="row jarak-form">
                 <div class="col m12" id="colres">
                     <div class="card">
@@ -116,13 +113,10 @@ if (empty($_SESSION['admin'])) {
                             <?php
                             if (isset($_REQUEST['submit'])) {
                                 $cari = mysqli_real_escape_string($config, $_REQUEST['cari']);
-                                echo '
-                                <div class="card-panel blue-grey lighten-5" style="margin-bottom: 20px;">
-                                    <p class="blue-grey-text">Hasil pencarian untuk: <strong class="black-text">' . stripslashes($cari) . '</strong></p>
-                                </div>';
+                                echo '<div class="card-panel blue-grey lighten-5" style="margin-bottom: 20px;"><p class="blue-grey-text">Hasil pencarian untuk: <strong class="black-text">' . stripslashes($cari) . '</strong></p></div>';
                             }
                             ?>
-                                     <div class="table-responsive">
+                            <div class="table-responsive">
                                 <table class="striped highlight responsive-table" id="tbl">
                                     <thead class="blue lighten-4" id="head">
                                         <tr>
@@ -133,63 +127,66 @@ if (empty($_SESSION['admin'])) {
                                             <th width="16%" class="center-align">
                                                 <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
                                                     Tindakan
-                                                    <a class="modal-trigger tooltipped" href="#modal" data-position="left" data-tooltip="Atur jumlah data">
-                                                        <i class="material-icons" style="color: #333;">settings</i>
-                                                    </a>
+                                                    <a class="modal-trigger tooltipped" href="#modal" data-position="left" data-tooltip="Atur jumlah data"><i class="material-icons" style="color: #333;">settings</i></a>
                                                 </div>
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php
-                                        // Tentukan query berdasarkan ada atau tidaknya pencarian
+                                        // PENERAPAN LOGIKA HAK AKSES DIMULAI DI SINI
+                                        $is_admin_user = ($_SESSION['admin'] == 4);
+                                        $base_query = "FROM tbl_surat_keluar";
+                                        $where_clause = "";
+
+                                        // 1. Filter Data: Jika Admin User, hanya tampilkan data miliknya
+                                        if ($is_admin_user) {
+                                            $where_clause .= " WHERE id_user='$id_user'";
+                                        }
+
+                                        // Tambahkan filter pencarian jika ada
                                         if (isset($_REQUEST['submit'])) {
                                             $cari = mysqli_real_escape_string($config, $_REQUEST['cari']);
-                                            if ($_SESSION['admin'] == 4) {
-                                                $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE id_user='$id_user' AND (isi LIKE '%$cari%' OR perihal LIKE '%$cari%' OR tujuan LIKE '%$cari%') ORDER BY id_surat DESC LIMIT $curr, $limit");
-                                            } else {
-                                                $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE isi LIKE '%$cari%' OR perihal LIKE '%$cari%' OR tujuan LIKE '%$cari%' ORDER BY id_surat DESC LIMIT $curr, $limit");
-                                            }
-                                        } else {
-                                            if ($_SESSION['admin'] == 4) {
-                                                $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE id_user='$id_user' ORDER BY id_surat DESC LIMIT $curr, $limit");
-                                            } else {
-                                                $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar ORDER BY id_surat DESC LIMIT $curr, $limit");
-                                            }
+                                            $search_condition = "(isi LIKE '%$cari%' OR perihal LIKE '%$cari%' OR tujuan LIKE '%$cari%')";
+                                            $where_clause .= ($is_admin_user ? " AND " : " WHERE ") . $search_condition;
                                         }
+
+                                        // Query untuk mengambil data sesuai hak akses
+                                        $query = mysqli_query($config, "SELECT * " . $base_query . $where_clause . " ORDER BY id_surat DESC LIMIT $curr, $limit");
 
                                         if (mysqli_num_rows($query) > 0) {
                                             while ($row = mysqli_fetch_array($query)) {
-                                                // GANTI SELURUH BLOK ECHO DI BAWAH INI
                                                 echo '
                                                 <tr style="vertical-align: top;">
-                                                    <td class="center-align">' . $row['no_agenda'] . '<hr class="grey lighten-3"/>' . $row['kode'] . '</td>
-                                                    <td>' . (empty($row['isi']) ? '-' : substr($row['isi'], 0, 200));
+                                                    <td class="center-align">' . $row['no_agenda'] . '<hr class="grey lighten-3" style="margin: 4px 0;"/>' . $row['kode'] . '</td>
+                                                    <td>' . $row['isi'];
                                                 
                                                 if (!empty($row['file'])) {
                                                     echo '<br/><br/><strong>File : </strong>
-                                                          <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank">
-                                                              <i class="material-icons" style="font-size: 1rem; vertical-align: middle; color: #ff9800;">attachment</i> <span style="color: #ff9800; text-decoration: underline;">' . $row['file'] . '</span>
-                                                          </a>';
+                                                          <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" style="text-decoration: underline;">' . $row['file'] . '</a>';
                                                 }
 
                                                 echo '</td>
-                                                    <td>' . $row['tujuan'] . '<br/><small class="grey-text">' . $row['perihal'] . '</small></td>
-                                                    <td class="center-align">' . $row['no_surat'] . '<hr class="grey lighten-3"/>' . indoDate($row['tgl_surat']) . '</td>
-                                                    <td class="center-align">
-                                                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; padding-top: 5px;">
-                                                            <a class="btn waves-effect waves-light blue tooltipped" data-position="top" data-tooltip="Edit" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '" style="width: 80px; display: flex; align-items: center; justify-content: center;">
-                                                                <i class="material-icons" style="font-size: 1.2rem;">edit</i>
-                                                                <strong style="color:white; margin-left: 4px;">EDIT</strong>
-                                                            </a>
-                                                            <a class="btn waves-effect waves-light deep-orange tooltipped" data-position="top" data-tooltip="Hapus" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');" style="width: 80px; display: flex; align-items: center; justify-content: center;">
-                                                                <i class="material-icons" style="font-size: 1.2rem;">delete</i>
-                                                                <strong style="color:white; margin-left: 4px;">DEL</strong>
-                                                            </a>
-                                                        </div>
-                                                    </td>
+                                                    <td>' . $row['tujuan'] . '<br/><small class="grey-text text-darken-1">' . $row['perihal'] . '</small></td>
+                                                    <td class="center-align">' . $row['no_surat'] . '<hr class="grey lighten-3" style="margin: 4px 0;"/>' . indoDate($row['tgl_surat']) . '</td>
+                                                    <td class="center-align">';
+
+                                                // 2. Batasi Tombol: Super Admin & Verifikator bisa semua, Admin User hanya data miliknya
+                                                $can_manage = in_array($_SESSION['admin'], [1, 2, 3]); // Super Admin & Verifikator
+                                                $is_owner = $row['id_user'] == $_SESSION['id_user'];
+
+                                                if ($can_manage || $is_owner) {
+                                                    echo '
+                                                    <div style="display: flex; justify-content: center; gap: 5px; padding-top: 5px;">
+                                                        <a class="btn waves-effect waves-light blue tooltipped" data-position="top" data-tooltip="Edit" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '" style="padding:0 1.2rem;"><i class="material-icons left" style="margin-right: 6px;">edit</i>EDIT</a>
+                                                        <a class="btn waves-effect waves-light deep-orange tooltipped" data-position="top" data-tooltip="Hapus" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');" style="padding:0 1.2rem;"><i class="material-icons left" style="margin-right: 6px;">delete</i>DEL</a>
+                                                    </div>';
+                                                } else {
+                                                    echo '<div class="grey-text" style="padding-top: 15px;">-</div>';
+                                                }
+
+                                                echo '</td>
                                                 </tr>';
-                                                // AKHIR BLOK ECHO YANG DIGANTI
                                             }
                                         } else {
                                             echo '<tr><td colspan="5" class="center-align"><div class="card-panel grey lighten-4" style="margin: 20px;">';
@@ -197,9 +194,6 @@ if (empty($_SESSION['admin'])) {
                                                 echo '<i class="material-icons large grey-text">search</i><p class="grey-text">Tidak ada data yang ditemukan untuk pencarian "<strong>' . stripslashes($cari) . '</strong>"</p>';
                                             } else {
                                                 echo '<i class="material-icons large grey-text">inbox</i><p class="grey-text">Tidak ada data untuk ditampilkan.</p>';
-                                                if ($_SESSION['admin'] != 2) {
-                                                    echo '<a href="index.php?page=admin&act=tsk&sub=add" class="btn blue waves-effect waves-light"><i class="material-icons left">add</i>Tambah Data Baru</a>';
-                                                }
                                             }
                                             echo '</div></td></tr>';
                                         }
@@ -211,15 +205,14 @@ if (empty($_SESSION['admin'])) {
                     </div>
                 </div>
             </div>
-            <!-- Row form END -->
 
-            <!-- Modal -->
+            <!-- Modal Pengaturan Paginasi -->
             <div id="modal" class="modal">
                 <div class="modal-content white">
                     <h5>Jumlah data yang ditampilkan per halaman</h5>
                     <?php
-                    $query_sett = mysqli_query($config, "SELECT id_sett, surat_keluar FROM tbl_sett");
-                    list($id_sett, $surat_keluar_sett) = mysqli_fetch_array($query_sett);
+                    $query_sett_modal = mysqli_query($config, "SELECT id_sett, surat_keluar FROM tbl_sett");
+                    list($id_sett, $surat_keluar_sett) = mysqli_fetch_array($query_sett_modal);
                     ?>
                     <div class="row">
                         <form method="post" action="">
@@ -254,22 +247,9 @@ if (empty($_SESSION['admin'])) {
                 </div>
             </div>
 
+            <!-- Paginasi -->
             <?php
-            if (isset($_REQUEST['submit'])) {
-                $cari = mysqli_real_escape_string($config, $_REQUEST['cari']);
-                if ($_SESSION['admin'] == 4) {
-                    $query_pg = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE id_user='$id_user' AND (isi LIKE '%$cari%' OR perihal LIKE '%$cari%' OR tujuan LIKE '%$cari%')");
-                } else {
-                    $query_pg = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE isi LIKE '%$cari%' OR perihal LIKE '%$cari%' OR tujuan LIKE '%$cari%'");
-                }
-            } else {
-                if ($_SESSION['admin'] == 4) {
-                    $query_pg = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE id_user='$id_user'");
-                } else {
-                    $query_pg = mysqli_query($config, "SELECT * FROM tbl_surat_keluar");
-                }
-            }
-
+            $query_pg = mysqli_query($config, "SELECT 1 " . $base_query . $where_clause);
             $cdata = mysqli_num_rows($query_pg);
             $cpg = ceil($cdata / $limit);
 
