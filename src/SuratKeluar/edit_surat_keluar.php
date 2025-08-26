@@ -156,7 +156,7 @@
             if($_SESSION['id_user'] != $id_user AND $_SESSION['id_user'] != 1){
                 echo '<script language="javascript">
                         window.alert("ERROR! Anda tidak memiliki hak akses untuk mengedit data ini");
-                        window.location.href="./admin.php?page=tsk";
+                        window.location.href="./index.php?page=admin&act=tsk";
                       </script>';
             } else {?>
 
