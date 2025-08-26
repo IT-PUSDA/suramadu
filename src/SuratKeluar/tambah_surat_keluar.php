@@ -109,6 +109,16 @@ if (empty($_SESSION['admin'])) {
                     ?>
                     <label for="tujuan">Tujuan Surat</label>
                 </div>
+                <div class="input-field col s6">
+                    <i class="material-icons prefix md-prefix">person</i>
+                    <input id="nama_pembuat" type="text" class="validate" name="nama_pembuat" required>
+                    <label for="nama_pembuat">Nama Pembuat</label>
+                </div>
+                <div class="input-field col s6">
+                    <i class="material-icons prefix md-prefix">lock</i>
+                    <input id="pin" type="password" class="validate" name="pin" required>
+                    <label for="pin">PIN</label>
+                </div>
 
                 <div class="input-field col s6">
                     <i class="material-icons prefix md-prefix">description</i>

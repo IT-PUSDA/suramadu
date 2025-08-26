@@ -18,6 +18,7 @@ if (empty($_SESSION['admin'])) {
         if (
             empty($_REQUEST['kode']) || empty($_REQUEST['perihal'])
             || empty($_REQUEST['tujuan']) || empty($_REQUEST['tgl_surat'])  || empty($_REQUEST['isi'])
+            || empty($_REQUEST['nama_pembuat']) || empty($_REQUEST['pin'])
         ) {
             $_SESSION['errEmpty'] = 'ERROR! Semua form wajib diisi';
             header("Location: index.php?page=admin&act=tsk&sub=add");
@@ -31,6 +32,8 @@ if (empty($_SESSION['admin'])) {
             $isi = $_REQUEST['isi'];
             $id_user = $_SESSION['id_user'];
             $bidang = $_REQUEST['bidang'];
+            $nama_pembuat = $_REQUEST['nama_pembuat'];
+            $pin = password_hash($_REQUEST['pin'], PASSWORD_DEFAULT);
 
             // =========================================================================
             // KODE PEMBUATAN NOMOR AGENDA & SURAT YANG DIPERBAIKI DAN LEBIH AMAN
@@ -148,8 +151,8 @@ if (empty($_SESSION['admin'])) {
                                             }
 
                                             // Query INSERT hanya satu kali
-                                            $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang)
-                                                                    VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang')");
+                                            $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang, nama_pembuat, pin)
+                                                                    VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang', '$nama_pembuat', '$pin')");
 
                                             if ($query == true) {
                                                 $_SESSION['succAdd'] = 'SUKSES! Data berhasil ditambahkan';
