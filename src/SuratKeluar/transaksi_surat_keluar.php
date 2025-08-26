@@ -120,11 +120,12 @@ if (empty($_SESSION['admin'])) {
                                 <table class="striped highlight responsive-table" id="tbl">
                                     <thead class="blue lighten-4" id="head">
                                         <tr>
-                                            <th width="10%" class="center-align">No. Agenda<br/><small>Kode</small></th>
-                                            <th width="31%">Isi Ringkas<br/><small>File</small></th>
-                                            <th width="24%">Tujuan<br/><small>Perihal</small></th>
-                                            <th width="19%" class="center-align">No. Surat<br/><small>Tgl Surat</small></th>
-                                            <th width="16%" class="center-align">
+                                            <th width="10%" class="center-align">No. Agenda<br /><small>Kode</small></th>
+                                            <th width="22%">Isi Ringkas<br /><small>File</small></th>
+                                            <th width="20%">Tujuan<br /><small>Perihal</small></th>
+                                            <th width="17%" class="center-align">No. Surat<br /><small>Tgl Surat</small></th>
+                                            <th width="20%">Pembuat<br /><small>Tgl Dibuat</small></th>
+                                            <th width="11%" class="center-align">
                                                 <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
                                                     Tindakan
                                                     <a class="modal-trigger tooltipped" href="#modal" data-position="left" data-tooltip="Atur jumlah data"><i class="material-icons" style="color: #333;">settings</i></a>
@@ -160,7 +161,7 @@ if (empty($_SESSION['admin'])) {
                                                 <tr style="vertical-align: top;">
                                                     <td class="center-align">' . $row['no_agenda'] . '<hr class="grey lighten-3" style="margin: 4px 0;"/>' . $row['kode'] . '</td>
                                                     <td>' . $row['isi'];
-                                                
+
                                                 if (!empty($row['file'])) {
                                                     echo '<br/><br/><strong>File : </strong>
                                                           <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" style="text-decoration: underline;">' . $row['file'] . '</a>';
@@ -169,6 +170,7 @@ if (empty($_SESSION['admin'])) {
                                                 echo '</td>
                                                     <td>' . $row['tujuan'] . '<br/><small class="grey-text text-darken-1">' . $row['perihal'] . '</small></td>
                                                     <td class="center-align">' . $row['no_surat'] . '<hr class="grey lighten-3" style="margin: 4px 0;"/>' . indoDate($row['tgl_surat']) . '</td>
+                                                    <td>' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>
                                                     <td class="center-align">';
 
                                                 // 2. Batasi Tombol: Super Admin & Verifikator bisa semua, Admin User hanya data miliknya
@@ -178,8 +180,12 @@ if (empty($_SESSION['admin'])) {
                                                 if ($can_manage || $is_owner) {
                                                     echo '
                                                     <div style="display: flex; justify-content: center; gap: 5px; padding-top: 5px;">
-                                                        <a class="btn waves-effect waves-light blue tooltipped" data-position="top" data-tooltip="Edit" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '" style="padding:0 1.2rem;"><i class="material-icons left" style="margin-right: 6px;">edit</i>EDIT</a>
-                                                        <a class="btn waves-effect waves-light deep-orange tooltipped" data-position="top" data-tooltip="Hapus" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');" style="padding:0 1.2rem;"><i class="material-icons left" style="margin-right: 6px;">delete</i>DEL</a>
+                                                        <a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i>
+                                                            EDIT
+                                                        </a>
+                                                        <a class="btn small deep-orange waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');"><i class="material-icons" style="color:white;">delete</i>
+                                                            DEL
+                                                        </a>
                                                     </div>';
                                                 } else {
                                                     echo '<div class="grey-text" style="padding-top: 15px;">-</div>';
@@ -222,7 +228,11 @@ if (empty($_SESSION['admin'])) {
                                 <div class="input-field col s11 right" style="margin: -5px 0 20px;">
                                     <select class="browser-default validate" name="surat_keluar" required>
                                         <option value="<?php echo $surat_keluar_sett; ?>"><?php echo $surat_keluar_sett; ?></option>
-                                        <option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option>
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
                                     </select>
                                 </div>
                                 <div class="modal-footer white">
@@ -248,7 +258,7 @@ if (empty($_SESSION['admin'])) {
             </div>
 
             <!-- Paginasi -->
-            <?php
+<?php
             $query_pg = mysqli_query($config, "SELECT 1 " . $base_query . $where_clause);
             $cdata = mysqli_num_rows($query_pg);
             $cpg = ceil($cdata / $limit);
