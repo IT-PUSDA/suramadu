@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Jika kode sampai di sini, berarti PIN diperlukan dan belum diverifikasi dengan benar.
-// Tampilkan halaman HTML dengan form untuk memasukkan PIN.
+// Tampilkan halaman HTML dengan form modal untuk memasukkan PIN.
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -100,86 +100,163 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verifikasi PIN Dokumen</title>
-    <!-- Impor Materialize CSS dan Icons -->
     <link rel="stylesheet" href="../../asset/css/materialize.min.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         body {
-            background-color: #e0e0e0; /* Abu-abu muda */
+            background-image: url('../../asset/img/background.jpg');
+            background-size: cover;
+            background-position: center;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
-        .container {
+        .modal-container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
+            text-align: center;
         }
-        .card-panel {
-            border-radius: 8px;
-        }
-        .card-title {
-            font-size: 1.5rem;
+        .modal-title {
+            font-size: 1.8rem;
             font-weight: 500;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            color: #424242;
+        }
+        .pin-code-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 30px 0;
+        }
+        .pin-code-input {
+            width: 45px !important;
+            height: 55px !important;
+            font-size: 24px !important;
+            text-align: center !important;
+            border: 2px solid #bdbdbd !important;
+            border-radius: 8px !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+        .pin-code-input:focus {
+            border-color: #2196F3 !important;
+            box-shadow: 0 0 8px 0 rgba(33, 150, 243, 0.5) !important;
         }
         .btn {
             width: 100%;
-            border-radius: 20px;
+            border-radius: 25px;
+            height: 45px;
+            line-height: 45px;
         }
         .error-message {
-            color: #f44336; /* red */
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
+            color: #f44336;
+            margin-top: 15px;
+            font-weight: 500;
         }
         .pembuat-info {
             font-size: 0.9rem;
             color: #757575;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="card-panel z-depth-2">
+    <div class="modal-container">
+        <i class="material-icons large blue-grey-text text-darken-1">https</i>
+        <h5 class="modal-title">Verifikasi PIN</h5>
+        <p class="grey-text text-darken-1">Dokumen ini dilindungi. Silakan masukkan 6 digit PIN untuk melanjutkan.</p>
+        <p class="pembuat-info">Pembuat Dokumen: <strong><?php echo htmlspecialchars($nama_pembuat); ?></strong></p>
+
+        <?php if (isset($error_message)): ?>
+            <p class="error-message"><?php echo $error_message; ?></p>
+        <?php endif; ?>
+
+        <form id="pinForm" method="POST" action="">
+            <input type="hidden" name="pin" id="fullPin">
+            <div class="pin-code-container">
+                <?php for ($i = 0; $i < 6; $i++): ?>
+                    <input type="tel" class="pin-code-input" maxlength="1" pattern="[0-9]" required>
+                <?php endfor; ?>
+            </div>
             <div class="row">
-                <div class="col s12 center-align">
-                    <i class="material-icons large blue-grey-text">lock_outline</i>
-                    <h5 class="card-title blue-grey-text text-darken-2">Verifikasi PIN</h5>
-                    <p class="grey-text">Dokumen ini dilindungi. Silakan masukkan PIN untuk melanjutkan.</p>
-                    <p class="pembuat-info">Pembuat Dokumen: <strong><?php echo htmlspecialchars($nama_pembuat); ?></strong></p>
+                <div class="input-field col s12">
+                    <button type="submit" class="btn waves-effect waves-light blue darken-1">Buka Dokumen</button>
                 </div>
             </div>
-            
-            <?php if (isset($error_message)): ?>
-                <p class="error-message"><?php echo $error_message; ?></p>
-            <?php endif; ?>
-
-            <form method="POST" action="">
-                <div class="row">
-                    <div class="input-field col s12">
-                        <i class="material-icons prefix">vpn_key</i>
-                        <input id="pin" type="password" name="pin" class="validate" required autofocus>
-                        <label for="pin">Masukkan PIN</label>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="input-field col s12">
-                        <button type="submit" class="btn waves-effect waves-light blue darken-1">Buka File</button>
-                    </div>
-                </div>
-            </form>
-             <div class="row" style="margin-top: 1rem;">
-                <div class="col s12 center-align">
-                   <a href="javascript:history.back()" class="btn-flat waves-effect">Kembali</a>
-                </div>
+        </form>
+        <div class="row" style="margin-top: 1rem;">
+            <div class="col s12 center-align">
+               <a href="javascript:window.close();" onclick="if(history.length > 1) {history.back(); return false;} else {window.close();}" class="btn-flat waves-effect">Kembali</a>
             </div>
         </div>
     </div>
 
-    <!-- Impor Materialize JS -->
-    <script src="../../asset/js/jquery-2.1.1.min.js"></script>
-    <script src="../../asset/js/materialize.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('pinForm');
+            const inputs = [...form.querySelectorAll('.pin-code-input')];
+            const fullPinInput = document.getElementById('fullPin');
+
+            inputs[0].focus();
+            inputs[0].select();
+
+            inputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    if (input.value && index < inputs.length - 1) {
+                        inputs[index + 1].focus();
+                    }
+                    updateFullPin();
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !input.value && index > 0) {
+                        inputs[index - 1].focus();
+                    }
+                });
+
+                // Handle paste
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pasteData = e.clipboardData.getData('text').replace(/\s/g, '').slice(0, 6);
+                    pasteData.split('').forEach((char, i) => {
+                        if (inputs[i]) {
+                            inputs[i].value = char;
+                        }
+                    });
+                    const lastInputIndex = Math.min(pasteData.length, 6) -1;
+                    if(lastInputIndex >= 0) {
+                       inputs[lastInputIndex].focus();
+                    }
+                    updateFullPin();
+                });
+            });
+
+            function updateFullPin() {
+                fullPinInput.value = inputs.map(i => i.value).join('');
+            }
+            
+            form.addEventListener('submit', function(e) {
+                updateFullPin();
+                if (fullPinInput.value.length !== 6) {
+                    e.preventDefault();
+                    // Optionally show an error message
+                    if (!document.querySelector('.error-message')) {
+                        const errorDiv = document.createElement('p');
+                        errorDiv.className = 'error-message';
+                        errorDiv.textContent = 'PIN harus terdiri dari 6 digit.';
+                        form.insertBefore(errorDiv, form.querySelector('.row'));
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>
