@@ -117,7 +117,9 @@ if (empty($_SESSION['admin'])) {
                 <div class="input-field col s6">
                     <i class="material-icons prefix md-prefix">lock</i>
                     <input id="pin" type="password" class="validate" name="pin" required>
-                    <label for="pin">PIN</label>
+                    <label for="pin">PIN Surat</label>
+                    <small class="grey-text">*Format file yang diperbolehkan hanya *.PDF dan ukuran maksimal file 2 MB!</small>
+
                 </div>
 
                 <div class="input-field col s6">
@@ -167,7 +169,7 @@ if (empty($_SESSION['admin'])) {
                             <input type="file" id="file" name="file" accept=".pdf" required>
                         </div>
                         <div class="file-path-wrapper">
-                            <input class="file-path validate" type="text" placeholder="Upload file/scan gambar surat keluar">
+                            <input class="file-path validate" type="text" placeholder="Upload file/dokumen yang sesuai">
                             <?php
                             if (isset($_SESSION['errSize'])) {
                                 $errSize = $_SESSION['errSize'];
