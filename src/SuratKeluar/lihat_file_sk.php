@@ -68,8 +68,8 @@ function serve_file($file)
 }
 
 
-// Jika PIN tidak di-set di database (untuk data lama), langsung tampilkan file
-if (empty($pin_hash)) {
+// Jika PIN tidak di-set di database (untuk data lama) atau jika pengguna adalah admin, langsung tampilkan file
+if (empty($pin_hash) || (isset($_SESSION['admin']) && $_SESSION['admin'] == 1)) {
     serve_file($file);
     exit();
 }
