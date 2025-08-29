@@ -164,7 +164,7 @@ if (empty($_SESSION['admin'])) {
 
                                                 if (!empty($row['file'])) {
                                                     echo '<br/><br/><strong>File : </strong>
-                                                          <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" style="text-decoration: underline;">' . $row['file'] . '</a>';
+                                                          <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" class="pin-trigger" data-action-type="view" data-id-surat="' . $row['id_surat'] . '" style="text-decoration: underline;">' . $row['file'] . '</a>';
                                                 }
 
                                                 echo '</td>
@@ -183,7 +183,7 @@ if (empty($_SESSION['admin'])) {
                                                         <a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i>
                                                             EDIT
                                                         </a>
-                                                        <a class="btn small deep-orange waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');"><i class="material-icons" style="color:white;">delete</i>
+                                                        <a class="btn small deep-orange waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" data-action-type="delete" data-id-surat="' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');"><i class="material-icons" style="color:white;">delete</i>
                                                             DEL
                                                         </a>
                                                     </div>';
@@ -283,4 +283,262 @@ if (empty($_SESSION['admin'])) {
         }
     }
 }
+?>
+
+<style>
+    /* CSS untuk Modal PIN */
+    .pin-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1002;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+    }
+    .pin-modal-container {
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        padding: 30px;
+        width: 100%;
+        max-width: 450px;
+        text-align: center;
+        position: relative;
+        transform: scale(0.9);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .pin-modal-overlay.active .pin-modal-container {
+        transform: scale(1);
+        opacity: 1;
+    }
+    .pin-modal-close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 2rem;
+        color: #9e9e9e;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .pin-modal-close:hover {
+        color: #616161;
+    }
+    .pin-modal-title {
+        font-size: 1.8rem;
+        font-weight: 500;
+        margin-bottom: 10px;
+        color: #424242;
+    }
+    .pin-code-container {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 30px 0;
+    }
+    .pin-code-input {
+        width: 45px !important;
+        height: 55px !important;
+        font-size: 24px !important;
+        text-align: center !important;
+        border: 2px solid #bdbdbd !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        background-color: #fff !important;
+    }
+    .pin-code-input:focus {
+        border-color: #2196F3 !important;
+        box-shadow: 0 0 8px 0 rgba(33, 150, 243, 0.5) !important;
+    }
+    .pin-modal-btn {
+        border-radius: 25px;
+        height: 45px;
+        line-height: 45px;
+    }
+    .pin-error-message {
+        color: #f44336;
+        margin-top: 15px;
+        font-weight: 500;
+        min-height: 21px;
+    }
+</style>
+
+<!-- HTML untuk Modal PIN -->
+<div id="pinModal" class="pin-modal-overlay">
+    <div class="pin-modal-container">
+        <span class="pin-modal-close">&times;</span>
+        <i class="material-icons large blue-grey-text text-darken-1">https</i>
+        <h5 class="pin-modal-title">Verifikasi PIN</h5>
+        <p class="grey-text text-darken-1">Aksi ini memerlukan izin. Silakan masukkan 6 digit PIN.</p>
+        
+        <form id="pinForm" method="POST" action="#">
+            <input type="hidden" name="pin" id="fullPin">
+            <div class="pin-code-container">
+                <?php for ($i = 0; $i < 6; $i++): ?>
+                    <input type="tel" class="pin-code-input" maxlength="1" pattern="[0-9]" required>
+                <?php endfor; ?>
+            </div>
+            <p id="pinErrorMessage" class="pin-error-message"></p>
+            <div class="row">
+                <div class="input-field col s12">
+                    <button type="submit" class="btn waves-effect waves-light blue darken-1 pin-modal-btn">Verifikasi & Lanjutkan</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('pinModal');
+    const modalClose = modal.querySelector('.pin-modal-close');
+    const pinForm = document.getElementById('pinForm');
+    const pinInputs = [...pinForm.querySelectorAll('.pin-code-input')];
+    const fullPinInput = document.getElementById('fullPin');
+    const errorMessage = document.getElementById('pinErrorMessage');
+    
+    let targetUrl = '';
+    let actionType = '';
+    let suratId = '';
+
+    // Fungsi untuk membuka modal
+    function openModal() {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('active'), 10);
+        pinInputs[0].focus();
+    }
+
+    // Fungsi untuk menutup modal
+    function closeModal() {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            resetModal();
+        }, 300);
+    }
+
+    // Fungsi untuk mereset modal
+    function resetModal() {
+        pinForm.reset();
+        pinInputs.forEach(input => input.value = '');
+        errorMessage.textContent = '';
+        targetUrl = '';
+        actionType = '';
+        suratId = '';
+    }
+
+    // Event listener untuk semua tombol yang butuh PIN
+    document.querySelectorAll('.pin-trigger').forEach(trigger => {
+        trigger.addEventListener('click', function (e) {
+            e.preventDefault();
+            targetUrl = this.getAttribute('href');
+            actionType = this.dataset.actionType;
+            suratId = this.dataset.idSurat;
+            openModal();
+        });
+    });
+
+    // Event listener untuk tombol close
+    modalClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Logika input PIN
+    pinInputs.forEach((input, index) => {
+        input.addEventListener('input', () => {
+            if (input.value && index < pinInputs.length - 1) {
+                pinInputs[index + 1].focus();
+            }
+            updateFullPin();
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && index > 0) {
+                pinInputs[index - 1].focus();
+            }
+        });
+
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasteData = (e.clipboardData || window.clipboardData).getData('text').replace(/\s/g, '').slice(0, 6);
+            pasteData.split('').forEach((char, i) => {
+                if (pinInputs[i]) pinInputs[i].value = char;
+            });
+            const lastInputIndex = Math.min(pasteData.length, 6) - 1;
+            if (lastInputIndex >= 0) pinInputs[lastInputIndex].focus();
+            updateFullPin();
+        });
+    });
+
+    function updateFullPin() {
+        fullPinInput.value = pinInputs.map(i => i.value).join('');
+    }
+
+    // Submit form PIN
+    pinForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        updateFullPin();
+
+        if (fullPinInput.value.length !== 6) {
+            errorMessage.textContent = 'PIN harus terdiri dari 6 digit.';
+            return;
+        }
+
+        errorMessage.textContent = '';
+        const formData = new FormData();
+        formData.append('id_surat', suratId);
+        formData.append('pin', fullPinInput.value);
+
+        fetch('src/Utils/verifikasi_pin_ajax.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                handleSuccessfulVerification();
+            } else {
+                errorMessage.textContent = data.message || 'PIN salah. Coba lagi.';
+                pinInputs.forEach(input => input.value = '');
+                pinInputs[0].focus();
+            }
+        })
+        .catch(error => {
+            errorMessage.textContent = 'Terjadi kesalahan. Silakan coba lagi.';
+            console.error('Error:', error);
+        });
+    });
+
+    function handleSuccessfulVerification() {
+        closeModal();
+        
+        // Sedikit penundaan agar modal sempat tertutup
+        setTimeout(() => {
+            if (actionType === 'delete') {
+                if (confirm('PIN terverifikasi. Apakah Anda yakin ingin menghapus data ini?')) {
+                    window.location.href = targetUrl;
+                }
+            } else if (actionType === 'view') {
+                window.open(targetUrl, '_blank');
+            } else { // 'edit' atau lainnya
+                window.location.href = targetUrl;
+            }
+        }, 200);
+    }
+});
+</script>
+
+<?php
+// ... existing code ...
+// ... (rest of the file)
 ?>
