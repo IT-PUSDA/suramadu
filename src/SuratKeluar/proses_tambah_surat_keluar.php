@@ -33,7 +33,15 @@ if (empty($_SESSION['admin'])) {
             $id_user = $_SESSION['id_user'];
             $bidang = $_REQUEST['bidang'];
             $nama_pembuat = $_REQUEST['nama_pembuat'];
-            $pin = password_hash($_REQUEST['pin'], PASSWORD_DEFAULT);
+
+            // Validasi PIN: harus 6 digit angka
+            $raw_pin = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
+            if (!(ctype_digit($raw_pin) && strlen($raw_pin) === 6)) {
+                $_SESSION['pink'] = 'PIN harus berupa tepat 6 digit angka';
+                header("Location: index.php?page=admin&act=tsk&sub=add");
+                die();
+            }
+            $pin = password_hash($raw_pin, PASSWORD_DEFAULT);
 
             // =========================================================================
             // KODE PEMBUATAN NOMOR AGENDA & SURAT YANG DIPERBAIKI DAN LEBIH AMAN

@@ -163,8 +163,17 @@ if (empty($_SESSION['admin'])) {
                                                     <td>' . $row['isi'];
 
                                                 if (!empty($row['file'])) {
-                                                    echo '<br/><br/><strong>File : </strong>
-                                                          <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" class="pin-trigger" data-action-type="view" data-id-surat="' . $row['id_surat'] . '" style="text-decoration: underline;">' . $row['file'] . '</a>';
+                                                    echo '<br/><br/><strong>File : </strong>';
+                                                    if ($_SESSION['admin'] == 1) {
+                                                        // Super Admin: langsung buka di tab baru tanpa PIN modal
+                                                        echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" rel="noopener" style="text-decoration: underline;">' . $row['file'] . '</a>';
+                                                    } else {
+                                                        // Selain Super Admin: gunakan PIN modal
+                                                        echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" class="pin-trigger" data-action-type="view" data-id-surat="' . $row['id_surat'] . '" style="text-decoration: underline;">' . $row['file'] . '</a>';
+                                                    }
+                                                    if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) {
+                                                        echo ' <span class="new badge blue" data-badge-caption="PIN diubah" title="PIN direset oleh admin"></span>';
+                                                    }
                                                 }
 
                                                 echo '</td>
@@ -178,15 +187,17 @@ if (empty($_SESSION['admin'])) {
                                                 $is_owner = $row['id_user'] == $_SESSION['id_user'];
 
                                                 if ($can_manage || $is_owner) {
-                                                    echo '
-                                                    <div style="display: flex; justify-content: center; gap: 5px; padding-top: 5px;">
-                                                        <a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i>
-                                                            EDIT
-                                                        </a>
-                                                        <a class="btn small deep-orange waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" data-action-type="delete" data-id-surat="' . $row['id_surat'] . '" onclick="return confirm(\'Apakah Anda yakin ingin menghapus data ini?\');"><i class="material-icons" style="color:white;">delete</i>
-                                                            DEL
-                                                        </a>
-                                                    </div>';
+                                                    echo '<div style="display: flex; justify-content: center; gap: 5px; padding-top: 5px;">';
+                                                    if ($_SESSION['admin'] == 1) {
+                                                        // Super Admin: langsung edit/hapus tanpa PIN modal
+                                                        echo '<a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
+                                                        echo '<a class="btn small deep-orange waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
+                                                    } else {
+                                                        // Selain Super Admin: gunakan PIN modal
+                                                        echo '<a class="btn small blue waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '" data-action-type="edit" data-id-surat="' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
+                                                        echo '<a class="btn small deep-orange waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" data-action-type="delete" data-id-surat="' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
+                                                    }
+                                                    echo '</div>';
                                                 } else {
                                                     echo '<div class="grey-text" style="padding-top: 15px;">-</div>';
                                                 }
