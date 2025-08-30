@@ -18,6 +18,12 @@ if (!isset($_GET['id_surat']) || empty($_GET['id_surat'])) {
 
 $id_surat = mysqli_real_escape_string($config, $_GET['id_surat']);
 
+// Keamanan tambahan: izinkan akses hanya jika memiliki tiket session atau super admin
+if (empty($_SESSION['file_access_granted'][$id_surat]) && (!isset($_SESSION['admin']) || $_SESSION['admin'] != 1)) {
+    http_response_code(403); // Forbidden
+    die('Akses tidak sah. Silakan lakukan verifikasi PIN terlebih dahulu melalui halaman transaksi.');
+}
+
 // Mengambil data file dari database
 $query = mysqli_query($config, "SELECT file FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
 
@@ -33,7 +39,7 @@ if (empty($file)) {
 }
 
 // Fungsi untuk melayani file
-function serve_file($file)
+function serve_file($file, $id_surat)
 {
     // Path absolut ke file
     $file_path = realpath(__DIR__ . '/../../upload/surat_keluar') . '/' . $file;
@@ -61,13 +67,19 @@ function serve_file($file)
         
         // Baca dan kirim file
         readfile($file_path);
+
+        // Hapus tiket akses setelah digunakan (one-time access)
+        if (isset($_SESSION['file_access_granted'][$id_surat])) {
+            unset($_SESSION['file_access_granted'][$id_surat]);
+        }
+
         exit(); // Hentikan eksekusi setelah file dikirim
     } else {
         die('ERROR: File fisik tidak ditemukan di server.');
     }
 }
 
-// Langsung panggil fungsi untuk menampilkan file, karena verifikasi sudah dilakukan di halaman sebelumnya.
-serve_file($file);
+// Tampilkan file (akses valid atau super admin)
+serve_file($file, $id_surat);
 
 ?>

@@ -116,15 +116,23 @@ if (empty($_SESSION['admin'])) {
                 </div>
                 <div class="input-field col s6">
                     <i class="material-icons prefix md-prefix">lock</i>
-                    <input id="pin" type="password" class="validate" name="pin" required>
+                    <input id="pin" type="tel" class="validate" name="pin" required inputmode="numeric" maxlength="6" pattern="[0-9]{6}" title="Masukkan tepat 6 digit angka" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
                     <label for="pin">PIN Surat</label>
-                    <small class="grey-text">*Format file yang diperbolehkan hanya *.PDF dan ukuran maksimal file 2 MB!</small>
-
+                    <span class="helper-text grey-text" style="font-size: 0.9em; margin-left: 44px;">Masukkan 6 digit angka</span>
+                    <?php
+                    if (isset($_SESSION['pink'])) {
+                        $pink = $_SESSION['pink'];
+                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">' . $pink . '</div>';
+                        unset($_SESSION['pink']);
+                    }
+                    ?>
                 </div>
 
                 <div class="input-field col s6">
                     <i class="material-icons prefix md-prefix">description</i>
                     <textarea id="isi" class="materialize-textarea validate" name="isi" required></textarea>
+                    <label for="isi">Isi Ringkas</label>
+                    <span class="helper-text grey-text" style="font-size: 0.9em; margin-left: 44px;">Isi ringkas minimal satu kalimat</span>
                     <?php
                     if (isset($_SESSION['isik'])) {
                         $isik = $_SESSION['isik'];
@@ -132,7 +140,29 @@ if (empty($_SESSION['admin'])) {
                         unset($_SESSION['isik']);
                     }
                     ?>
-                    <label for="isi">Isi Ringkas</label>
+                    <div style="margin-top:18px;"></div>
+                    <div class="file-field input-field tooltipped" data-position="top" data-tooltip="Jika tidak ada file/scan gambar surat, biarkan kosong">
+                        <div class="btn light-green darken-1">
+                            <span>File</span>
+                            <input type="file" id="file" name="file" accept=".pdf" required>
+                        </div>
+                        <div class="file-path-wrapper">
+                            <input class="file-path validate" type="text" placeholder="Upload file/dokumen yang sesuai">
+                            <?php
+                            if (isset($_SESSION['errSize'])) {
+                                $errSize = $_SESSION['errSize'];
+                                echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">' . $errSize . '</div>';
+                                unset($_SESSION['errSize']);
+                            }
+                            if (isset($_SESSION['errFormat'])) {
+                                $errFormat = $_SESSION['errFormat'];
+                                echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">' . $errFormat . '</div>';
+                                unset($_SESSION['errFormat']);
+                            }
+                            ?>
+                            <small class="red-text">*Format file yang diperbolehkan hanya *.PDF dan ukuran maksimal file 2 MB!</small>
+                        </div>
+                    </div>
                 </div>
                 <div class="input-field col s6">
                     <i class="material-icons prefix md-prefix">low_priority</i><label>Bidang</label><br />
@@ -161,30 +191,6 @@ if (empty($_SESSION['admin'])) {
                         unset($_SESSION['bidangk']);
                     }
                     ?>
-                </div>
-                <div class="input-field col s6">
-                    <div class="file-field input-field tooltipped" data-position="top" data-tooltip="Jika tidak ada file/scan gambar surat, biarkan kosong">
-                        <div class="btn light-green darken-1">
-                            <span>File</span>
-                            <input type="file" id="file" name="file" accept=".pdf" required>
-                        </div>
-                        <div class="file-path-wrapper">
-                            <input class="file-path validate" type="text" placeholder="Upload file/dokumen yang sesuai">
-                            <?php
-                            if (isset($_SESSION['errSize'])) {
-                                $errSize = $_SESSION['errSize'];
-                                echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">' . $errSize . '</div>';
-                                unset($_SESSION['errSize']);
-                            }
-                            if (isset($_SESSION['errFormat'])) {
-                                $errFormat = $_SESSION['errFormat'];
-                                echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">' . $errFormat . '</div>';
-                                unset($_SESSION['errFormat']);
-                            }
-                            ?>
-                            <small class="red-text">*Format file yang diperbolehkan hanya *.PDF dan ukuran maksimal file 2 MB!</small>
-                        </div>
-                    </div>
                 </div>
             </div>
             <!-- Row in form END -->

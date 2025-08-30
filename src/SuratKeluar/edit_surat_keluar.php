@@ -27,6 +27,21 @@
                 $id_user = $_SESSION['id_user'];
 				$bidang = $_REQUEST['bidang'];
 
+                // Opsi: Super Admin dapat menyetel ulang PIN (6 digit)
+                $pin_clause = '';
+                if (isset($_SESSION['admin']) && $_SESSION['admin'] == 1) {
+                    $new_pin = isset($_REQUEST['new_pin']) ? trim($_REQUEST['new_pin']) : '';
+                    if ($new_pin !== '') {
+                        if (!(ctype_digit($new_pin) && strlen($new_pin) === 6)) {
+                            $_SESSION['newpink'] = 'PIN baru harus berupa tepat 6 digit angka';
+                            echo '<script language="javascript">window.history.back();</script>';
+                            exit;
+                        }
+                        $pin_hash = password_hash($new_pin, PASSWORD_DEFAULT);
+                        $pin_clause = ", pin='" . mysqli_real_escape_string($config, $pin_hash) . "'";
+                    }
+                }
+
                 //validasi input data
                 if(!preg_match("/^[0-9.]*$/", $nkode)){
                     $_SESSION['kodek'] = 'Form Kode Klasifikasi hanya boleh mengandung karakter angka dan titik(.)';
@@ -87,11 +102,12 @@
                                                             move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$nfile);
 
                                                             $query = mysqli_query($config, "UPDATE tbl_surat_keluar SET perihal='$perihal', no_surat='$no_surat', tujuan='$tujuan', kode='$nkode', 
-															tgl_surat='$tgl_surat', isi='$isi', file='$nfile', id_user='$id_user',bidang='$bidang' WHERE id_surat='$id_surat'");
+																tgl_surat='$tgl_surat', isi='$isi', file='$nfile', id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                             if($query == true){
+                                                                if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                                 $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
-                                                                header("Location: ./admin.php?page=tsk");
+                                                                header("Location: index.php?page=admin&act=tsk");
                                                                 die();
                                                             } else {
                                                                 $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
@@ -104,11 +120,12 @@
                                                             move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$nfile);
 
                                                             $query = mysqli_query($config, "UPDATE tbl_surat_keluar SET perihal='$perihal', no_surat='$no_surat', tujuan='$tujuan', kode='$nkode', 
-															tgl_surat='$tgl_surat', isi='$isi', file='$nfile', id_user='$id_user',bidang='$bidang' WHERE id_surat='$id_surat'");
+																tgl_surat='$tgl_surat', isi='$isi', file='$nfile', id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                             if($query == true){
+                                                                if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                                 $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
-                                                                header("Location: ./admin.php?page=tsk");
+                                                                header("Location: index.php?page=admin&act=tsk");
                                                                 die();
                                                             } else {
                                                                 $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
@@ -129,11 +146,12 @@
                                                 $id_surat = $_REQUEST['id_surat'];
 
                                                 $query = mysqli_query($config, "UPDATE tbl_surat_keluar SET perihal='$perihal', no_surat='$no_surat', tujuan='$tujuan', kode='$nkode', 
-															tgl_surat='$tgl_surat', isi='$isi', id_user='$id_user',bidang='$bidang' WHERE id_surat='$id_surat'");
+																tgl_surat='$tgl_surat', isi='$isi', id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                 if($query == true){
+                                                    if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                     $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
-                                                    header("Location: ./admin.php?page=tsk");
+                                                    header("Location: index.php?page=admin&act=tsk");
                                                     die();
                                                 } else {
                                                     $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
@@ -209,7 +227,7 @@
                 <div class="row jarak-form">
 
                     <!-- Form START -->
-                    <form class="col s12" method="POST" action="?page=tsk&act=edit" enctype="multipart/form-data">
+                    <form class="col s12" method="POST" action="index.php?page=admin&act=tsk&sub=edit" enctype="multipart/form-data">
 
                         <!-- Row in form START -->
                         <div class="row">
@@ -238,7 +256,7 @@
                                     ?>
                                 <label for="kode">Kode Klasifikasi</label>
                             </div>
-							<div class="input-field col s6">
+                            <div class="input-field col s6">
                                 <i class="material-icons prefix md-prefix">looks_two</i>
                                 <input id="no_surat" type="text" class="validate" name="no_surat" value="<?php echo $no_surat ;?>" readonly required>
                                     <?php
@@ -250,6 +268,21 @@
                                     ?>
                                 <label for="no_surat">Nomor Surat</label>
                             </div>
+                            <?php if(isset($_SESSION['admin']) && $_SESSION['admin'] == 1) { ?>
+                            <div class="input-field col s6">
+                                <i class="material-icons prefix md-prefix">lock</i>
+                                <input id="new_pin" type="tel" class="validate" name="new_pin" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" title="Masukkan tepat 6 digit angka" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
+                                <label for="new_pin">Setel PIN Baru (opsional)</label>
+                                <span class="helper-text grey-text" style="font-size: 0.9em; margin-left: 44px;">Kosongkan jika tidak ingin mengubah PIN</span>
+                                <?php
+                                if(isset($_SESSION['newpink'])){
+                                    $newpink = $_SESSION['newpink'];
+                                    echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$newpink.'</div>';
+                                    unset($_SESSION['newpink']);
+                                }
+                                ?>
+                            </div>
+                            <?php } ?>
 							<div class="input-field col s6">
                             <i class="material-icons prefix md-prefix">featured_play_list</i>
                             <input id="perihal" type="text" class="validate" name="perihal" value="<?php echo $perihal ;?>"required>
