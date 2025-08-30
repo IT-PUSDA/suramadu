@@ -304,6 +304,21 @@ if (empty($_SESSION['admin'])) {
     /* Compact actions: remove spacing between buttons */
     .actions-compact a.btn { margin-left: 0 !important; margin-right: 6px !important; }
     .actions-compact a.btn:last-child { margin-right: 0 !important; }
+
+    /* Cross-browser table stability (Chrome/Edge/Firefox) */
+    #tbl { table-layout: fixed; width: 100%; border-collapse: collapse; }
+    #tbl thead th, #tbl tbody td { box-sizing: border-box; }
+    /* Enforce column widths via CSS to be consistent across browsers */
+    #tbl thead th:nth-child(1) { width: 10%; }
+    #tbl thead th:nth-child(2) { width: 30%; }
+    #tbl thead th:nth-child(3) { width: 14%; }
+    #tbl thead th:nth-child(4) { width: 18%; }
+    #tbl thead th:nth-child(5) { width: 12%; }
+    #tbl thead th:nth-child(6) { width: 15%; }
+    /* Make second-line text consistent across browsers */
+    #tbl small { display: block; margin-top: 2px; line-height: 1.2; font-size: 0.9rem; }
+    /* Better wrapping for long content like numbers/paths */
+    #tbl td { overflow-wrap: anywhere; word-break: break-word; }
     /* CSS untuk Modal PIN */
     .pin-modal-overlay {
         position: fixed;
