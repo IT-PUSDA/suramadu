@@ -7,6 +7,15 @@
     } else {
 
         if(isset($_REQUEST['submit'])){
+            // Enforce edit access ticket server-side for non-super-admin
+            $id_surat = isset($_REQUEST['id_surat']) ? mysqli_real_escape_string($config, $_REQUEST['id_surat']) : '';
+            if ($_SESSION['admin'] != 1) {
+                if (empty($_SESSION['edit_access_granted'][$id_surat])) {
+                    $_SESSION['err'] = '<center>ERROR! Verifikasi PIN diperlukan untuk mengedit</center>';
+                    header("Location: index.php?page=admin&act=tsk");
+                    die();
+                }
+            }
 
             //validasi form kosong
             if($_REQUEST['kode'] == "" || $_REQUEST['no_surat'] == "" || $_REQUEST['perihal'] == ""
@@ -105,6 +114,8 @@
 																tgl_surat='$tgl_surat', isi='$isi', file='$nfile', id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                             if($query == true){
+                                                                // Hapus tiket akses edit setelah sukses (sekali pakai)
+                                                                unset($_SESSION['edit_access_granted'][$id_surat]);
                                                                 if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                                 $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
                                                                 header("Location: index.php?page=admin&act=tsk");
@@ -123,6 +134,8 @@
 																tgl_surat='$tgl_surat', isi='$isi', file='$nfile', id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                             if($query == true){
+                                                                // Hapus tiket akses edit setelah sukses (sekali pakai)
+                                                                unset($_SESSION['edit_access_granted'][$id_surat]);
                                                                 if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                                 $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
                                                                 header("Location: index.php?page=admin&act=tsk");
@@ -149,6 +162,8 @@
 																tgl_surat='$tgl_surat', isi='$isi', id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                 if($query == true){
+                                                    // Hapus tiket akses edit setelah sukses (sekali pakai)
+                                                    unset($_SESSION['edit_access_granted'][$id_surat]);
                                                     if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                     $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
                                                     header("Location: index.php?page=admin&act=tsk");
@@ -171,11 +186,15 @@
             $id_surat = mysqli_real_escape_string($config, $_REQUEST['id_surat']);
             $query = mysqli_query($config, "SELECT id_surat, no_agenda, perihal, no_surat, tujuan, kode, tgl_surat, isi, file, id_user, bidang FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
             list($id_surat, $no_agenda, $perihal, $no_surat, $tujuan, $kode, $tgl_surat, $isi, $file, $id_user, $bidang) = mysqli_fetch_array($query);
-            if($_SESSION['id_user'] != $id_user AND $_SESSION['id_user'] != 1){
-                echo '<script language="javascript">
-                        window.alert("ERROR! Anda tidak memiliki hak akses untuk mengedit data ini");
-                        window.location.href="./index.php?page=admin&act=tsk";
-                      </script>';
+            $is_super_admin = ($_SESSION['admin'] == 1); // hanya super admin bebas
+            $can_manage_any = in_array($_SESSION['admin'], [2,3]); // level 2/3 bisa kelola semua jika ada tiket
+            $is_owner = ($_SESSION['id_user'] == $id_user);
+            // Non-super-admin: butuh tiket, dan harus pemilik atau memiliki kewenangan global (2/3)
+            if(!$is_super_admin && (empty($_SESSION['edit_access_granted'][$id_surat]) || (!$is_owner && !$can_manage_any))){
+                                echo '<script language="javascript">
+                                                window.alert("ERROR! Anda tidak memiliki hak akses untuk mengedit data ini");
+                                                window.location.href="index.php?page=admin&act=tsk";
+                                            </script>';
             } else {?>
 
                 <!-- Row Start -->
@@ -350,7 +369,7 @@
                                     <input type="file" id="file" name="file">
                                 </div>
                                 <div class="file-path-wrapper">
-                                    <input class="file-path validate" type="text" value="<?php echo $file ;?>" placeholder="Upload file/scan gambar surat masuk">
+                                    <input class="file-path validate" type="text" value="<?php echo $file ;?>" placeholder="Upload file/dokumen yang sesuai">
                                         <?php
                                             if(isset($_SESSION['errSize'])){
                                                 $errSize = $_SESSION['errSize'];
@@ -363,7 +382,7 @@
                                                 unset($_SESSION['errFormat']);
                                             }
                                         ?>
-                                    <small class="red-text">*Format file yang diperbolehkan *.JPG, *.PNG, *.DOC, *.DOCX, *.PDF dan ukuran maksimal file 5 MB!</small>
+                                    <small class="red-text">*Format file yang diperbolehkan hanya *.PDF dan ukuran maksimal file 2 MB!</small>
                                 </div>
                             </div>
                         </div>

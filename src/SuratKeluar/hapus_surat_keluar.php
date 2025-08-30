@@ -8,6 +8,22 @@
 
         $id_surat = mysqli_real_escape_string($config, $_REQUEST['id_surat']);
 
+        // Cek hak akses server-side: hanya Super Admin bebas PIN, lainnya wajib tiket delete + kewenangan
+        $is_super_admin = ($_SESSION['admin'] == 1);
+        if (!$is_super_admin) {
+            // Ambil pemilik data untuk validasi owner
+            $q_owner = mysqli_query($config, "SELECT id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
+            list($owner_id) = mysqli_fetch_array($q_owner);
+            $can_manage = in_array($_SESSION['admin'], [2,3]); // level ini boleh kelola semua jika punya tiket
+            $is_owner = ($owner_id == $_SESSION['id_user']);
+
+            if ((!$can_manage && !$is_owner) || empty($_SESSION['delete_access_granted'][$id_surat])) {
+                $_SESSION['err'] = '<center>ERROR! Anda tidak memiliki izin menghapus surat ini</center>';
+                header("Location: index.php?page=admin&act=tsk");
+                die();
+            }
+        }
+
         // Ambil nama file dari database SEBELUM record dihapus
         $query_file = mysqli_query($config, "SELECT file FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
         list($file) = mysqli_fetch_array($query_file);
@@ -26,6 +42,8 @@
         $query = mysqli_query($config, "DELETE FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
 
         if ($query == true) {
+            // Hapus tiket akses delete setelah sukses (sekali pakai)
+            unset($_SESSION['delete_access_granted'][$id_surat]);
             $_SESSION['succDel'] = 'SUKSES! Data dan file berhasil dihapus';
             header("Location: index.php?page=admin&act=tsk");
             die();

@@ -21,16 +21,20 @@ if (mysqli_num_rows($query) > 0) {
 
     // If PIN is not set in DB (for old data), or if user is super admin, grant access
     if (empty($pin_hash) || (isset($_SESSION['admin']) && $_SESSION['admin'] == 1)) {
-        // Set session untuk memberikan izin akses file
+        // Set session untuk memberikan izin akses
         $_SESSION['file_access_granted'][$id_surat] = true;
+        $_SESSION['edit_access_granted'][$id_surat] = true;
+        $_SESSION['delete_access_granted'][$id_surat] = true;
         echo json_encode(['success' => true]);
         exit();
     }
 
     // Verify the submitted PIN against the hash
     if (password_verify($submitted_pin, $pin_hash)) {
-        // Set session untuk memberikan izin akses file
+        // Set session untuk memberikan izin akses
         $_SESSION['file_access_granted'][$id_surat] = true;
+        $_SESSION['edit_access_granted'][$id_surat] = true;
+        $_SESSION['delete_access_granted'][$id_surat] = true;
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'message' => 'PIN yang Anda masukkan salah.']);
