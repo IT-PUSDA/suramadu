@@ -23,7 +23,12 @@
                         include "restore.php";
                         break;
                     case 'usr':
-                        include "user.php";
+                        // load user management/listing from src/User
+                        include BASE_PATH . "/src/User/user.php";
+                        break;
+                    case 'ret':
+                        // jadwal retensi arsip
+                        include BASE_PATH . "/src/Pengaturan/retensi.php";
                         break;
                     }
             } else {
