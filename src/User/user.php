@@ -209,9 +209,31 @@
                     <!-- Row form Start -->
                     <div class="row jarak-form">
 
-                        <div class="col s12" id="colres">
-                            <!-- Table START -->
-                            <table class="highlight responsive-table" id="tbl">
+                                                <div class="col s12" id="colres">
+                                                        <!-- Table START -->
+                                                                                    <style>
+                                                            /* Center all cells and improve role badge styles */
+                                                            table.table-center th, table.table-center td { text-align:center; vertical-align:middle; }
+                                                            .role-badge { display:inline-block; padding:6px 12px; border-radius:9999px; font-weight:600; font-size:0.85rem; color:#fff; box-shadow:0 1px 2px rgba(0,0,0,.15); letter-spacing:.2px; }
+                                                            .role-admin { background:#e53935; }
+                                                            .role-pimpinan { background:#8e24aa; }
+                                                            .role-operator { background:#00897b; }
+                                                            .role-bidang { background:#607d8b; }
+                                                                                        /* Pagination styles */
+                                                                                                                        .pagination.pager { display:inline-flex; align-items:center; }
+                                                                                                                        .pagination.pager li { margin: 0 3px; }
+                                                                                                                        .pagination.pager li a {
+                                                                                                                            display:inline-flex; align-items:center; justify-content:center; gap:4px;
+                                                                                                                            border:1px solid rgba(0,0,0,.12); border-radius:10px; background:#fff; color:#455a64;
+                                                                                                                            height:36px; min-width:36px; padding:0 10px; box-shadow:0 1px 2px rgba(0,0,0,.08);
+                                                                                                                        }
+                                                                                        .pagination.pager li.active a { background:#1e88e5; color:#fff; border-color:#1e88e5; }
+                                                                                        .pagination.pager li.disabled a { background:#f5f5f5; color:#bdbdbd; border-color:rgba(0,0,0,.08); }
+                                                                                                                        .pagination.pager i.material-icons { font-size:20px; line-height:36px; height:36px; }
+                                                                                                                        .pagination.pager i.material-icons.md-48 { font-size:20px; }
+                                                                                                                        .pagination.pager li.disabled a { pointer-events:none; }
+                                                        </style>
+                                                        <table class="highlight responsive-table table-center" id="tbl">
                                 <thead class="blue lighten-4" id="head">
                                     <tr>
                                         <th style="width:8%">No</th>
@@ -230,20 +252,20 @@
                                     echo '<td>'.$no++.'</td>';
 
                                     $roleLabel = 'Bidang';
-                                    $roleClass = 'blue-grey';
+                                    $roleClass = 'role-bidang';
                                     if($row['admin'] == 1){
                                         $roleLabel = 'Admin';
-                                        $roleClass = 'red';
+                                        $roleClass = 'role-admin';
                                     } elseif($row['admin'] == 2){
                                         $roleLabel = 'Pimpinan';
-                                        $roleClass = 'purple';
+                                        $roleClass = 'role-pimpinan';
                                     } elseif($row['admin'] == 3){
                                         $roleLabel = 'Operator';
-                                        $roleClass = 'teal';
+                                        $roleClass = 'role-operator';
                                     }
                                     echo '<td>'.$row['username'].'</td>
                                             <td>'.$row['nama'].'<br/>'.$row['nip'].'</td>
-                                            <td><span class="chip '.$roleClass.' white-text">'.$roleLabel.'</span></td>
+                                            <td><span class="role-badge '.$roleClass.'">'.$roleLabel.'</span></td>
                                             <td>';
 
                                     if($_SESSION['username'] == $row['username']){
@@ -279,8 +301,9 @@
 
                     $cpg = ceil($cdata/$limit);
 
-                    echo '<!-- Pagination START -->
-                          <ul class="pagination">';
+                                        echo '<!-- Pagination START -->
+                                                    <div class="center-align" style="margin: 12px 0 8px;">
+                                                        <ul class="pagination pager">';
 
                     if($cdata > $limit){
 
@@ -310,8 +333,9 @@
                             echo '<li class="disabled"><a href=""><i class="material-icons md-48">chevron_right</i></a></li>
                                   <li class="disabled"><a href=""><i class="material-icons md-48">last_page</i></a></li>';
                         }
-                            echo ' </ul>
-                                   <!-- Pagination END -->';
+                echo ' </ul>
+                    </div>
+                    <!-- Pagination END -->';
                     } else {
                         echo '';
                     }

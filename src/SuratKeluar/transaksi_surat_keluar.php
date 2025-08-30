@@ -274,7 +274,9 @@ if (empty($_SESSION['admin'])) {
             $cdata = mysqli_num_rows($query_pg);
             $cpg = ceil($cdata / $limit);
 
-            echo '<br/><!-- Pagination START --><ul class="pagination">';
+                        echo '<br/><!-- Pagination START -->
+                                    <div class="center-align" style="margin: 12px 0 8px;">
+                                        <ul class="pagination pager">';
             if ($cdata > $limit) {
                 if ($pg > 1) {
                     $prev = $pg - 1;
@@ -290,7 +292,7 @@ if (empty($_SESSION['admin'])) {
                     echo '<li class="disabled"><a><i class="material-icons md-48">chevron_right</i></a></li><li class="disabled"><a><i class="material-icons md-48">last_page</i></a></li>';
                 }
             }
-            echo '</ul><!-- Pagination END -->';
+            echo '  </ul></div><!-- Pagination END -->';
         }
     }
 }
@@ -401,6 +403,21 @@ if (empty($_SESSION['admin'])) {
         font-weight: 500;
         min-height: 21px;
     }
+</style>
+
+<style>
+/* Pagination styles (Surat Keluar) */
+.pagination.pager { display:inline-flex; align-items:center; }
+.pagination.pager li { margin: 0 3px; }
+.pagination.pager li a {
+    display:inline-flex; align-items:center; justify-content:center; gap:4px;
+    border:1px solid rgba(0,0,0,.12); border-radius:10px; background:#fff; color:#455a64;
+    height:36px; min-width:36px; padding:0 10px; box-shadow:0 1px 2px rgba(0,0,0,.08);
+}
+.pagination.pager li.active a { background:#1e88e5; color:#fff; border-color:#1e88e5; }
+.pagination.pager li.disabled a { background:#f5f5f5; color:#bdbdbd; border-color:rgba(0,0,0,.08); pointer-events:none; }
+.pagination.pager i.material-icons { font-size:20px; line-height:36px; height:36px; }
+.pagination.pager i.material-icons.md-48 { font-size:20px; }
 </style>
 
 <!-- HTML untuk Modal PIN -->
