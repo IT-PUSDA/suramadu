@@ -120,12 +120,12 @@ if (empty($_SESSION['admin'])) {
                                 <table class="striped highlight responsive-table" id="tbl">
                                     <thead class="blue lighten-4" id="head">
                                         <tr>
-                                            <th width="10%" class="center-align">No. Agenda<br /><small>Kode</small></th>
-                                            <th width="22%">Isi Ringkas<br /><small>File</small></th>
-                                            <th width="20%">Tujuan<br /><small>Perihal</small></th>
-                                            <th width="17%" class="center-align">No. Surat<br /><small>Tgl Surat</small></th>
-                                            <th width="20%">Pembuat<br /><small>Tgl Dibuat</small></th>
-                                            <th width="11%" class="center-align">
+                                            <th width="12%" class="center-align no-wrap">No. Agenda<br /><small>Kode</small></th>
+                                            <th width="15%">Isi Ringkas<br /><small>File</small></th>
+                                            <th width="20%" class="center-align">Tujuan<br /><small>Perihal</small></th>
+                                            <th width="15%" class="center-align">No. Surat<br /><small>Tgl Surat</small></th>
+                                            <th width="23%" class="center-align">Pembuat<br /><small>Tgl Dibuat</small></th>
+                                            <th width="10%" class="center-align">
                                                 <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
                                                     Tindakan
                                                     <a class="modal-trigger tooltipped" href="#modal" data-position="left" data-tooltip="Atur jumlah data"><i class="material-icons" style="color: #333;">settings</i></a>
@@ -177,9 +177,9 @@ if (empty($_SESSION['admin'])) {
                                                 }
 
                                                 echo '</td>
-                                                    <td>' . $row['tujuan'] . '<br/><small class="grey-text text-darken-1">' . $row['perihal'] . '</small></td>
-                                                    <td class="center-align">' . $row['no_surat'] . '<hr class="grey lighten-3" style="margin: 4px 0;"/>' . indoDate($row['tgl_surat']) . '</td>
-                                                    <td>' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>
+                                                    <td class="center-align">' . $row['tujuan'] . '<br/><small class="grey-text text-darken-1">' . $row['perihal'] . '</small></td>
+                                                    <td class="center-align">' . $row['no_surat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . indoDate($row['tgl_surat']) . '</small></td>
+                                                    <td class="center-align">' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>
                                                     <td class="center-align">';
 
                                                 // 2. Batasi Tombol: Super Admin & Verifikator bisa semua, Admin User hanya data miliknya
@@ -187,7 +187,7 @@ if (empty($_SESSION['admin'])) {
                                                 $is_owner = $row['id_user'] == $_SESSION['id_user'];
 
                                                 if ($can_manage || $is_owner) {
-                                                    echo '<div style="display: flex; justify-content: center; gap: 5px; padding-top: 5px;">';
+                                                    echo '<div class="actions-compact" style="display: flex; justify-content: center; gap: 0px; padding-top: 5px;">';
                                                     if ($_SESSION['admin'] == 1) {
                                                         // Super Admin: langsung edit/hapus tanpa PIN modal
                                                         echo '<a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
@@ -297,6 +297,13 @@ if (empty($_SESSION['admin'])) {
 ?>
 
 <style>
+    /* Utility: prevent wrapping for specific header text */
+    th.no-wrap { white-space: nowrap; }
+    /* Utility: no wrap inline elements */
+    .nowrap { white-space: nowrap; }
+    /* Compact actions: remove spacing between buttons */
+    .actions-compact a.btn { margin-left: 0 !important; margin-right: 6px !important; }
+    .actions-compact a.btn:last-child { margin-right: 0 !important; }
     /* CSS untuk Modal PIN */
     .pin-modal-overlay {
         position: fixed;
