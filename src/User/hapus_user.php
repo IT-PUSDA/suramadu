@@ -7,17 +7,17 @@
     } else {
 
         $id_user = mysqli_real_escape_string($config, $_REQUEST['id_user']);
-        if($id_user == 1){
+    if($id_user == 1){
             echo '<script language="javascript">
                     window.alert("ERROR! Super Admin tidak boleh dihapus");
-                    window.location.href="./admin.php?page=sett&sub=usr";
+            window.location.href="index.php?page=admin&act=sett&sub=usr";
                   </script>';
         } else {
 
             if($id_user == $_SESSION['id_user']){
                 echo '<script language="javascript">
                         window.alert("ERROR! Anda tidak diperbolehkan menghapus akun Anda sendiri. Hubungi super admin untuk menghapusnya");
-                        window.location.href="./admin.php?page=sett&sub=usr";
+                        window.location.href="index.php?page=admin&act=sett&sub=usr";
                       </script>';
             } else {
 
@@ -85,8 +85,8 @@
             				   		</table>
     				            </div>
                                 <div class="card-action">
-            		                <a href="?page=sett&sub=usr&act=del&submit=yes&id_user='.$row['id_user'].'" class="btn-large deep-orange waves-effect waves-light white-text">HAPUS <i class="material-icons">delete</i></a>
-            		                <a href="?page=sett&sub=usr" class="btn-large blue waves-effect waves-light white-text">BATAL <i class="material-icons">clear</i></a>
+            		                <a href="index.php?page=admin&act=sett&sub=usr&uact=del&submit=yes&id_user='.$row['id_user'].'" class="btn-large deep-orange waves-effect waves-light white-text">HAPUS <i class="material-icons">delete</i></a>
+            		                <a href="index.php?page=admin&act=sett&sub=usr" class="btn-large blue waves-effect waves-light white-text">BATAL <i class="material-icons">clear</i></a>
             		            </div>
                             </div>
                         </div>
@@ -100,12 +100,12 @@
 
                 		if($query == true){
                             $_SESSION['succDel'] = 'SUKSES! User berhasil dihapus<br/>';
-                            header("Location: ./admin.php?page=sett&sub=usr");
+                header("Location: index.php?page=admin&act=sett&sub=usr");
                             die();
                 		} else {
                             $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
                             echo '<script language="javascript">
-                                    window.location.href="./admin.php?page=sett&sub=usr&act=del&id_user='.$id_user.'";
+                    window.location.href="index.php?page=admin&act=sett&sub=usr&uact=del&id_user='.$id_user+'";
                                   </script>';
                 		}
                 	}

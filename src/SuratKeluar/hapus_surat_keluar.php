@@ -10,7 +10,7 @@
 
         // Cek hak akses server-side: hanya Super Admin bebas PIN, lainnya wajib tiket delete + kewenangan
         $is_super_admin = ($_SESSION['admin'] == 1);
-        if (!$is_super_admin) {
+    if (!$is_super_admin) {
             // Ambil pemilik data untuk validasi owner
             $q_owner = mysqli_query($config, "SELECT id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
             list($owner_id) = mysqli_fetch_array($q_owner);

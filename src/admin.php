@@ -11,6 +11,17 @@ if (!isset($_SESSION['admin'])) {
     header("Location: index.php");
     die();
 } else {
+    // Sinkronkan level peran dari database agar perubahan langsung efektif tanpa perlu logout/login
+    if (isset($_SESSION['id_user'])) {
+        $sid = (int) $_SESSION['id_user'];
+        $resRole = mysqli_query($config, "SELECT admin FROM tbl_user WHERE id_user='$sid' LIMIT 1");
+        if ($resRole && mysqli_num_rows($resRole) === 1) {
+            list($dbAdmin) = mysqli_fetch_array($resRole);
+            if ((string)$dbAdmin !== (string)$_SESSION['admin']) {
+                $_SESSION['admin'] = (int)$dbAdmin;
+            }
+        }
+    }
 ?>
 
     <!doctype html>
