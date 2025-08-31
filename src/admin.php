@@ -209,6 +209,119 @@ if (!isset($_SESSION['admin'])) {
                         }
                         ?>
 
+                        <?php if ((int)$_SESSION['admin'] === 1) { ?>
+                        <!-- Surat Keluar per Bidang/UPT -->
+                        <div class="col s12">
+                            <div class="card" style="border-radius:10px;">
+                                <div class="card-content">
+                                    <h5 style="margin:0 0 16px; display:flex; align-items:center; gap:8px;">
+                                        <i class="material-icons" style="color:#546e7a;">dashboard</i>
+                                        Ringkasan Surat Keluar per Bidang/UPT
+                                    </h5>
+                                    <?php
+                                    // Peta grup -> daftar username uploader (berdasarkan tbl_user.username)
+                                    $BIDANG_USERNAMES = [
+                                        'sekretariat'   => ['SEKRETARIAT', 'TU'],
+                                        'psda'          => ['PSDA'],
+                                        'irigasi'       => ['IRIGASI'],
+                                        'swp'           => ['SWP'],
+                                        'binfat'        => ['BINFAT'],
+                                        'upt-kediri'    => ['KEDIRI'],
+                                        'korwil-malang' => ['MALANG'],
+                                        'korwil-surabaya'=> ['SURABAYA'],
+                                        'upt-bojonegoro'=> ['BOJONEGORO'],
+                                        'korwil-madiun' => ['MADIUN'],
+                                        'upt-bondowoso' => ['BONDOWOSO'],
+                                        'upt-lumajang'  => ['LUMAJANG'],
+                                        'upt-pasuruan'  => ['PASURUAN','PASURUAN','PASURUAN'], /* placeholder if later added */
+                                        'upt-madura'    => ['MADURA'],
+                                    ];
+
+                                    $BIDANG_LABELS = [
+                                        'sekretariat' => 'SEKRETARIAT',
+                                        'psda' => 'PSDA',
+                                        'irigasi' => 'IRIGASI',
+                                        'swp' => 'SWP',
+                                        'binfat' => 'BINFAT',
+                                        'upt-kediri' => 'UPT KEDIRI',
+                                        'korwil-malang' => 'KORWIL MALANG',
+                                        'korwil-surabaya' => 'KORWIL SURABAYA',
+                                        'upt-bojonegoro' => 'UPT BOJONEGORO',
+                                        'korwil-madiun' => 'KORWIL MADIUN',
+                                        'upt-bondowoso' => 'UPT BONDOWOSO',
+                                        'upt-lumajang' => 'UPT LUMAJANG',
+                                        'upt-pasuruan' => 'UPT PASURUAN',
+                                        'upt-madura' => 'UPT MADURA',
+                                    ];
+
+                                    $COLOR_CLASS = [
+                                        'sekretariat' => 'teal',
+                                        'psda' => 'light-blue darken-1',
+                                        'irigasi' => 'green',
+                                        'swp' => 'deep-purple',
+                                        'binfat' => 'orange darken-2',
+                                        'upt-kediri' => 'indigo',
+                                        'korwil-malang' => 'red',
+                                        'korwil-surabaya' => 'deep-orange',
+                                        'upt-bojonegoro' => 'brown',
+                                        'korwil-madiun' => 'blue-grey',
+                                        'upt-bondowoso' => 'cyan darken-1',
+                                        'upt-lumajang' => 'purple',
+                                        'upt-pasuruan' => 'lime darken-1',
+                                        'upt-madura' => 'pink darken-1',
+                                    ];
+
+                                    // Kumpulkan semua username unik dan ambil id_user-nya
+                                    $allUsernames = [];
+                                    foreach ($BIDANG_USERNAMES as $list) { foreach ($list as $u) { $allUsernames[] = strtoupper($u); } }
+                                    $allUsernames = array_values(array_unique($allUsernames));
+                                    $in = "'" . implode("','", array_map(function($s) use ($config){ return mysqli_real_escape_string($config, $s); }, $allUsernames)) . "'";
+                                    $resUsers = mysqli_query($config, "SELECT id_user, UPPER(username) AS uname FROM tbl_user WHERE UPPER(username) IN ($in)");
+                                    $unameToId = [];
+                                    if ($resUsers) {
+                                        while ($r = mysqli_fetch_assoc($resUsers)) { $unameToId[$r['uname']] = (int)$r['id_user']; }
+                                    }
+
+                                    // Ambil jumlah per bidang
+                                    $counts = [];
+                                    foreach ($BIDANG_USERNAMES as $key => $usernames) {
+                                        $ids = [];
+                                        foreach ($usernames as $u) {
+                                            $uUp = strtoupper($u);
+                                            if (isset($unameToId[$uUp])) { $ids[] = $unameToId[$uUp]; }
+                                        }
+                                        if (count($ids) === 0) { $counts[$key] = 0; continue; }
+                                        $idList = implode(',', array_map('intval', $ids));
+                                        $sql = "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_user IN ($idList)";
+                                        $res = mysqli_query($config, $sql);
+                                        $row = $res ? mysqli_fetch_assoc($res) : ['c' => 0];
+                                        $counts[$key] = (int)$row['c'];
+                                    }
+                                    ?>
+
+                                    <div class="row" style="margin-bottom:0;">
+                                        <?php foreach ($BIDANG_USERNAMES as $key => $terms): ?>
+                                            <div class="col s12 m6 l4 xl3">
+                                                <a href="index.php?page=admin&act=tsk&filter_bidang=<?php echo urlencode($key); ?>" class="block-link" style="text-decoration:none;">
+                                                    <div class="card <?php echo $COLOR_CLASS[$key] ?? 'blue-grey'; ?>" style="border-radius:12px;">
+                                                        <div class="card-content white-text" style="min-height:110px;">
+                                                            <span class="card-title" style="display:flex; align-items:center; gap:8px;"><i class="material-icons md-36">drafts</i> <?php echo $BIDANG_LABELS[$key]; ?></span>
+                                                            <h5 class="white-text" style="margin-top:6px; letter-spacing:.2px;"><?php echo number_format($counts[$key]); ?> SURAT KELUAR</h5>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+
+                                    <div class="right-align" style="margin-top:-10px;">
+                                        <small class="grey-text">Klik salah satu kartu untuk melihat daftar terfilter.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php } ?>
+
                     </div>
                     <!-- Row END -->
                 <?php

@@ -139,10 +139,61 @@ if (empty($_SESSION['admin'])) {
                                         $is_admin_user = ($_SESSION['admin'] == 4);
                                         $base_query = "FROM tbl_surat_keluar";
                                         $where_clause = "";
+                                        // Mapping bidang (sama dengan di dashboard)
+                                        // Map grup -> username uploader (untuk filter berbasis id_user)
+                                        $map = [
+                                            'sekretariat'   => ['SEKRETARIAT', 'TU'],
+                                            'psda'          => ['PSDA'],
+                                            'irigasi'       => ['IRIGASI'],
+                                            'swp'           => ['SWP'],
+                                            'binfat'        => ['BINFAT'],
+                                            'upt-kediri'    => ['KEDIRI'],
+                                            'korwil-malang' => ['MALANG'],
+                                            'korwil-surabaya'=> ['SURABAYA'],
+                                            'upt-bojonegoro'=> ['BOJONEGORO'],
+                                            'korwil-madiun' => ['MADIUN'],
+                                            'upt-bondowoso' => ['BONDOWOSO'],
+                                            'upt-lumajang'  => ['LUMAJANG'],
+                        'upt-pasuruan'  => ['PASURUAN'],
+                                            'upt-madura'    => ['MADURA'],
+                                        ];
+                                        $labels = [
+                                            'sekretariat' => 'Sekretariat',
+                                            'psda' => 'PSDA',
+                                            'irigasi' => 'Irigasi',
+                                            'swp' => 'SWP',
+                                            'binfat' => 'Binfat',
+                                            'upt-kediri' => 'UPT Kediri',
+                                            'korwil-malang' => 'Korwil Malang',
+                                            'korwil-surabaya' => 'Korwil Surabaya',
+                                            'upt-bojonegoro' => 'UPT Bojonegoro',
+                                            'korwil-madiun' => 'Korwil Madiun',
+                                            'upt-bondowoso' => 'UPT Bondowoso',
+                                            'upt-lumajang' => 'UPT Lumajang',
+                                            'upt-pasuruan' => 'UPT Pasuruan',
+                                            'upt-madura' => 'UPT Madura',
+                                        ];
 
                                         // 1. Filter Data: Jika Admin User, hanya tampilkan data miliknya
                                         if ($is_admin_user) {
                                             $where_clause .= " WHERE id_user='$id_user'";
+                                        }
+
+                                        // Jika Super Admin mengklik kartu bidang di beranda, terapkan filter bidang
+                                        if (isset($_GET['filter_bidang']) && $_GET['filter_bidang'] !== '') {
+                                            $filterKey = $_GET['filter_bidang'];
+                                            if (isset($map[$filterKey])) {
+                                                // Ambil id_user berdasarkan username grup
+                                                $usernames = array_map('strtoupper', $map[$filterKey]);
+                                                $in = "'" . implode("','", array_map(function($s) use ($config){ return mysqli_real_escape_string($config, $s); }, $usernames)) . "'";
+                                                $res = mysqli_query($config, "SELECT id_user, UPPER(username) AS uname FROM tbl_user WHERE UPPER(username) IN ($in)");
+                                                $ids = [];
+                                                if ($res) { while ($r = mysqli_fetch_assoc($res)) { $ids[] = (int)$r['id_user']; } }
+                                                if (!empty($ids)) {
+                                                    $idList = implode(',', array_map('intval', $ids));
+                                                    $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user IN ($idList)";
+                                                }
+                                            }
                                         }
 
                                         // Tambahkan filter pencarian jika ada
@@ -214,7 +265,15 @@ if (empty($_SESSION['admin'])) {
                                             }
                                             echo '</div></td></tr>';
                                         }
-                                        ?>
+                                                                                // Banner filter aktif (jika ada)
+                                                                                if (!empty($filterKey) && isset($labels[$filterKey])) {
+                                                                                        echo '<div class="card-panel blue-grey lighten-5" style="margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">'
+                                                                                                . '<span class="blue-grey-text">Filter Bidang: <strong class="black-text">' . htmlspecialchars($labels[$filterKey]) . '</strong></span>'
+                                                                                                . '<a class="btn-flat waves-effect" href="index.php?page=admin&act=tsk"><i class="material-icons left">clear</i>Hapus Filter</a>'
+                                                                                            . '</div>';
+                                                                                }
+
+                                                                                ?>
                                     </tbody>
                                 </table>
                             </div>
@@ -277,17 +336,19 @@ if (empty($_SESSION['admin'])) {
                         echo '<br/><!-- Pagination START -->
                                     <div class="center-align" style="margin: 12px 0 8px;">
                                         <ul class="pagination pager">';
-            if ($cdata > $limit) {
+        $extra = '';
+        if (!empty($_GET['filter_bidang'])) { $extra .= '&filter_bidang=' . urlencode($_GET['filter_bidang']); }
+        if ($cdata > $limit) {
                 if ($pg > 1) {
                     $prev = $pg - 1;
-                    echo '<li><a href="index.php?page=admin&act=tsk&pg=1"><i class="material-icons md-48">first_page</i></a></li><li><a href="index.php?page=admin&act=tsk&pg=' . $prev . '"><i class="material-icons md-48">chevron_left</i></a></li>';
+            echo '<li><a href="index.php?page=admin&act=tsk&pg=1' . $extra . '"><i class="material-icons md-48">first_page</i></a></li><li><a href="index.php?page=admin&act=tsk&pg=' . $prev . $extra . '"><i class="material-icons md-48">chevron_left</i></a></li>';
                 } else {
                     echo '<li class="disabled"><a><i class="material-icons md-48">first_page</i></a></li><li class="disabled"><a><i class="material-icons md-48">chevron_left</i></a></li>';
                 }
 
                 if ($pg < $cpg) {
                     $next = $pg + 1;
-                    echo '<li><a href="index.php?page=admin&act=tsk&pg=' . $next . '"><i class="material-icons md-48">chevron_right</i></a></li><li><a href="index.php?page=admin&act=tsk&pg=' . $cpg . '"><i class="material-icons md-48">last_page</i></a></li>';
+            echo '<li><a href="index.php?page=admin&act=tsk&pg=' . $next . $extra . '"><i class="material-icons md-48">chevron_right</i></a></li><li><a href="index.php?page=admin&act=tsk&pg=' . $cpg . $extra . '"><i class="material-icons md-48">last_page</i></a></li>';
                 } else {
                     echo '<li class="disabled"><a><i class="material-icons md-48">chevron_right</i></a></li><li class="disabled"><a><i class="material-icons md-48">last_page</i></a></li>';
                 }
