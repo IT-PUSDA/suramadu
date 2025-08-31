@@ -25,13 +25,19 @@ if (empty($_SESSION['file_access_granted'][$id_surat]) && (!isset($_SESSION['adm
 }
 
 // Mengambil data file dari database
-$query = mysqli_query($config, "SELECT file FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
+$query = mysqli_query($config, "SELECT file,id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
 
 if (mysqli_num_rows($query) == 0) {
     die('ERROR: Data surat tidak ditemukan.');
 }
 
-list($file) = mysqli_fetch_array($query);
+list($file, $owner_id) = mysqli_fetch_array($query);
+
+// Pembatasan tambahan untuk level Bidang (4): hanya boleh melihat file milik sendiri
+if ((int)$_SESSION['admin'] === 4 && (int)$owner_id !== (int)$_SESSION['id_user']) {
+    http_response_code(403);
+    die('Akses ditolak: Anda tidak dapat melihat file milik bidang lain.');
+}
 
 // Jika file tidak ada di database, hentikan proses
 if (empty($file)) {

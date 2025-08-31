@@ -14,10 +14,16 @@ $id_surat = mysqli_real_escape_string($config, $_POST['id_surat']);
 $submitted_pin = $_POST['pin'];
 
 // Fetch the PIN hash from the database
-$query = mysqli_query($config, "SELECT pin FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
+$query = mysqli_query($config, "SELECT pin,id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
 
 if (mysqli_num_rows($query) > 0) {
-    list($pin_hash) = mysqli_fetch_array($query);
+    list($pin_hash, $owner_id) = mysqli_fetch_array($query);
+
+    // Jika pengguna adalah level Bidang (4), batasi hanya boleh akses data miliknya
+    if (isset($_SESSION['admin']) && (int)$_SESSION['admin'] === 4 && (int)$owner_id !== (int)$_SESSION['id_user']) {
+        echo json_encode(['success' => false, 'message' => 'Anda tidak berhak mengakses data milik bidang lain.']);
+        exit();
+    }
 
     // If PIN is not set in DB (for old data), or if user is super admin, grant access
     if (empty($pin_hash) || (isset($_SESSION['admin']) && $_SESSION['admin'] == 1)) {

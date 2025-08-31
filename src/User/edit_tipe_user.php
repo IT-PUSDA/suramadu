@@ -10,38 +10,32 @@
         if($_REQUEST['id_user'] == 1){
             echo '<script language="javascript">
                     window.alert("ERROR! Super Admin tidak boleh diedit");
-                    window.location.href="./admin.php?page=sett&sub=usr";
+                    window.location.href="index.php?page=admin&act=sett&sub=usr";
                   </script>';
         } else {
 
             if($_REQUEST['id_user'] == $_SESSION['id_user']){
                 echo '<script language="javascript">
                         window.alert("ERROR! Anda tidak diperbolehkan mengedit tipe akun Anda sendiri. Hubungi super admin untuk mengeditnya");
-                        window.location.href="./admin.php?page=sett&sub=usr";
+                        window.location.href="index.php?page=admin&act=sett&sub=usr";
                       </script>';
             } else {
 
                 if(isset($_REQUEST['submit'])){
 
-                    $id_user = $_REQUEST['id_user'];
-                    $admin = $_REQUEST['admin'];
+                    $id_user = mysqli_real_escape_string($config, $_REQUEST['id_user']);
+                    $admin = mysqli_real_escape_string($config, $_REQUEST['admin']);
 
                     if($id_user == $_SESSION['id_user']){
                         echo '<script language="javascript">
                                 window.alert("ERROR! Anda tidak boleh mengedit akun Anda sendiri. Hubungi super admin untuk mengeditnya");
-                                window.location.href="./admin.php?page=sett&su
-								
-								
-								
-								
-								
-								
-								b=usr";
+                                window.location.href="index.php?page=admin&act=sett&sub=usr";
                               </script>';
                     } else {
 
-                        if(!preg_match("/^[2-4]*$/", $admin)){
-                            $_SESSION['tipeuser'] = 'Form Tipe User hanya boleh mengandung karakter angka 2 atau 3 atau 4';
+                        // Level user valid: 1-4 (Administrator, Pimpinan, Operator, Bidang)
+                        if(!preg_match("/^[1-4]$/", $admin)){
+                            $_SESSION['tipeuser'] = 'Form Tipe User hanya boleh berisi angka 1,2,3,4';
                             echo '<script language="javascript">window.history.back();</script>';
                         } else {
 
@@ -49,12 +43,12 @@
 
                             if($query == true){
                                 $_SESSION['succEdit'] = 'SUKSES! Tipe user berhasil diupdate';
-                                header("Location: ./admin.php?page=sett&sub=usr");
+                                header("Location: index.php?page=admin&act=sett&sub=usr");
                                 die();
                             } else {
                                 $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
                                 echo '<script language="javascript">
-                                        window.location.href="./admin.php?page=sett&sub=usr&act=edit&id_user='.$id_user.'";
+                                        window.location.href="index.php?page=admin&act=sett&sub=usr&uact=edit&id_user='.$id_user.'";
                                       </script>';
                             }
                         }
@@ -103,7 +97,7 @@
                         <div class="row jarak-form">
 
                             <!-- Form START -->
-                            <form class="col s12" method="post" action="?page=sett&sub=usr&act=edit">
+                            <form class="col s12" method="post" action="index.php?page=admin&act=sett&sub=usr&uact=edit">
 
                                 <!-- Row in form START -->
                                 <div class="row">
@@ -157,7 +151,7 @@
                                         <button type="submit" name="submit" class="btn-large blue waves-effect waves-light">SIMPAN <i class="material-icons">done</i></button>
                                     </div>
                                     <div class="col 6">
-                                        <a href="?page=sett&sub=usr" class="btn-large deep-orange waves-effect waves-light">BATAL <i class="material-icons">clear</i></a>
+                                        <a href="index.php?page=admin&act=sett&sub=usr" class="btn-large deep-orange waves-effect waves-light">BATAL <i class="material-icons">clear</i></a>
                                     </div>
                                 </div>
 

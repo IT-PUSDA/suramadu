@@ -15,6 +15,18 @@
                     header("Location: index.php?page=admin&act=tsk");
                     die();
                 }
+                // Tambahan: jika level Bidang (4), pastikan hanya boleh edit milik sendiri
+                if ((int)$_SESSION['admin'] === 4) {
+                    $q_owner = mysqli_query($config, "SELECT id_user FROM tbl_surat_keluar WHERE id_surat='".$id_surat."'");
+                    if ($q_owner && mysqli_num_rows($q_owner) === 1) {
+                        list($owner_id_chk) = mysqli_fetch_array($q_owner);
+                        if ((int)$owner_id_chk !== (int)$_SESSION['id_user']) {
+                            $_SESSION['err'] = '<center>ERROR! Anda tidak berhak mengedit data milik bidang lain</center>';
+                            header("Location: index.php?page=admin&act=tsk");
+                            die();
+                        }
+                    }
+                }
             }
 
             //validasi form kosong
