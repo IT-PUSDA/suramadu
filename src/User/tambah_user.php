@@ -5,24 +5,26 @@
         header("Location: ./");
         die();
     } else {
-        if(isset($_REQUEST['submit'])){
+    if(isset($_REQUEST['submit'])){
 
             //validasi form kosong
             if($_REQUEST['username'] == "" || $_REQUEST['password'] == "" || $_REQUEST['nama'] == "" || $_REQUEST['nip'] == "" || $_REQUEST['admin'] == ""){
                 $_SESSION['errEmpty'] = 'ERROR! Semua form wajib diisi!';
-                header("Location: ./admin.php?page=sett&sub=usr&act=add");
+                header("Location: index.php?page=admin&act=sett&sub=usr&uact=add");
                 die();
             } else {
 
-                $username = $_REQUEST['username'];
-                $password = $_REQUEST['password'];
-                $nama = $_REQUEST['nama'];
-                $nip = $_REQUEST['nip'];
-                $admin = $_REQUEST['admin'];
+                // sanitasi input dasar
+                $username = trim(mysqli_real_escape_string($config, $_REQUEST['username']));
+                $password = trim($_REQUEST['password']);
+                $nama = trim(mysqli_real_escape_string($config, $_REQUEST['nama']));
+                $nip = trim(mysqli_real_escape_string($config, $_REQUEST['nip']));
+                $admin = trim(mysqli_real_escape_string($config, $_REQUEST['admin']));
 
                 //validasi input data
-                if(!preg_match("/^[a-zA-Z., ]*$/", $username)){
-                    $_SESSION['uname'] = 'Form Nama hanya boleh mengandung karakter huruf, spasi, titik(.) dan koma(,)';
+                // Username: huruf/angka/underscore, minimal 5 karakter
+                if(!preg_match("/^[A-Za-z0-9_]+$/", $username)){
+                    $_SESSION['uname'] = 'Username hanya boleh huruf, angka, atau underscore (_).';
                     echo '<script language="javascript">window.history.back();</script>';
                 } else {
 
@@ -36,8 +38,9 @@
                             echo '<script language="javascript">window.history.back();</script>';
                         } else {
 
-                            if(!preg_match("/^[2-4]*$/", $admin)){
-                                $_SESSION['tipeuser'] = 'Form Tipe User hanya boleh mengandung karakter angka 2,3,4';
+                            // Level user: 1-4 (sesuai pilihan pada select)
+                            if(!preg_match("/^[1-4]$/", $admin)){
+                                $_SESSION['tipeuser'] = 'Form Tipe User hanya boleh berisi angka 1,2,3,4';
                                 echo '<script language="javascript">window.history.back();</script>';
                             } else {
 
@@ -49,8 +52,8 @@
                                     echo '<script language="javascript">window.history.back();</script>';
                                 } else {
 
-                                    if(strlen($username) < 1){
-                                        $_SESSION['errUser5'] = 'Username minimal 1 karakter!';
+                                    if(strlen($username) < 5){
+                                        $_SESSION['errUser5'] = 'Username minimal 5 karakter!';
                                         echo '<script language="javascript">window.history.back();</script>';
                                     } else {
 
@@ -63,7 +66,7 @@
 
                                             if($query != false){
                                                 $_SESSION['succAdd'] = 'SUKSES! User baru berhasil ditambahkan';
-                                                header("Location: ./admin.php?page=sett&sub=usr");
+                                                header("Location: index.php?page=admin&act=sett&sub=usr");
                                                 die();
                                             } else {
                                                 $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
@@ -86,7 +89,7 @@
                     <nav class="secondary-nav">
                         <div class="nav-wrapper blue-grey darken-1">
                             <ul class="left">
-                                <li class="waves-effect waves-light"><a href="?page=sett&sub=usr&act=add" class="judul"><i class="material-icons">person_add</i> Tambah User</a></li>
+                                <li class="waves-effect waves-light"><a href="index.php?page=admin&act=sett&sub=usr&uact=add" class="judul"><i class="material-icons">person_add</i> Tambah User</a></li>
                             </ul>
                         </div>
                     </nav>
@@ -128,7 +131,7 @@
             <div class="row jarak-form">
 
                 <!-- Form START -->
-                <form class="col s12" method="post" action="?page=sett&sub=usr&act=add">
+                <form class="col s12" method="post" action="index.php?page=admin&act=sett&sub=usr&uact=add">
 
                     <!-- Row in form START -->
                     <div class="row">
@@ -216,7 +219,7 @@
                             <button type="submit" name="submit" class="btn-large blue waves-effect waves-light">SIMPAN <i class="material-icons">done</i></button>
                         </div>
                         <div class="col 6">
-                            <a href="?page=sett&sub=usr" class="btn-large deep-orange waves-effect waves-light">BATAL <i class="material-icons">clear</i></a>
+                            <a href="index.php?page=admin&act=sett&sub=usr" class="btn-large deep-orange waves-effect waves-light">BATAL <i class="material-icons">clear</i></a>
                         </div>
                     </div>
 
