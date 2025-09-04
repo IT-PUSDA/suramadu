@@ -100,7 +100,6 @@
                                 <ul>
                                     <li><a href="index.php?page=admin&act=sett">Instansi</a></li>
                                     <li><a href="index.php?page=admin&act=sett&sub=usr">User</a></li>
-                                    <li><a href="index.php?page=admin&act=sett&sub=ret">Retensi</a></li>
                                     <li><a href="index.php?page=admin&act=sett&sub=back">Backup Database</a></li>
                                     <li><a href="index.php?page=admin&act=sett&sub=rest">Restore Database</a></li>
                                 </ul>

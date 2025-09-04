@@ -33,8 +33,7 @@ Thumbs.db
 /cache/
 
 # Upload directories
-/upload/surat_keluar
-/uploads/
+/upload/
 /files/
 /src/include/config.php
 
