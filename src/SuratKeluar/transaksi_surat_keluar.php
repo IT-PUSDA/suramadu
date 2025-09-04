@@ -74,7 +74,7 @@ if (empty($_SESSION['admin'])) {
                                 <div class="col m5 hide-on-med-and-down">
                                     <form method="post" action="index.php?page=admin&act=tsk">
                                         <div class="input-field round-in-box">
-                                            <input id="search" type="search" name="cari" placeholder="Ketik dan tekan enter mencari data..." required>
+                                            <input id="search" type="search" name="cari" placeholder="Ketik untuk mencari data..." autocomplete="off" required>
                                             <label for="search"><i class="material-icons">search</i></label>
                                             <input type="submit" name="submit" class="hidden">
                                         </div>
@@ -110,6 +110,10 @@ if (empty($_SESSION['admin'])) {
                 <div class="col m12" id="colres">
                     <div class="card">
                         <div class="card-content">
+                            <!-- Panel info hasil pencarian (live) -->
+                            <div id="search-info-panel" class="card-panel blue-grey lighten-5" style="margin-bottom: 20px; display: none;">
+                                <p class="blue-grey-text">Hasil pencarian untuk: <strong class="black-text" id="search-info-text"></strong></p>
+                            </div>
                             <?php
                             if (isset($_REQUEST['submit'])) {
                                 $cari = mysqli_real_escape_string($config, $_REQUEST['cari']);
@@ -133,7 +137,7 @@ if (empty($_SESSION['admin'])) {
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="tbody-data">
                                         <?php
                                         // PENERAPAN LOGIKA HAK AKSES DIMULAI DI SINI
                                         $is_admin_user = ($_SESSION['admin'] == 4);
@@ -199,7 +203,7 @@ if (empty($_SESSION['admin'])) {
                                         // Tambahkan filter pencarian jika ada
                                         if (isset($_REQUEST['submit'])) {
                                             $cari = mysqli_real_escape_string($config, $_REQUEST['cari']);
-                                            $search_condition = "(isi LIKE '%$cari%' OR perihal LIKE '%$cari%' OR tujuan LIKE '%$cari%')";
+                                            $search_condition = "(isi LIKE '%$cari%' OR perihal LIKE '%$cari%' OR tujuan LIKE '%$cari%' OR No_Surat LIKE '%$cari%')";
                                             $where_clause .= ($is_admin_user ? " AND " : " WHERE ") . $search_condition;
                                         }
 
@@ -508,6 +512,69 @@ if (empty($_SESSION['admin'])) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Live search setup
+    const searchInput = document.getElementById('search');
+    const tbody = document.getElementById('tbody-data');
+    const infoPanel = document.getElementById('search-info-panel');
+    const infoText = document.getElementById('search-info-text');
+    let searchTimer;
+
+    function debounce(fn, wait) {
+        let t;
+        return function (...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    function getFilterBidangParam() {
+        const params = new URLSearchParams(window.location.search);
+        const v = params.get('filter_bidang');
+        return v ? `&filter_bidang=${encodeURIComponent(v)}` : '';
+    }
+
+    function updateInfoPanel(q) {
+        if (q && q.trim() !== '') {
+            infoText.textContent = q;
+            infoPanel.style.display = 'block';
+        } else {
+            infoPanel.style.display = 'none';
+            infoText.textContent = '';
+        }
+    }
+
+    function rebindPinTriggers() {
+        // Remove previous to avoid duplicate handlers
+        document.querySelectorAll('.pin-trigger').forEach(el => {
+            const newEl = el.cloneNode(true);
+            el.parentNode.replaceChild(newEl, el);
+        });
+        // Reattach handler using the same logic below
+        attachPinHandlers();
+    }
+
+    const doLiveSearch = debounce(() => {
+        const q = searchInput.value;
+        updateInfoPanel(q);
+        const url = `src/SuratKeluar/ajax_search_surat_keluar.php?cari=${encodeURIComponent(q || '')}${getFilterBidangParam()}`;
+        fetch(url, { credentials: 'same-origin' })
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(html => {
+                tbody.innerHTML = html;
+                rebindPinTriggers();
+            })
+            .catch(err => {
+                console.error('Live search error:', err);
+            });
+    }, 300);
+
+    if (searchInput && tbody) {
+        searchInput.addEventListener('input', doLiveSearch);
+    }
+
     const modal = document.getElementById('pinModal');
     const modalClose = modal.querySelector('.pin-modal-close');
     const pinForm = document.getElementById('pinForm');
@@ -545,16 +612,20 @@ document.addEventListener('DOMContentLoaded', function () {
         suratId = '';
     }
 
-    // Event listener untuk semua tombol yang butuh PIN
-    document.querySelectorAll('.pin-trigger').forEach(trigger => {
-        trigger.addEventListener('click', function (e) {
-            e.preventDefault();
-            targetUrl = this.getAttribute('href');
-            actionType = this.dataset.actionType;
-            suratId = this.dataset.idSurat;
-            openModal();
+    function attachPinHandlers() {
+        document.querySelectorAll('.pin-trigger').forEach(trigger => {
+            trigger.addEventListener('click', function (e) {
+                e.preventDefault();
+                targetUrl = this.getAttribute('href');
+                actionType = this.dataset.actionType;
+                suratId = this.dataset.idSurat;
+                openModal();
+            });
         });
-    });
+    }
+
+    // Initial bind for existing content
+    attachPinHandlers();
 
     // Event listener untuk tombol close
     modalClose.addEventListener('click', closeModal);
