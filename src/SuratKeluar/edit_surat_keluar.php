@@ -12,7 +12,8 @@
             if ($_SESSION['admin'] != 1) {
                 if (empty($_SESSION['edit_access_granted'][$id_surat])) {
                     $_SESSION['err'] = '<center>ERROR! Verifikasi PIN diperlukan untuk mengedit</center>';
-                    header("Location: index.php?page=admin&act=tsk");
+                    $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+                    header("Location: index.php?page=admin&act=".$ret_act);
                     die();
                 }
                 // Tambahan: jika level Bidang (4), pastikan hanya boleh edit milik sendiri
@@ -22,7 +23,8 @@
                         list($owner_id_chk) = mysqli_fetch_array($q_owner);
                         if ((int)$owner_id_chk !== (int)$_SESSION['id_user']) {
                             $_SESSION['err'] = '<center>ERROR! Anda tidak berhak mengedit data milik bidang lain</center>';
-                            header("Location: index.php?page=admin&act=tsk");
+                            $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+                            header("Location: index.php?page=admin&act=".$ret_act);
                             die();
                         }
                     }
@@ -130,7 +132,8 @@
                                                                 unset($_SESSION['edit_access_granted'][$id_surat]);
                                                                 if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                                 $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
-                                                                header("Location: index.php?page=admin&act=tsk");
+                                                                $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+                                                                header("Location: index.php?page=admin&act=".$ret_act);
                                                                 die();
                                                             } else {
                                                                 $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
@@ -150,7 +153,8 @@
                                                                 unset($_SESSION['edit_access_granted'][$id_surat]);
                                                                 if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                                 $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
-                                                                header("Location: index.php?page=admin&act=tsk");
+                                                                $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+                                                                header("Location: index.php?page=admin&act=".$ret_act);
                                                                 die();
                                                             } else {
                                                                 $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
@@ -178,7 +182,8 @@
                                                     unset($_SESSION['edit_access_granted'][$id_surat]);
                                                     if ($pin_clause !== '') { $_SESSION['pinResetIds'][$id_surat] = true; }
                                                     $_SESSION['succEdit'] = 'SUKSES! Data berhasil diupdate';
-                                                    header("Location: index.php?page=admin&act=tsk");
+                                                    $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+                                                    header("Location: index.php?page=admin&act=".$ret_act);
                                                     die();
                                                 } else {
                                                     $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
@@ -205,7 +210,9 @@
             if(!$is_super_admin && (empty($_SESSION['edit_access_granted'][$id_surat]) || (!$is_owner && !$can_manage_any))){
                                 echo '<script language="javascript">
                                                 window.alert("ERROR! Anda tidak memiliki hak akses untuk mengedit data ini");
-                                                window.location.href="index.php?page=admin&act=tsk";
+                                                var params = (function(q){ var o={}; q.replace(/^[?]/,"").split("&").forEach(function(p){ if(!p) return; var s=p.split("="); o[decodeURIComponent(s[0])] = decodeURIComponent(s[1]||""); }); return o; })(window.location.search);
+                                                var act = params.act || "tsk";
+                                                window.location.href = "index.php?page=admin&act=" + act;
                                             </script>';
             } else {?>
 
@@ -258,7 +265,8 @@
                 <div class="row jarak-form">
 
                     <!-- Form START -->
-                    <form class="col s12" method="POST" action="index.php?page=admin&act=tsk&sub=edit" enctype="multipart/form-data">
+                    <form class="col s12" method="POST" action="index.php?page=admin&sub=edit" enctype="multipart/form-data">
+                        <input type="hidden" name="act" value="<?php echo isset($_REQUEST['act']) ? htmlspecialchars($_REQUEST['act']) : 'tsk'; ?>"/>
 
                         <!-- Row in form START -->
                         <div class="row">

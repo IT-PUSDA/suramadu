@@ -67,6 +67,15 @@ if (!isset($_SESSION['admin'])) {
                         case 'tsk':
                             include(BASE_PATH . '/src/SuratKeluar/transaksi_surat_keluar.php');
                             break;
+                        case 'tsk_nd':
+                            include(BASE_PATH . '/src/SuratKeluar/transaksi_surat_keluar_nota_dinas.php');
+                            break;
+                        case 'tsk_ph':
+                            include(BASE_PATH . '/src/SuratKeluar/transaksi_surat_keluar_produk_hukum.php');
+                            break;
+                        case 'tsk_keu':
+                            include(BASE_PATH . '/src/SuratKeluar/transaksi_surat_keluar_keuangan.php');
+                            break;
                         case 'not':
                             include(BASE_PATH . '/src/NotaDinas/transaksi_nota_dinas.php');
                             break;
@@ -139,6 +148,22 @@ if (!isset($_SESSION['admin'])) {
                         } else {
                             $count2 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_keluar"));
                         }
+                        // cek apakah kolom jenis ada
+                        $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+                        if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
+                        // hitung jumlah per jenis (mengikuti batasan operator bila ada)
+                        $whereUser = ($_SESSION['admin'] == 4) ? (" AND id_user='" . intval($_SESSION['id_user']) . "'") : '';
+                        if ($hasJenis) {
+                            $qND = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='nota_dinas'".$whereUser);
+                            $qPH = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='produk_hukum'".$whereUser);
+                            $qKEU = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='keuangan'".$whereUser);
+                            $countND = ($qND ? (int)mysqli_fetch_assoc($qND)['c'] : 0);
+                            $countPH = ($qPH ? (int)mysqli_fetch_assoc($qPH)['c'] : 0);
+                            $countKEU = ($qKEU ? (int)mysqli_fetch_assoc($qKEU)['c'] : 0);
+                        } else {
+                            // fallback bila kolom belum ada
+                            $countND = 0; $countPH = 0; $countKEU = 0;
+                        }
                         //menghitung jumlah surat masuk
                         if ($_SESSION['admin'] == 4) {
                             $id_user = $_SESSION['id_user'];
@@ -165,12 +190,48 @@ if (!isset($_SESSION['admin'])) {
                     </div>
                 </div> -->
 
-                        <div class="col s12 m4">
-                            <div class="card lime darken-1">
-                                <div class="card-content">
-                                    <span class="card-title white-text"><i class="material-icons md-36">drafts</i> Jumlah Surat Keluar</span>
-                                    <a href="index.php?page=admin&act=tsk"><?php echo '<h5 class="white-text link">' . $count2 . ' Surat Keluar</h5>'; ?></a>
+                        <div class="col s12">
+                            <div class="row home-stats" style="margin-bottom: 0;">
+                            <div class="col s12 m6 l3">
+                                <div class="card lime darken-1 hs-card">
+                                    <div class="card-content">
+                                        <span class="card-title white-text"><i class="material-icons md-36">drafts</i> Surat Keluar</span>
+                                        <a href="index.php?page=admin&act=tsk" class="white-text" style="text-decoration:none;"><h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($count2); ?> SURAT KELUAR</h5></a>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <!-- Kartu shortcut jenis Surat Keluar -->
+                            <div class="col s12 m6 l3">
+                                <a href="index.php?page=admin&act=tsk_nd" class="hs-link">
+                                    <div class="card teal hs-card">
+                                        <div class="card-content">
+                                            <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">assignment</i> Nota Dinas</span>
+                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countND); ?> SURAT NOTA DINAS</h5>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col s12 m6 l3">
+                                <a href="index.php?page=admin&act=tsk_ph" class="hs-link">
+                                    <div class="card deep-orange hs-card">
+                                        <div class="card-content">
+                                            <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">gavel</i> Produk Hukum</span>
+                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countPH); ?> SURAT PRODUK HUKUM</h5>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col s12 m6 l3">
+                                <a href="index.php?page=admin&act=tsk_keu" class="hs-link">
+                                    <div class="card indigo hs-card">
+                                        <div class="card-content">
+                                            <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">attach_money</i> Keuangan</span>
+                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countKEU); ?> SURAT KEUANGAN</h5>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
                             </div>
                         </div>
                         <!--
@@ -194,20 +255,20 @@ if (!isset($_SESSION['admin'])) {
                 </div>
     			-->
 
-                        <?php
-                        if ($_SESSION['id_user'] == 1 || $_SESSION['admin'] == 3) { ?>
-                            <div class="col s12 m4">
-                                <div class="card blue accent-2">
+                        <?php if ($_SESSION['id_user'] == 1 || $_SESSION['admin'] == 3) { ?>
+                        <div class="col s12">
+                            <div class="row home-stats" style="margin-top:16px; margin-bottom:0;">
+                            <div class="col s12 m6 l3">
+                                <div class="card blue accent-2 hs-card">
                                     <div class="card-content">
-                                        <span class="card-title white-text"><i class="material-icons md-36">people</i> Jumlah Pengguna</span>
-                                        <a><?php echo '<h5 class="white-text link">' . $count5 . ' Pengguna</h5>'; ?></a>
+                                        <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">people</i> Jumlah Pengguna</span>
+                                        <h5 class="white-text" style="margin:8px 0 0;"><?php echo number_format($count5); ?> PENGGUNA</h5>
                                     </div>
                                 </div>
+                                </div>
                             </div>
-                            <!-- Info Statistic START -->
-                        <?php
-                        }
-                        ?>
+                        </div>
+                        <?php } ?>
 
                         <?php if ((int)$_SESSION['admin'] === 1) { ?>
                         <!-- Surat Keluar per Bidang/UPT -->
@@ -339,6 +400,29 @@ if (!isset($_SESSION['admin'])) {
 
     </body>
     <!-- Body END -->
+
+    <style>
+        /* Home cards: uniform size + rounded corners */
+    .home-stats .card.hs-card { border-radius: 14px; height: 120px; display:flex; }
+    .home-stats .card.hs-card .card-content { border-radius: 14px; display:flex; flex-direction:column; justify-content:center; height:100%; padding: 16px 18px; }
+        .home-stats .hs-link { text-decoration: none; display:block; }
+        .home-stats .hs-sub { margin-top: 8px; opacity: .95; font-weight: 500; }
+        /* Make icons and titles align nicely */
+        .home-stats .card-title { margin: 0; line-height: 1.1; }
+        /* Smaller, cleaner count text on home cards */
+        .home-stats .card.hs-card h5.link { font-size: 1.15rem; font-weight: 600; letter-spacing: .2px; margin: 6px 0 0; }
+    /* Align with default Materialize gutters to match rows above/below */
+    .row.home-stats { margin-left: -0.75rem; margin-right: -0.75rem; }
+    .home-stats .col { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .home-stats .card.hs-card { margin: 8px 0; }
+    @media (max-width: 992px) { .home-stats .card.hs-card { height: 115px; } }
+        @media (max-width: 600px) {
+            .home-stats .card.hs-card { height: auto; }
+            .home-stats .card.hs-card h5.link { font-size: 1.05rem; }
+            .row.home-stats { margin-left: -0.75rem; margin-right: -0.75rem; }
+            .home-stats .col { padding-left: 0.75rem; padding-right: 0.75rem; }
+        }
+    </style>
 
     </html>
 

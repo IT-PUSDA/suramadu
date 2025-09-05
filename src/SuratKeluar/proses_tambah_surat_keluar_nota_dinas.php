@@ -1,0 +1,116 @@
+<?php
+// Proses penyimpanan Surat Keluar - Nota Dinas
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/../include/config.php';
+
+if (empty($_SESSION['admin'])) {
+    $_SESSION['err'] = '<center>Anda harus login terlebih dahulu!</center>';
+    header('Location: index.php');
+    die();
+}
+
+if (isset($_REQUEST['submit1'])) {
+    if (empty($_REQUEST['kode']) || empty($_REQUEST['perihal']) || empty($_REQUEST['tujuan']) || empty($_REQUEST['tgl_surat']) || empty($_REQUEST['isi']) || empty($_REQUEST['nama_pembuat']) || empty($_REQUEST['pin'])) {
+        $_SESSION['errEmpty'] = 'ERROR! Semua form wajib diisi';
+    header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
+        die();
+    }
+
+    $nkode = $_REQUEST['kode'];
+    $perihal = $_REQUEST['perihal'];
+    $tujuan = $_REQUEST['tujuan'];
+    $tgl_surat = $_REQUEST['tgl_surat'];
+    $isi = $_REQUEST['isi'];
+    $id_user = $_SESSION['id_user'];
+    $bidang = $_REQUEST['bidang'];
+    $nama_pembuat = $_REQUEST['nama_pembuat'];
+
+    $raw_pin = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
+    if (!(ctype_digit($raw_pin) && strlen($raw_pin) === 6)) {
+        $_SESSION['pink'] = 'PIN harus berupa tepat 6 digit angka';
+    header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
+        die();
+    }
+    $pin = password_hash($raw_pin, PASSWORD_DEFAULT);
+
+    // Nomor agenda: halaman-baris. Maks 100 baris per halaman. Reset setiap awal tahun dan dipisah per jenis bila kolom tersedia.
+    $year = date('Y', strtotime($tgl_surat));
+    $hasJenisForQuery = false; $resJenisQ = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+    if ($resJenisQ && mysqli_num_rows($resJenisQ) === 1) { $hasJenisForQuery = true; }
+    $filterJenis = $hasJenisForQuery ? " AND jenis='nota_dinas'" : "";
+    $uid = (int)$id_user;
+    $qcount = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE YEAR(tgl_surat)='".$year."' AND id_user='".$uid."'".$filterJenis);
+    $totalThisYear = 0; if ($qcount) { $rc = mysqli_fetch_assoc($qcount); $totalThisYear = (int)$rc['c']; }
+    $next = $totalThisYear + 1; // urutan ke-n dalam tahun tsb
+    $page = (int)ceil($next / 100);
+    $line = (int)((($next - 1) % 100) + 1);
+    $lineStr = ($line === 100) ? '100' : sprintf('%02d', $line);
+    $no_agenda = sprintf('%02d', $page) . '-' . $lineStr; // contoh: 01-01 ... 01-100, 02-01, dst
+    $no_agendak = sprintf('%02d', $page) . $lineStr;      // tanpa dash untuk keperluan no_surat
+
+    $q1 = mysqli_query($config, "SELECT max(id_surat) as urut FROM tbl_surat_keluar");
+    $data1 = mysqli_fetch_array($q1);
+    $id_surat = ($data1['urut'] ?? 0) + 1;
+
+    // Format umum (sama seperti default) : kode/no_agenda/bidang/tahun
+    $no_surat = $nkode . '/' . $no_agendak . '/' . $bidang . '/' . $year;
+
+    // Validasi input
+    if (!preg_match('/^[0-9.]*$/', $nkode)) { $_SESSION['kodek']='Form Kode Klasifikasi hanya boleh mengandung karakter angka'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+    if (!preg_match('/^[a-zA-Z0-9.\/ -]*$/', $no_surat)) { $_SESSION['no_suratk']='Form No Surat hanya boleh mengandung karakter huruf, angka, spasi, titik(.), minus(-) dan garis miring(/)'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $perihal)) { $_SESSION['perihal']='Form Perihal tidak valid'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $tujuan)) { $_SESSION['tujuan']='Form Tujuan tidak valid'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+    if (!preg_match('/^[0-9.-]*$/', $tgl_surat)) { $_SESSION['tgl_suratk']='Form Tanggal Surat tidak valid'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $isi)) { $_SESSION['isik']='Form Isi Ringkas tidak valid'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+    if (!preg_match('/^[0-9.]*$/', $bidang)) { $_SESSION['bidangk']='Form Bidang hanya boleh angka & titik(.)'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+
+    $cek = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
+    if (mysqli_num_rows($cek) > 0) { $_SESSION['errDup']='Nomor Surat sudah terpakai, gunakan yang lain!'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+
+    // Upload file
+    $nfile = '';
+    if (!empty($_FILES['file']['name'])) {
+        $ekstensi = ['pdf'];
+        $file = $_FILES['file']['name'];
+        $x = explode('.', $file);
+        $eks = strtolower(end($x));
+        $ukuran = $_FILES['file']['size'];
+        $target_dir = BASE_PATH . "/upload/surat_keluar/";
+        $max_size = 2097152; // 2MB
+        if (in_array($eks, $ekstensi) === true) {
+            if ($ukuran < $max_size) {
+                $rand = rand(1, 10000);
+                $nfile = $rand . "-" . $file;
+                if (!move_uploaded_file($_FILES['file']['tmp_name'], $target_dir . $nfile)) {
+                    $_SESSION['errQ'] = 'ERROR! Gagal mengupload file.';
+                    header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
+                    die();
+                }
+            } else { $_SESSION['errSize']='Ukuran file terlalu besar! Maks 2 MB.'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+        } else { $_SESSION['errFormat']='Format file yang diperbolehkan hanya *.PDF!'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+    }
+
+    // Tambahkan kolom jenis bila tersedia
+    $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+    if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
+
+    if ($hasJenis) {
+        $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin,jenis)
+                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin','nota_dinas')");
+    } else {
+        $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin)
+                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin')");
+    }
+    if ($query) {
+        $_SESSION['succAdd'] = 'SUKSES! Data berhasil ditambahkan';
+        header('Location: index.php?page=admin&act=tsk_nd');
+        die();
+    } else {
+        $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query: ' . mysqli_error($config);
+        header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
+        die();
+    }
+}

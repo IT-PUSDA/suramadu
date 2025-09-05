@@ -21,6 +21,15 @@ if (empty($_SESSION['admin'])) {
                 case 'add':
                     include 'tambah_surat_keluar.php';
                     break;
+                case 'add_nota_dinas':
+                    include 'tambah_surat_keluar_nota_dinas.php';
+                    break;
+                case 'add_produk_hukum':
+                    include 'tambah_surat_keluar_produk_hukum.php';
+                    break;
+                case 'add_keuangan':
+                    include 'tambah_surat_keluar_keuangan.php';
+                    break;
                 case 'edit':
                     include 'edit_surat_keluar.php';
                     break;
@@ -29,6 +38,15 @@ if (empty($_SESSION['admin'])) {
                     break;
                 case 'proses_tambah':
                     include 'proses_tambah_surat_keluar.php';
+                    break;
+                case 'proses_tambah_nota_dinas':
+                    include 'proses_tambah_surat_keluar_nota_dinas.php';
+                    break;
+                case 'proses_tambah_produk_hukum':
+                    include 'proses_tambah_surat_keluar_produk_hukum.php';
+                    break;
+                case 'proses_tambah_keuangan':
+                    include 'proses_tambah_surat_keluar_keuangan.php';
                     break;
             }
         } else {

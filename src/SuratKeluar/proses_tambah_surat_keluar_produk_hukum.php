@@ -1,0 +1,79 @@
+<?php
+// Proses Surat Keluar - Produk Hukum
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+require_once __DIR__ . '/../include/config.php';
+
+if (empty($_SESSION['admin'])) { $_SESSION['err']='<center>Anda harus login terlebih dahulu!</center>'; header('Location: index.php'); die(); }
+
+if (isset($_REQUEST['submit1'])) {
+    if (empty($_REQUEST['kode']) || empty($_REQUEST['perihal']) || empty($_REQUEST['tujuan']) || empty($_REQUEST['tgl_surat']) || empty($_REQUEST['isi']) || empty($_REQUEST['nama_pembuat']) || empty($_REQUEST['pin'])) {
+    $_SESSION['errEmpty']='ERROR! Semua form wajib diisi'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die();
+    }
+
+    $nkode = $_REQUEST['kode'];
+    $perihal = $_REQUEST['perihal'];
+    $tujuan = $_REQUEST['tujuan'];
+    $tgl_surat = $_REQUEST['tgl_surat'];
+    $isi = $_REQUEST['isi'];
+    $id_user = $_SESSION['id_user'];
+    $bidang = $_REQUEST['bidang'];
+    $nama_pembuat = $_REQUEST['nama_pembuat'];
+
+    $raw_pin = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
+    if (!(ctype_digit($raw_pin) && strlen($raw_pin) === 6)) { $_SESSION['pink']='PIN harus berupa tepat 6 digit angka'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    $pin = password_hash($raw_pin, PASSWORD_DEFAULT);
+
+    $year = date('Y', strtotime($tgl_surat));
+    // Agenda halaman-baris: 100 baris per halaman, reset per tahun & per jenis bila kolom tersedia
+    $hasJenisForQuery = false; $resJenisQ = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+    if ($resJenisQ && mysqli_num_rows($resJenisQ) === 1) { $hasJenisForQuery = true; }
+    $filterJenis = $hasJenisForQuery ? " AND jenis='produk_hukum'" : "";
+    $uid = (int)$id_user;
+    $qcount = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE YEAR(tgl_surat)='".$year."' AND id_user='".$uid."'".$filterJenis);
+    $totalThisYear = 0; if ($qcount) { $rc = mysqli_fetch_assoc($qcount); $totalThisYear = (int)$rc['c']; }
+    $next = $totalThisYear + 1;
+    $page = (int)ceil($next / 100);
+    $line = (int)((($next - 1) % 100) + 1);
+    $lineStr = ($line === 100) ? '100' : sprintf('%02d', $line);
+    $no_agenda = sprintf('%02d', $page) . '-' . $lineStr;
+    $no_agendak = sprintf('%02d', $page) . $lineStr;
+
+    $q1 = mysqli_query($config, "SELECT max(id_surat) as urut FROM tbl_surat_keluar"); $d1 = mysqli_fetch_array($q1); $id_surat = ($d1['urut'] ?? 0) + 1;
+
+    // FORMAT KHUSUS PRODUK HUKUM: no_surat/kode_bidang/no_agenda/tahun
+    // no_surat pada produk hukum menggunakan isian perihal kode utama ($nkode) sebagai leading code
+    $no_surat = $nkode . '/' . $bidang . '/' . $no_agendak . '/' . $year;
+
+    // Validasi
+    if (!preg_match('/^[0-9.]*$/', $nkode)) { $_SESSION['kodek']='Form Kode Klasifikasi hanya angka & titik'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    if (!preg_match('/^[a-zA-Z0-9.\/ -]*$/', $no_surat)) { $_SESSION['no_suratk']='No Surat tidak valid'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $perihal)) { $_SESSION['perihal']='Perihal tidak valid'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $tujuan)) { $_SESSION['tujuan']='Tujuan tidak valid'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    if (!preg_match('/^[0-9.-]*$/', $tgl_surat)) { $_SESSION['tgl_suratk']='Tanggal tidak valid'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $isi)) { $_SESSION['isik']='Isi ringkas tidak valid'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    if (!preg_match('/^[0-9.]*$/', $bidang)) { $_SESSION['bidangk']='Bidang tidak valid'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+
+    $dup = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
+    if (mysqli_num_rows($dup) > 0) { $_SESSION['errDup']='Nomor Surat sudah terpakai, gunakan yang lain!'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+
+    // Upload file
+    $nfile = '';
+    if (!empty($_FILES['file']['name'])) {
+        $ekstensi = ['pdf']; $file = $_FILES['file']['name']; $x = explode('.', $file); $eks = strtolower(end($x)); $ukuran = $_FILES['file']['size'];
+        $target_dir = BASE_PATH . '/upload/surat_keluar/'; $max = 2097152;
+        if (in_array($eks, $ekstensi)) { if ($ukuran < $max) { $nfile = rand(1,10000).'-'.$file; if (!move_uploaded_file($_FILES['file']['tmp_name'],$target_dir.$nfile)) { $_SESSION['errQ']='ERROR! Gagal mengupload file.'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); } } else { $_SESSION['errSize']='Ukuran file terlalu besar! Maks 2 MB.'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); } } else { $_SESSION['errFormat']='Format file yang diperbolehkan hanya *.PDF!'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    }
+
+    // Insert with jenis if column exists
+    $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'"); if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
+    if ($hasJenis) {
+        $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin,jenis) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin','produk_hukum')";
+    } else {
+        $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin')";
+    }
+    $ok = mysqli_query($config, $sql);
+    if ($ok) { $_SESSION['succAdd']='SUKSES! Data berhasil ditambahkan'; header('Location: index.php?page=admin&act=tsk_ph'); die(); }
+    $_SESSION['errQ']='ERROR! Ada masalah dengan query: '.mysqli_error($config); header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die();
+}

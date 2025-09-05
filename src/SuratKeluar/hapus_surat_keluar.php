@@ -19,7 +19,8 @@
 
             if ((!$can_manage && !$is_owner) || empty($_SESSION['delete_access_granted'][$id_surat])) {
                 $_SESSION['err'] = '<center>ERROR! Anda tidak memiliki izin menghapus surat ini</center>';
-                header("Location: index.php?page=admin&act=tsk");
+                $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+                header("Location: index.php?page=admin&act=".$ret_act);
                 die();
             }
         }
@@ -45,11 +46,13 @@
             // Hapus tiket akses delete setelah sukses (sekali pakai)
             unset($_SESSION['delete_access_granted'][$id_surat]);
             $_SESSION['succDel'] = 'SUKSES! Data dan file berhasil dihapus';
-            header("Location: index.php?page=admin&act=tsk");
+            $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+            header("Location: index.php?page=admin&act=".$ret_act);
             die();
         } else {
             $_SESSION['errQ'] = 'ERROR! Gagal menghapus data';
-            header("Location: index.php?page=admin&act=tsk");
+            $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+            header("Location: index.php?page=admin&act=".$ret_act);
             die();
         }
     }
