@@ -106,7 +106,21 @@
         } else {
 
             // pagging & search
-            $limit = 10;
+            // Dynamic limit: Super Admin can change jumlah data per halaman via dropdown (per_page)
+            // Perubahan konsep: gunakan modal (ikon gear) seperti transaksi_surat_keluar.php
+            // Terima pengaturan via POST (bukan GET) untuk konsistensi dengan halaman lain
+            if(isset($_POST['simpan_user_per_page']) && $_SESSION['admin']==1){
+                $pp_raw = intval($_POST['user_per_page']);
+                $allowed = [5,10,20,50,100];
+                if(in_array($pp_raw,$allowed)){
+                    $_SESSION['user_per_page'] = $pp_raw;
+                }
+                // Redirect agar form tidak re-submit saat refresh
+                header('Location: index.php?page=admin&act=sett&sub=usr');
+                die();
+            }
+            $limit = isset($_SESSION['user_per_page']) ? intval($_SESSION['user_per_page']) : 10;
+            if($limit <=0){ $limit = 10; }
             $pg = @$_GET['pg'];
             $q = isset($_GET['q']) ? trim(mysqli_real_escape_string($config, $_GET['q'])) : '';
                 if(empty($pg)){
@@ -145,17 +159,17 @@
                                                     }
 
                                                 echo '</li></ul>';
-                                                // Search form (GET)
-                        echo '<form method="get" class="right" style="margin:8px 12px 0 0;">'
-                                                    .'<input type="hidden" name="page" value="admin"/>'
-                                                    .'<input type="hidden" name="act" value="sett"/>'
-                                                    .'<input type="hidden" name="sub" value="usr"/>'
-                                                    .'<div class="input-field" style="margin:0;">'
-                                                        .'<input id="search" type="search" name="q" value="'.htmlspecialchars($q,ENT_QUOTES).'" placeholder="Cari username/nama" />'
-                                                        .'<label class="label-icon" for="search"><i class="material-icons">search</i></label>'
-                            .'<a href="index.php?page=admin&act=sett&sub=usr" class="btn-flat white-text" title="Bersihkan pencarian"><i class="material-icons">close</i></a>'
-                                                    .'</div>'
-                                                .'</form>';
+                                                // Search form (GET) - revert to standard round-in-box style for consistency
+                        echo '<form method="get" class="right hide-on-small-only" style="margin:0;">'
+                            .'<input type="hidden" name="page" value="admin" />'
+                            .'<input type="hidden" name="act" value="sett" />'
+                            .'<input type="hidden" name="sub" value="usr" />'
+                            .'<div class="input-field round-in-box" style="padding:8px 0;">'
+                            .'<input id="search" type="search" name="q" value="'.htmlspecialchars($q,ENT_QUOTES).'" placeholder="Cari username/nama" autocomplete="off" '.($q==''?'':'autofocus').' />'
+                            .'<label for="search"><i class="material-icons">search</i></label>'
+                            .($q!='' ? '<a href="index.php?page=admin&act=sett&sub=usr" class="btn-flat" style="color:#fff;line-height:36px;height:36px;padding:0 6px;"><i class="material-icons">close</i></a>' : '')
+                            .'</div>'
+                            .'</form>';
                                     echo '    </div>
                                     </div>
                                 </nav>
@@ -233,17 +247,62 @@
                                                                                                                         .pagination.pager i.material-icons.md-48 { font-size:20px; }
                                                                                                                         .pagination.pager li.disabled a { pointer-events:none; }
                                                         </style>
-                                                        <table class="highlight responsive-table table-center" id="tbl">
-                                <thead class="blue lighten-4" id="head">
-                                    <tr>
-                                        <th style="width:8%">No</th>
-                                        <th style="width:23%">Username</th>
-                                        <th style="width:30%">Nama<br/>NIP</th>
-                                        <th style="width:22%">Level</th>
-                                        <th style="width:17%">Tindakan</th>
-                                    </tr>
-                                </thead>
-                                <tbody>';
+                                                        ';
+
+                    // Build tindakan header with gear icon & modal trigger (Super Admin only)
+                    $tindakanHeader = '<th style="width:17%">Tindakan';
+                    if($_SESSION['admin']==1){
+                        // tighter gear placement (inline-flex)
+                        $tindakanHeader .= '<span class="tooltipped" data-position="left" data-tooltip="Atur jumlah data" style="display:inline-flex;align-items:center;margin-left:4px;">'
+                            .'<a class="modal-trigger" href="#modalUser" style="display:inline-flex;align-items:center;height:18px;line-height:18px;"><i class="material-icons" style="color:#333;font-size:18px;">settings</i></a></span>';
+                    }
+                    $tindakanHeader .= '</th>';
+
+                    // Output table header
+                    echo '<table class="highlight responsive-table table-center" id="tbl">'
+                        .'<thead class="blue lighten-4" id="head">'
+                        .'<tr>'
+                        .'<th style="width:8%">No</th>'
+                        .'<th style="width:23%">Username</th>'
+                        .'<th style="width:30%">Nama<br/>NIP</th>'
+                        .'<th style="width:22%">Level</th>'
+                        .$tindakanHeader
+                        .'</tr>'
+                        .'</thead>'
+                        .'<tbody>';
+
+                    // Modal pengaturan jumlah user per halaman
+                    if($_SESSION['admin']==1){
+                        $sel_limit = $limit; $opts=[5,10,20,50,100];
+                        echo '<div id="modalUser" class="modal">'
+                            .'<div class="modal-content white">'
+                            .'<h5>Jumlah data yang ditampilkan per halaman</h5>'
+                            .'<div class="row">'
+                            .'<form method="post" action="">'
+                            .'<div class="input-field col s12">'
+                            .'<div class="input-field col s1" style="float:left;"><i class="material-icons prefix md-prefix">looks_one</i></div>'
+                            .'<div class="input-field col s11 right" style="margin:-5px 0 20px;">'
+                            .'<select class="browser-default validate" name="user_per_page" required>';
+                        // current first
+                        if(!in_array($sel_limit,$opts)){ $opts[]=$sel_limit; }
+                        // Ensure unique & sort asc
+                        $opts = array_unique($opts); sort($opts, SORT_NUMERIC);
+                        foreach($opts as $o){
+                            $sel = ($o==$sel_limit)?' selected':' ';
+                            echo '<option value="'.$o.'"'.$sel.'>'.$o.'</option>';
+                        }
+                        echo '</select>'
+                            .'</div>'
+                            .'<div class="modal-footer white">'
+                            .'<button type="submit" class="modal-action waves-effect waves-green btn-flat" name="simpan_user_per_page" value="1">Simpan</button>'
+                            .'<a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Batal</a>'
+                            .'</div>'
+                            .'</div>'
+                            .'</form>'
+                            .'</div>'
+                            .'</div>'
+                            .'</div>';
+                    }
 
                                 if(mysqli_num_rows($query) > 0){
                                     $no = 1;
