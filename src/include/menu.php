@@ -53,7 +53,9 @@
                             <ul>
                                 <!--<li><a href="index.php?page=admin&act=tsm">Surat Masuk</a></li>-->
                                 <li><a href="index.php?page=admin&act=tsk">Surat Keluar</a></li>
-                                <!--<li><a href="index.php?page=admin&act=not">Nota Dinas</a></li>-->
+                                <li><a href="index.php?page=admin&act=tsk_nd">Nota Dinas</a></li>
+                                <li><a href="index.php?page=admin&act=tsk_ph">Produk Hukum</a></li>
+                                <li><a href="index.php?page=admin&act=tsk_keu">Keuangan</a></li>
                             </ul>
                         </div>
                     </li>
@@ -142,7 +144,9 @@
             <ul id='transaksi' class='dropdown-content'>
                 <!--<li><a href="index.php?page=admin&act=tsm">Surat Masuk</a></li>-->
                 <li><a href="index.php?page=admin&act=tsk">Surat Keluar</a></li>
-                <!--<li><a href="index.php?page=admin&act=not">Nota Dinas</a></li>-->
+                <li><a href="index.php?page=admin&act=tsk_nd">Nota Dinas</a></li>
+                <li><a href="index.php?page=admin&act=tsk_ph">Produk Hukum</a></li>
+                <li><a href="index.php?page=admin&act=tsk_keu">Keuangan</a></li>
             </ul>
 
 
