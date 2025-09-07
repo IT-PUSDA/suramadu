@@ -214,6 +214,7 @@ if (empty($_SESSION['admin'])) {
                                         }
 
                                         // Jika Super Admin mengklik kartu bidang di beranda, terapkan filter bidang
+                                        $filter_id_list = '';
                                         if (isset($_GET['filter_bidang']) && $_GET['filter_bidang'] !== '') {
                                             $filterKey = $_GET['filter_bidang'];
                                             if (isset($map[$filterKey])) {
@@ -226,6 +227,7 @@ if (empty($_SESSION['admin'])) {
                                                 if (!empty($ids)) {
                                                     $idList = implode(',', array_map('intval', $ids));
                                                     $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user IN ($idList)";
+                                                    $filter_id_list = $idList;
                                                 }
                                             }
                                         }
@@ -255,6 +257,25 @@ if (empty($_SESSION['admin'])) {
 
                                         // Query untuk mengambil data sesuai hak akses + filter jenis umum
                                         $query = mysqli_query($config, "SELECT * " . $base_query . $where_clause . " ORDER BY id_surat DESC LIMIT $curr, $limit");
+
+                                        // Jika ada filter bidang aktif, tampilkan quick-switch per jenis beserta hitungannya
+                                        if (!empty($filter_id_list)) {
+                                            $countUmum = $countND = $countPH = $countKEU = 0;
+                                            $qU = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_user IN ($filter_id_list) AND jenis='umum'");
+                                            $qN = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_user IN ($filter_id_list) AND jenis='nota_dinas'");
+                                            $qP = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_user IN ($filter_id_list) AND jenis='produk_hukum'");
+                                            $qK = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_user IN ($filter_id_list) AND jenis='keuangan'");
+                                            if ($qU) { $countUmum = (int)mysqli_fetch_assoc($qU)['c']; }
+                                            if ($qN) { $countND = (int)mysqli_fetch_assoc($qN)['c']; }
+                                            if ($qP) { $countPH = (int)mysqli_fetch_assoc($qP)['c']; }
+                                            if ($qK) { $countKEU = (int)mysqli_fetch_assoc($qK)['c']; }
+                                            echo '<div class="row" style="margin: 6px 0 12px;">'
+                                                . '<div class="col s12 m6 l3"><a href="index.php?page=admin&act=tsk&filter_bidang=' . urlencode($filterKey) . '" class="hs-link"><div class="card lime darken-1 hs-card"><div class="card-content"><span class="card-title white-text"><i class="material-icons md-24">label</i> Umum</span><h6 class="white-text hs-sub">' . number_format($countUmum) . ' SURAT</h6></div></div></a></div>'
+                                                . '<div class="col s12 m6 l3"><a href="index.php?page=admin&act=tsk_nd&filter_bidang=' . urlencode($filterKey) . '" class="hs-link"><div class="card teal hs-card"><div class="card-content"><span class="card-title white-text"><i class="material-icons md-24">assignment</i> Nota Dinas</span><h6 class="white-text hs-sub">' . number_format($countND) . ' SURAT</h6></div></div></a></div>'
+                                                . '<div class="col s12 m6 l3"><a href="index.php?page=admin&act=tsk_ph&filter_bidang=' . urlencode($filterKey) . '" class="hs-link"><div class="card deep-orange hs-card"><div class="card-content"><span class="card-title white-text"><i class="material-icons md-24">gavel</i> Produk Hukum</span><h6 class="white-text hs-sub">' . number_format($countPH) . ' SURAT</h6></div></div></a></div>'
+                                                . '<div class="col s12 m6 l3"><a href="index.php?page=admin&act=tsk_keu&filter_bidang=' . urlencode($filterKey) . '" class="hs-link"><div class="card indigo hs-card"><div class="card-content"><span class="card-title white-text"><i class="material-icons md-24">attach_money</i> Keuangan</span><h6 class="white-text hs-sub">' . number_format($countKEU) . ' SURAT</h6></div></div></a></div>'
+                                                . '</div>';
+                                        }
 
                                         if (mysqli_num_rows($query) > 0) {
                                             while ($row = mysqli_fetch_array($query)) {
