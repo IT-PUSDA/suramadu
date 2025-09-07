@@ -102,6 +102,7 @@
                                 <ul>
                                     <li><a href="index.php?page=admin&act=sett">Instansi</a></li>
                                     <li><a href="index.php?page=admin&act=sett&sub=usr">User</a></li>
+                                    <li><a href="index.php?page=admin&act=ref">Klasifikasi Surat</a></li>
                                     <li><a href="index.php?page=admin&act=sett&sub=back">Backup Database</a></li>
                                     <li><a href="index.php?page=admin&act=sett&sub=rest">Restore Database</a></li>
                                 </ul>
@@ -120,6 +121,7 @@
                                 <ul>
                                     <li><a href="index.php?page=admin&act=sett">Instansi</a></li>
                                     <li><a href="index.php?page=admin&act=sett&sub=usr">User</a></li>
+                                    <li><a href="index.php?page=admin&act=ref">Klasifikasi Surat</a></li>
                                 </ul>
                             </div>
                         </li>
@@ -169,6 +171,7 @@
                 <ul id='pengaturan' class='dropdown-content'>
                     <li><a href="index.php?page=admin&act=sett">Instansi</a></li>
                     <li><a href="index.php?page=admin&act=sett&sub=usr">User</a></li>
+                    <li><a href="index.php?page=admin&act=ref">Klasifikasi Surat</a></li>
                     <li class="divider"></li>
                     <li><a href="index.php?page=admin&act=sett&sub=back">Backup Database</a></li>
                     <li><a href="index.php?page=admin&act=sett&sub=rest">Restore Database</a></li>
@@ -176,6 +179,14 @@
             <?php
             }
             ?>
+            <?php if ($_SESSION['admin'] == 2) { ?>
+                <li><a class="dropdown-button" href="#!" data-activates="pengaturan2">Pengaturan <i class="material-icons md-18">arrow_drop_down</i></a></li>
+                <ul id='pengaturan2' class='dropdown-content'>
+                    <li><a href="index.php?page=admin&act=sett">Instansi</a></li>
+                    <li><a href="index.php?page=admin&act=sett&sub=usr">User</a></li>
+                    <li><a href="index.php?page=admin&act=ref">Klasifikasi Surat</a></li>
+                </ul>
+            <?php } ?>
 
             <li class="right" style="margin-right: 10px;"><a class="dropdown-button" href="#!" data-activates="logout"><i class="material-icons">account_circle</i> <?php echo $_SESSION['nama']; ?><i class="material-icons md-18">arrow_drop_down</i></a></li>
             <ul id='logout' class='dropdown-content'>

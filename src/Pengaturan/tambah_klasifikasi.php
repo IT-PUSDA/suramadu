@@ -9,7 +9,7 @@
         if($_SESSION['admin'] != 1 AND $_SESSION['admin'] != 3){
             echo '<script language="javascript">
                     window.alert("ERROR! Anda tidak memiliki hak akses untuk menambahkan data");
-                    window.location.href="./admin.php?page=ref";
+                    window.location.href="./index.php?page=admin&act=ref";
                   </script>';
         } else {
 
@@ -54,7 +54,7 @@
 
                                     if($query != false){
                                         $_SESSION['succAdd'] = 'SUKSES! Data berhasil ditambahkan';
-                                        header("Location: ./admin.php?page=ref");
+                                        header("Location: ./index.php?page=admin&act=ref");
                                         die();
                                     } else {
                                         $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
@@ -73,7 +73,7 @@
                         <nav class="secondary-nav">
                             <div class="nav-wrapper blue-grey darken-1">
                                 <ul class="left">
-                                    <li class="waves-effect waves-light"><a href="?page=ref&act=add" class="judul"><i class="material-icons">bookmark</i> Tambah Klasifikasi Surat</a></li>
+                                    <li class="waves-effect waves-light"><a href="./index.php?page=admin&act=ref&sub=add" class="judul"><i class="material-icons">bookmark</i> Tambah Klasifikasi Surat</a></li>
                                 </ul>
                             </div>
                         </nav>
@@ -115,7 +115,7 @@
                 <div class="row jarak-form">
 
                     <!-- Form START -->
-                    <form class="col s12" method="post" action="?page=ref&act=add">
+                    <form class="col s12" method="post" action="./index.php?page=admin&act=ref&sub=add">
 
                         <!-- Row in form START -->
                         <div class="row">
@@ -167,7 +167,7 @@
                                 <button type="submit" name="submit" class="btn-large blue waves-effect waves-light">SIMPAN <i class="material-icons">done</i></button>
                             </div>
                             <div class="col 6">
-                                <a href="?page=ref" class="btn-large deep-orange waves-effect waves-light">BATAL <i class="material-icons">clear</i></a>
+                                <a href="./index.php?page=admin&act=ref" class="btn-large deep-orange waves-effect waves-light">BATAL <i class="material-icons">clear</i></a>
                             </div>
                         </div>
 

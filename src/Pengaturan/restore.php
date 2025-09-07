@@ -142,7 +142,7 @@
                                     die();
                         		} else {
                                     $_SESSION['errUpload'] = 'ERROR! Proses upload database gagal';
-                                    header("Location: ./admin.php?page=ref&act=imp");
+                                    header("Location: ./index.php?page=admin&act=ref&sub=imp");
                                     die();
                     		    }
                             } else {

@@ -16,7 +16,7 @@
             if($_SESSION['admin'] != 1 AND $_SESSION['admin'] != 3){
                 echo '<script language="javascript">
                         window.alert("ERROR! Anda tidak memiliki hak akses untuk menghapus data ini");
-                        window.location.href="./admin.php?page=ref";
+                        window.location.href="./index.php?page=admin&act=ref";
                       </script>';
             } else {
 
@@ -66,8 +66,8 @@
         			   		</table>
     			        </div>
                         <div class="card-action">
-        	                <a href="?page=ref&act=del&submit=yes&id_klasifikasi='.$row['id_klasifikasi'].'" class="btn-large deep-orange waves-effect waves-light white-text">HAPUS <i class="material-icons">delete</i></a>
-        	                <a href="?page=ref" class="btn-large blue waves-effect waves-light white-text">BATAL <i class="material-icons">clear</i></a>
+        	                <a href="./index.php?page=admin&act=ref&sub=del&submit=yes&id_klasifikasi='.$row['id_klasifikasi'].'" class="btn-large deep-orange waves-effect waves-light white-text">HAPUS <i class="material-icons">delete</i></a>
+        	                <a href="./index.php?page=admin&act=ref" class="btn-large blue waves-effect waves-light white-text">BATAL <i class="material-icons">clear</i></a>
         	            </div>
                     </div>
                 </div>
@@ -81,12 +81,12 @@
 
             	if($query == true){
                     $_SESSION['succDel'] = 'SUKSES! Data berhasil dihapus<br/>';
-                    header("Location: ./admin.php?page=ref");
+                    header("Location: ./index.php?page=admin&act=ref");
                     die();
             	} else {
                     $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
                     echo '<script language="javascript">
-                            window.location.href="./admin.php?page=ref&act=del&id_klasifikasi='.$id_klasifikasi.'";
+                            window.location.href="./index.php?page=admin&act=ref&sub=del&id_klasifikasi='.$id_klasifikasi.'";
                           </script>';
             	}
             }

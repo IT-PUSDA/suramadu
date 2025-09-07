@@ -13,6 +13,90 @@
                   </script>';
         } else {
 
+            // Paksa koneksi MySQL ke utf8mb4 agar karakter khusus tidak menyebabkan "Incorrect string value"
+            if (isset($config) && function_exists('mysqli_set_charset')) {
+                @mysqli_set_charset($config, 'utf8mb4');
+            }
+
+            // Import dari file CSV yang ada di folder asset (tanpa upload)
+            if(isset($_POST['import_asset'])){
+                $assetName = isset($_POST['selected_asset']) ? basename($_POST['selected_asset']) : '';
+                if($assetName === '' || stripos($assetName, '.csv') === false){
+                    $_SESSION['errEmpty'] = 'ERROR! Pilih file CSV dari folder asset terlebih dahulu';
+                    header("Location: ./index.php?page=admin&act=ref&sub=imp");
+                    die();
+                }
+                $path = BASE_PATH . '/asset/' . $assetName;
+                if(!file_exists($path)){
+                    $_SESSION['errUpload'] = 'ERROR! File asset tidak ditemukan: ' . htmlspecialchars($assetName);
+                    header("Location: ./index.php?page=admin&act=ref&sub=imp");
+                    die();
+                }
+
+                // Jika tidak mencentang cek_asset, kosongkan tabel lebih dulu
+                $keepExisting = isset($_POST['cek_asset']);
+                if(!$keepExisting){
+                    mysqli_query($config, "TRUNCATE TABLE tbl_klasifikasi");
+                }
+
+                $handle = fopen($path, 'r');
+                if(!$handle){
+                    $_SESSION['errUpload'] = 'ERROR! Gagal membuka file asset';
+                    header("Location: ./index.php?page=admin&act=ref&sub=imp");
+                    die();
+                }
+
+                $id_user = $_SESSION['id_user'];
+                $imported = 0;
+                // Deteksi delimiter dari baris pertama
+                $firstLine = fgets($handle);
+                $delims = [",",";","\t"];
+                $bestDelim = ','; $bestCount=-1;
+                foreach($delims as $d){ $c = substr_count($firstLine, $d); if($c>$bestCount){ $bestCount=$c; $bestDelim=$d; } }
+                rewind($handle);
+
+                $row = 0;
+                while(($data = fgetcsv($handle, 0, $bestDelim)) !== FALSE){
+                    if(!$data){ continue; }
+                    $row++;
+                    // Trim semua kolom dan hilangkan UTF-8 BOM jika ada di awal sel
+                    $data = array_map(function($v){
+                        $v = trim((string)$v);
+                        if (substr($v, 0, 3) === "\xEF\xBB\xBF") { $v = substr($v, 3); }
+                        return $v;
+                    }, $data);
+                    $count = count($data);
+                    if($count < 3){ continue; }
+
+                    // Skip header (jika ada)
+                    $first = strtolower($data[0]); $second = isset($data[1])? strtolower($data[1]) : '';
+                    if($row===1 && (strpos($first,'id')===0 || strpos($first,'kode')===0 || strpos($second,'kode')===0)){
+                        continue;
+                    }
+
+                    // Tentukan mapping kolom (3: kode,nama,uraian | 4: id,kode,nama,uraian)
+                    $hasId = ($count >= 4 && ctype_digit($data[0]));
+                    $kode  = mysqli_real_escape_string($config, $hasId ? $data[1] : $data[0]);
+                    $nama  = mysqli_real_escape_string($config, $hasId ? $data[2] : $data[1]);
+                    $urai  = mysqli_real_escape_string($config, $hasId ? $data[3] : (isset($data[2]) ? $data[2] : ''));
+
+                    if($kode === '' || $nama === ''){ continue; }
+
+                    if($hasId){
+                        $id = (int)$data[0];
+                        mysqli_query($config, "INSERT INTO tbl_klasifikasi (id_klasifikasi, kode, nama, uraian, id_user) VALUES ($id, '$kode', '$nama', '$urai', '$id_user')");
+                    } else {
+                        mysqli_query($config, "INSERT INTO tbl_klasifikasi (id_klasifikasi, kode, nama, uraian, id_user) VALUES (NULL, '$kode', '$nama', '$urai', '$id_user')");
+                    }
+                    $imported++;
+                }
+                fclose($handle);
+
+                $_SESSION['succUpload'] = 'SUKSES! ' . $imported . ' baris berhasil diimport dari asset';
+                header("Location: ./index.php?page=admin&act=ref");
+                die();
+            }
+
             //proses upload file
             if(isset($_POST['submit'])){
 
@@ -20,7 +104,7 @@
 
                 if($file == ""){
                     $_SESSION['errEmpty'] = 'ERROR! Form File tidak boleh kosong';
-                    header("Location: ./admin.php?page=ref&act=imp");
+                    header("Location: ./index.php?page=admin&act=ref&sub=imp");
                     die();
                 } else {
 
@@ -37,7 +121,7 @@
                                 $_SESSION['succUpload'] = 'SUKSES! Data berhasil diimport';
                             } else {
                                 $_SESSION['errUpload'] = 'ERROR! Proses upload data gagal';
-                                header("Location: ./admin.php?page=ref&act=imp");
+                                header("Location: ./index.php?page=admin&act=ref&sub=imp");
                                 die();
                             }
 
@@ -45,14 +129,46 @@
                             $handle = fopen($file, "r");
                             $id_user = $_SESSION['id_user'];
 
-                            //parsing file csv
-                            while(($data = fgetcsv($handle, 1000, ",")) !== FALSE){
+                            // Deteksi delimiter dari baris pertama
+                            $firstLine = fgets($handle);
+                            $delims = [",",";","\t"];
+                            $bestDelim = ','; $bestCount = -1;
+                            foreach($delims as $d){ $c = substr_count($firstLine, $d); if($c > $bestCount){ $bestCount = $c; $bestDelim = $d; } }
+                            rewind($handle);
 
-                                //insert data ke dalam database
-                                $query = mysqli_query($config, "INSERT into tbl_klasifikasi(id_klasifikasi,kode,nama,uraian,id_user) values(null,'$data[1]','$data[2]','$data[3]','$id_user')");
+                            //parsing file csv
+                            $row = 0; $imported=0;
+                            while(($data = fgetcsv($handle, 0, $bestDelim)) !== FALSE){
+                                if(!$data) { continue; }
+                                $row++;
+                                // Trim semua kolom & hilangkan UTF-8 BOM di awal jika ada
+                                $data = array_map(function($v){
+                                    $v = trim((string)$v);
+                                    if (substr($v, 0, 3) === "\xEF\xBB\xBF") { $v = substr($v, 3); }
+                                    return $v;
+                                }, $data);
+                                $cnt = count($data);
+                                if($cnt < 3) { continue; }
+                                // Header? skip jika ada kata Kode/Nama di awal
+                                $first = strtolower($data[0]); $second = isset($data[1])? strtolower($data[1]) : '';
+                                if($row === 1 && ((strpos($first,'id') === 0) || (strpos($first,'kode') === 0) || (strpos($second,'kode') === 0))){ continue; }
+
+                                $hasId = ($cnt >= 4 && ctype_digit($data[0]));
+                                $kode  = mysqli_real_escape_string($config, $hasId ? $data[1] : $data[0]);
+                                $nama  = mysqli_real_escape_string($config, $hasId ? $data[2] : $data[1]);
+                                $urai  = mysqli_real_escape_string($config, $hasId ? $data[3] : (isset($data[2]) ? $data[2] : ''));
+                                if($kode === '' || $nama === '') { continue; }
+
+                                if($hasId){
+                                    $id = (int)$data[0];
+                                    mysqli_query($config, "INSERT INTO tbl_klasifikasi (id_klasifikasi, kode, nama, uraian, id_user) VALUES ($id, '$kode', '$nama', '$urai', '$id_user')");
+                                } else {
+                                    mysqli_query($config, "INSERT INTO tbl_klasifikasi (id_klasifikasi, kode, nama, uraian, id_user) VALUES (NULL, '$kode', '$nama', '$urai', '$id_user')");
+                                }
+                                $imported++;
                             }
                             fclose($handle);
-                            header("Location: ./admin.php?page=ref");
+                            header("Location: ./index.php?page=admin&act=ref");
                             die();
                         } else {
 
@@ -64,7 +180,7 @@
                                 $_SESSION['succUpload'] = 'SUKSES! Data berhasil diimport';
                             } else {
                                 $_SESSION['errUpload'] = 'ERROR! Proses upload data gagal';
-                                header("Location: ./admin.php?page=ref&act=imp");
+                                header("Location: ./index.php?page=admin&act=ref&sub=imp");
                                 die();
                             }
 
@@ -72,20 +188,50 @@
                             $handle = fopen($file, "r");
                             $id_user = $_SESSION['id_user'];
 
-                            //parsing file csv
-                            while(($data = fgetcsv($handle, 1000, ",")) !== FALSE){
+                            // Deteksi delimiter
+                            $firstLine = fgets($handle);
+                            $delims = [",",";","\t"];
+                            $bestDelim = ','; $bestCount = -1;
+                            foreach($delims as $d){ $c = substr_count($firstLine, $d); if($c > $bestCount){ $bestCount = $c; $bestDelim = $d; } }
+                            rewind($handle);
 
-                                //insert data ke dalam database
-                                $query = mysqli_query($config, "INSERT into tbl_klasifikasi(id_klasifikasi,kode,nama,uraian,id_user) values('$data[0]','$data[1]','$data[2]','$data[3]','$id_user')");
+                            //parsing file csv
+                            $row = 0; $imported=0;
+                            while(($data = fgetcsv($handle, 0, $bestDelim)) !== FALSE){
+                                if(!$data) { continue; }
+                                $row++;
+                                $data = array_map(function($v){
+                                    $v = trim((string)$v);
+                                    if (substr($v, 0, 3) === "\xEF\xBB\xBF") { $v = substr($v, 3); }
+                                    return $v;
+                                }, $data);
+                                $cnt = count($data);
+                                if($cnt < 3) { continue; }
+                                $first = strtolower($data[0]); $second = isset($data[1])? strtolower($data[1]) : '';
+                                if($row === 1 && ((strpos($first,'id') === 0) || (strpos($first,'kode') === 0) || (strpos($second,'kode') === 0))){ continue; }
+
+                                $hasId = ($cnt >= 4 && ctype_digit($data[0]));
+                                $kode  = mysqli_real_escape_string($config, $hasId ? $data[1] : $data[0]);
+                                $nama  = mysqli_real_escape_string($config, $hasId ? $data[2] : $data[1]);
+                                $urai  = mysqli_real_escape_string($config, $hasId ? $data[3] : (isset($data[2]) ? $data[2] : ''));
+                                if($kode === '' || $nama === '') { continue; }
+
+                                if($hasId){
+                                    $id = (int)$data[0];
+                                    mysqli_query($config, "INSERT INTO tbl_klasifikasi (id_klasifikasi, kode, nama, uraian, id_user) VALUES ($id, '$kode', '$nama', '$urai', '$id_user')");
+                                } else {
+                                    mysqli_query($config, "INSERT INTO tbl_klasifikasi (id_klasifikasi, kode, nama, uraian, id_user) VALUES (NULL, '$kode', '$nama', '$urai', '$id_user')");
+                                }
+                                $imported++;
                             }
                             fclose($handle);
-                            header("Location: ./admin.php?page=ref");
+                            header("Location: ./index.php?page=admin&act=ref");
                             die();
                         }
 
                     } else {
                         $_SESSION['errFormat'] = 'ERROR! Format file yang diperbolehkan hanya *.CSV';
-                        header("Location: ./admin.php?page=ref&act=imp");
+                        header("Location: ./index.php?page=admin&act=ref&sub=imp");
                         die();
                     }
                 }
@@ -101,8 +247,8 @@
                                 <div class="nav-wrapper blue-grey darken-1">
                                     <div class="col m12">
                                         <ul class="left">
-                                            <li class="waves-effect waves-light"><a href="?page=ref&act=imp" class="judul"><i class="material-icons">bookmark</i> Import Referensi Surat</a></li>
-                                            <li class="waves-effect waves-light"><a href="?page=ref"><i class="material-icons">arrow_back</i> Kembali</a></li>
+                                            <li class="waves-effect waves-light"><a href="./index.php?page=admin&act=ref&sub=imp" class="judul"><i class="material-icons">bookmark</i> Import Referensi Surat</a></li>
+                                            <li class="waves-effect waves-light"><a href="./index.php?page=admin&act=ref"><i class="material-icons">arrow_back</i> Kembali</a></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -153,6 +299,18 @@
                     unset($_SESSION['errEmpty']);
                 }
 
+                // Siapkan daftar file CSV yang ada di folder asset
+                $assetOptions = '';
+                if(defined('BASE_PATH')){
+                    $assetFiles = glob(BASE_PATH . '/asset/*.csv');
+                    if($assetFiles){
+                        foreach($assetFiles as $af){
+                            $bn = basename($af);
+                            $assetOptions .= '<option value="'.$bn.'">'.$bn.'</option>';
+                        }
+                    }
+                }
+
                 echo '
                 <!-- Row form Start -->
                 <div class="row">
@@ -186,7 +344,7 @@
 
                                 <p>
                                     <form method="post" enctype="multipart/form-data" >
-                                        <a href="?page=ref&act=imp&download" name="download" class="waves-effect waves-light blue-text"><i class="material-icons">file_download</i> <strong>DOWNLOAD CONTOH FORMAT FILE CSV</strong></a>
+                                        <a href="./index.php?page=admin&act=ref&sub=imp&download" name="download" class="waves-effect waves-light blue-text"><i class="material-icons">file_download</i> <strong>DOWNLOAD CONTOH FORMAT FILE CSV</strong></a>
                                     </form>
                                 </p><br/>
 
@@ -208,6 +366,23 @@
                                         <label for="cek" class="kata" style="color: #444;">Centang jika tidak ingin menghapus data yang sudah ada</label>
                                     </div>
                                     <button type="submit" class="btn-large blue waves-effect waves-light" name="submit">IMPORT <i class="material-icons">file_upload</i></button>
+                                </form>
+                                <div class="divider" style="margin:18px 0;"></div>
+                                <form method="post">
+                                    <div class="row" style="margin-bottom:0;">
+                                        <div class="input-field col m6">
+                                            <select name="selected_asset" required>
+                                                <option value="" disabled selected>Pilih file CSV dari folder asset</option>' . $assetOptions . '
+                                            </select>
+                                            <label>Pilih CSV di asset</label>
+                                        </div>
+                                        <div class="input-field col m6" style="margin-top:28px;">
+                                            <input type="checkbox" id="cek_asset" name="cek_asset">
+                                            <label for="cek_asset" class="kata" style="color:#444;">Centang jika tidak ingin menghapus data yang sudah ada</label>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn teal waves-effect waves-light" name="import_asset">IMPORT DARI ASSET <i class="material-icons">file_download</i></button>
+                                    <p class="grey-text" style="margin-top:8px;">Format CSV yang didukung: tiga kolom (kode,nama,uraian) atau empat kolom (id,kode,nama,uraian). Baris header akan diabaikan.</p>
                                 </form>
                             </div>
                         </div>

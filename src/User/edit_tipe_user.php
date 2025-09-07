@@ -39,10 +39,61 @@
                             echo '<script language="javascript">window.history.back();</script>';
                         } else {
 
-                            $query = mysqli_query($config, "UPDATE tbl_user SET admin='$admin' WHERE id_user='$id_user'");
+                            // Siapkan bagian SET untuk query update
+                            $setParts = [];
+                            $setParts[] = "admin='".$admin."'";
+
+                            // Hanya Super Admin yang boleh mengubah username & nama
+                            if(isset($_SESSION['admin']) && $_SESSION['admin'] == 1){
+                                $new_username = isset($_REQUEST['username']) ? trim($_REQUEST['username']) : '';
+                                $new_nama = isset($_REQUEST['nama']) ? trim($_REQUEST['nama']) : '';
+
+                                // Validasi dasar
+                                if($new_username === '' || $new_nama === ''){
+                                    $_SESSION['errQ'] = 'ERROR! Username dan Nama wajib diisi';
+                                    echo '<script language="javascript">window.history.back();</script>';
+                                    die();
+                                }
+                                if(!preg_match("/^[A-Za-z0-9_]+$/", $new_username)){
+                                    $_SESSION['uname'] = 'Username hanya boleh huruf, angka, atau underscore (_).';
+                                    echo '<script language="javascript">window.history.back();</script>';
+                                    die();
+                                }
+                                if(strlen($new_username) < 5){
+                                    $_SESSION['errUser5'] = 'Username minimal 5 karakter!';
+                                    echo '<script language="javascript">window.history.back();</script>';
+                                    die();
+                                }
+                                if(!preg_match("/^[a-zA-Z., ]*$/", $new_nama)){
+                                    $_SESSION['namauser'] = 'Form Nama hanya boleh mengandung karakter huruf, spasi, titik(.) dan koma(,)';
+                                    echo '<script language="javascript">window.history.back();</script>';
+                                    die();
+                                }
+
+                                // Ambil data user saat ini untuk cek perubahan username
+                                $curRes = mysqli_query($config, "SELECT username FROM tbl_user WHERE id_user='".$id_user."'");
+                                $cur = $curRes ? mysqli_fetch_assoc($curRes) : null;
+                                $cur_username = $cur ? $cur['username'] : '';
+
+                                // Jika username berubah, cek ketersediaan
+                                if($new_username !== $cur_username){
+                                    $cek = mysqli_query($config, "SELECT 1 FROM tbl_user WHERE username='".mysqli_real_escape_string($config,$new_username)."' AND id_user<>'".$id_user."'");
+                                    if($cek && mysqli_num_rows($cek) > 0){
+                                        $_SESSION['errUsername'] = 'Username sudah terpakai, gunakan yang lain!';
+                                        echo '<script language="javascript">window.history.back();</script>';
+                                        die();
+                                    }
+                                }
+
+                                $setParts[] = "username='".mysqli_real_escape_string($config,$new_username)."'";
+                                $setParts[] = "nama='".mysqli_real_escape_string($config,$new_nama)."'";
+                            }
+
+                            $setClause = implode(', ', $setParts);
+                            $query = mysqli_query($config, "UPDATE tbl_user SET $setClause WHERE id_user='".$id_user."'");
 
                             if($query == true){
-                                $_SESSION['succEdit'] = 'SUKSES! Tipe user berhasil diupdate';
+                                $_SESSION['succEdit'] = 'SUKSES! Data user berhasil diupdate';
                                 header("Location: index.php?page=admin&act=sett&sub=usr");
                                 die();
                             } else {
@@ -68,7 +119,11 @@
                                 <nav class="secondary-nav">
                                     <div class="nav-wrapper blue-grey darken-1">
                                         <ul class="left">
-                                            <li class="waves-effect waves-light  tooltipped" data-position="right" data-tooltip="Menu ini hanya untuk mengedit tipe user. Username dan password bisa diganti lewat menu profil"><a href="#" class="judul"><i class="material-icons">mode_edit</i> Edit Tipe User</a></li>
+                                            <?php if(isset($_SESSION['admin']) && $_SESSION['admin']==1){ ?>
+                                                <li class="waves-effect waves-light tooltipped" data-position="right" data-tooltip="Super Admin dapat mengubah tipe user, username dan nama."><a href="#" class="judul"><i class="material-icons">mode_edit</i> Edit User</a></li>
+                                            <?php } else { ?>
+                                                <li class="waves-effect waves-light  tooltipped" data-position="right" data-tooltip="Menu ini hanya untuk mengedit tipe user. Username dan password bisa diganti lewat menu profil"><a href="#" class="judul"><i class="material-icons">mode_edit</i> Edit Tipe User</a></li>
+                                            <?php } ?>
                                         </ul>
                                     </div>
                                 </nav>
@@ -101,16 +156,30 @@
 
                                 <!-- Row in form START -->
                                 <div class="row">
-                                    <div class="input-field col s6">
+                                    <div class="input-field col s6 tooltipped" data-position="top" data-tooltip="<?php echo (isset($_SESSION['admin']) && $_SESSION['admin']==1) ? 'Username minimal 5 karakter [ huruf, angka atau underscore(_) ]' : 'Hanya Super Admin yang dapat mengubah username'; ?>">
                                         <input type="hidden" value="<?php echo $row['id_user'] ;?>" name="id_user">
                                         <i class="material-icons prefix md-prefix">account_circle</i>
-                                        <input id="username" type="text" value="<?php echo $row['username'] ;?>" readonly class="grey-text">
+                                        <?php if(isset($_SESSION['admin']) && $_SESSION['admin']==1){ ?>
+                                            <input id="username" type="text" name="username" value="<?php echo $row['username'] ;?>" required>
+                                            <?php
+                                                if(isset($_SESSION['uname'])){ echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$_SESSION['uname'].'</div>'; unset($_SESSION['uname']); }
+                                                if(isset($_SESSION['errUsername'])){ echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$_SESSION['errUsername'].'</div>'; unset($_SESSION['errUsername']); }
+                                                if(isset($_SESSION['errUser5'])){ echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$_SESSION['errUser5'].'</div>'; unset($_SESSION['errUser5']); }
+                                            ?>
+                                        <?php } else { ?>
+                                            <input id="username" type="text" value="<?php echo $row['username'] ;?>" readonly class="grey-text">
+                                        <?php } ?>
                                         <label  for="username">Username</label>
                                     </div>
-                                    <div class="input-field col s6">
+                                    <div class="input-field col s6 tooltipped" data-position="top" data-tooltip="<?php echo (isset($_SESSION['admin']) && $_SESSION['admin']==1) ? 'Ubah nama profil pengguna' : 'Hanya Super Admin yang dapat mengubah nama'; ?>">
                                         <i class="material-icons prefix md-prefix">text_fields</i>
-                                        <input id="username" type="text" value="<?php echo $row['nama'] ;?>" readonly class="grey-text">
-                                        <label for="username">Nama</label>
+                                        <?php if(isset($_SESSION['admin']) && $_SESSION['admin']==1){ ?>
+                                            <input id="nama" type="text" name="nama" value="<?php echo htmlspecialchars($row['nama']); ?>" required>
+                                            <?php if(isset($_SESSION['namauser'])){ echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$_SESSION['namauser'].'</div>'; unset($_SESSION['namauser']); } ?>
+                                        <?php } else { ?>
+                                            <input id="nama" type="text" value="<?php echo htmlspecialchars($row['nama']); ?>" readonly class="grey-text">
+                                        <?php } ?>
+                                        <label for="nama">Nama</label>
                                     </div>
                                     <div class="input-field col s6">
                                         <i class="material-icons prefix md-prefix">supervisor_account</i><label>Pilih tipe user</label><br/>

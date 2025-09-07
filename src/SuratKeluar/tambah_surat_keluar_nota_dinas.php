@@ -41,14 +41,15 @@ foreach (['errQ', 'errEmpty'] as $k) {
                 } ?>
                 <label for="tgl_surat">Tanggal Surat</label>
             </div>
-            <div class="input-field col s6 tooltipped" data-position="top" data-tooltip="Diambil dari data referensi kode klasifikasi">
+            <div class="input-field col s6 tooltipped" data-position="top" data-tooltip="Diambil dari data referensi kode klasifikasi" style="position:relative;">
                 <i class="material-icons prefix md-prefix">bookmark</i>
-                <input id="kode" type="text" class="validate" name="kode" required>
+                <input id="kode" type="text" class="validate" name="kode" autocomplete="off" required>
                 <?php if (isset($_SESSION['kodek'])) {
                     echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">' . $_SESSION['kodek'] . '</div>';
                     unset($_SESSION['kodek']);
                 } ?>
                 <label for="kode">Kode Klasifikasi</label>
+                <div id="kode-suggest" class="collection" style="position:absolute; z-index:1000; display:none; max-height:260px; overflow:auto; left:44px; right:0; background:#fff;"></div>
             </div>
             <div class="input-field col s6">
                 <i class="material-icons prefix md-prefix">featured_play_list</i>
@@ -137,3 +138,55 @@ foreach (['errQ', 'errEmpty'] as $k) {
         </div>
     </form>
 </div>
+<script>
+(function(){
+    const input = document.getElementById('kode');
+    if(!input) return;
+    const box = document.getElementById('kode-suggest');
+    let idx = -1, items = [];
+    function hide(){ box.style.display='none'; box.innerHTML=''; idx=-1; items=[]; }
+        function render(list){
+            if(!list.length){
+                box.innerHTML = '<a class="collection-item grey-text" href="#" onclick="return false;">Tidak ada hasil. Pastikan data klasifikasi sudah diimport.</a>';
+                box.style.display='block';
+                items = [];
+                return;
+            }
+        box.innerHTML = list.map((r,i)=>`
+            <a href="#" class="collection-item" data-kode="${r.kode.replace(/"/g,'&quot;')}">
+                <span class="blue-text" style="font-weight:600">${r.kode}</span> - ${r.nama || ''}
+                <br><small class="grey-text">${r.uraian || ''}</small>
+            </a>`).join('');
+        box.style.display='block';
+        items = Array.from(box.querySelectorAll('.collection-item'));
+        items.forEach((el,i)=>{
+            el.addEventListener('mouseover',()=>{ setActive(i); });
+            el.addEventListener('click',(e)=>{ e.preventDefault(); pick(i); });
+        });
+    }
+    function setActive(i){ if(items[idx]) items[idx].classList.remove('active'); idx=i; if(items[idx]) items[idx].classList.add('active'); }
+    function pick(i){ if(!items[i]) return; input.value = items[i].getAttribute('data-kode'); hide(); input.focus(); }
+    let t;
+    function query(q){
+        fetch('/src/Utils/klasifikasi_search.php?term='+encodeURIComponent(q||''), {credentials:'same-origin'})
+            .then(r=>r.ok?r.json():[])
+            .then(render)
+            .catch(()=>hide());
+    }
+    input.addEventListener('focus',()=>{ if(input.value.trim()===''){ query(''); }});
+    input.addEventListener('input',()=>{
+        const q = input.value.trim();
+        if(q.length < 1){ query(''); return; }
+        clearTimeout(t);
+        t = setTimeout(()=>{ query(q); }, 180);
+    });
+    input.addEventListener('keydown',(e)=>{
+        if(box.style.display==='none') return;
+        if(e.key==='ArrowDown'){ e.preventDefault(); setActive(Math.min(idx+1, items.length-1)); }
+        else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(Math.max(idx-1, 0)); }
+        else if(e.key==='Enter'){ if(idx>-1){ e.preventDefault(); pick(idx); } }
+        else if(e.key==='Escape'){ hide(); }
+    });
+    document.addEventListener('click',(e)=>{ if(!box.contains(e.target) && e.target!==input){ hide(); } });
+})();
+</script>

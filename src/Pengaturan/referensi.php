@@ -6,8 +6,8 @@
         die();
     } else {
 
-        if(isset($_REQUEST['act'])){
-            $act = $_REQUEST['act'];
+        if(isset($_REQUEST['sub'])){
+            $act = $_REQUEST['sub'];
             switch ($act) {
                 case 'add':
                     include "tambah_klasifikasi.php";
@@ -46,17 +46,17 @@
                                 <div class="nav-wrapper blue-grey darken-1">
                                     <div class="col m7">
                                         <ul class="left">
-                                            <li class="waves-effect waves-light hide-on-small-only"><a href="?page=ref" class="judul"><i class="material-icons">class</i> Klasifikasi Surat</a></li>';
+                                            <li class="waves-effect waves-light hide-on-small-only"><a href="index.php?page=admin&act=ref" class="judul"><i class="material-icons">class</i> Klasifikasi Surat</a></li>';
                                             if($_SESSION['admin'] == 1 || $_SESSION['admin'] == 3){
-                                                echo '<li class="waves-effect waves-light"><a href="?page=ref&act=add"><i class="material-icons md-24">add_circle</i> Tambah Data</a></li>
-                                                <li class="waves-effect waves-light"><a href="?page=ref&act=imp"><i class="material-icons md-24">file_upload</i> Import Data</a></li>';
+                                                echo '<li class="waves-effect waves-light"><a href="index.php?page=admin&act=ref&sub=add"><i class="material-icons md-24">add_circle</i> Tambah Data</a></li>
+                                                <li class="waves-effect waves-light"><a href="index.php?page=admin&act=ref&sub=imp"><i class="material-icons md-24">file_upload</i> Import Data</a></li>';
                                             } else {
                                                 echo '';
                                             } echo '
                                         </ul>
                                     </div>
                                     <div class="col m5 hide-on-med-and-down">
-                                        <form method="post" action="?page=ref">
+                                        <form method="post" action="index.php?page=admin&act=ref">
                                             <div class="input-field round-in-box">
                                                 <input id="search" type="search" name="cari" placeholder="Ketik dan tekan enter mencari data..." required>
                                                 <label for="search"><i class="material-icons">search</i></label>
@@ -135,7 +135,7 @@
                     <div class="col s12" style="margin-top: -18px;">
                         <div class="card blue lighten-5">
                             <div class="card-content">
-                                <p class="description">Hasil pencarian untuk kata kunci <strong>"'.stripslashes($cari).'"</strong><span class="right"><a href="?page=ref"><i class="material-icons md-36" style="color: #333;">clear</i></a></span></p>
+                                <p class="description">Hasil pencarian untuk kata kunci <strong>"'.stripslashes($cari).'"</strong><span class="right"><a href="index.php?page=admin&act=ref"><i class="material-icons md-36" style="color: #333;">clear</i></a></span></p>
                             </div>
                         </div>
                     </div>
@@ -167,9 +167,9 @@
                                         if($_SESSION['admin'] == 2 || $_SESSION['admin'] == 4){
                                             echo '<a class="btn small blue-grey waves-effect waves-light"><i class="material-icons">error</i> NO ACTION</a>';
                                         } else {
-                                          echo '<a class="btn small blue waves-effect waves-light" href="?page=ref&act=edit&id_klasifikasi='.$row['id_klasifikasi'].'">
+                            echo '<a class="btn small blue waves-effect waves-light" href="index.php?page=admin&act=ref&sub=edit&id_klasifikasi='.$row['id_klasifikasi'].'">
                                                     <i class="material-icons">edit</i> EDIT</a>
-                                                <a class="btn small deep-orange waves-effect waves-light" href="?page=ref&act=del&id_klasifikasi='.$row['id_klasifikasi'].'">
+                                <a class="btn small deep-orange waves-effect waves-light" href="index.php?page=admin&act=ref&sub=del&id_klasifikasi='.$row['id_klasifikasi'].'">
                                                     <i class="material-icons">delete</i> DEL</a>';
                                         } echo '
                                         </td>
@@ -188,16 +188,22 @@
                         $cdata = mysqli_num_rows($query);
                         $cpg = ceil($cdata/$limit);
 
+                        // Info bar: showing X to Y of N
+                        $start = ($cdata > 0) ? ($curr + 1) : 0;
+                        $end = min($curr + $limit, $cdata);
+                        $label = 'Showing '.number_format($start).' to '.number_format($end).' of '.number_format($cdata).' entries';
+                        echo '<div class="center-align grey-text text-darken-1" style="margin:10px 0 6px;">'.$label.'</div>';
+
                         echo '<!-- Pagination START -->
-                              <ul class="pagination">';
+                              <div class="center-align"><ul class="pagination">';
 
                         if($cdata > $limit ){
 
                             //first and previous pagging
                             if($pg > 1){
                                 $prev = $pg - 1;
-                                echo '<li><a href="?page=ref&pg=1"><i class="material-icons md-48">first_page</i></a></li>
-                                      <li><a href="?page=ref&pg='.$prev.'"><i class="material-icons md-48">chevron_left</i></a></li>';
+                      echo '<li><a href="index.php?page=admin&act=ref&pg=1"><i class="material-icons md-48">first_page</i></a></li>
+                          <li><a href="index.php?page=admin&act=ref&pg='.$prev.'"><i class="material-icons md-48">chevron_left</i></a></li>';
                             } else {
                                 echo '<li class="disabled"><a href=""><i class="material-icons md-48">first_page</i></a></li>
                                       <li class="disabled"><a href=""><i class="material-icons md-48">chevron_left</i></a></li>';
@@ -214,14 +220,14 @@
                             //last and next pagging
                             if($pg < $cpg){
                                 $next = $pg + 1;
-                                echo '<li><a href="?page=ref&pg='.$next.'"><i class="material-icons md-48">chevron_right</i></a></li>
-                                      <li><a href="?page=ref&pg='.$cpg.'"><i class="material-icons md-48">last_page</i></a></li>';
+                      echo '<li><a href="index.php?page=admin&act=ref&pg='.$next.'"><i class="material-icons md-48">chevron_right</i></a></li>
+                          <li><a href="index.php?page=admin&act=ref&pg='.$cpg.'"><i class="material-icons md-48">last_page</i></a></li>';
                             } else {
                                 echo '<li class="disabled"><a href=""><i class="material-icons md-48">chevron_right</i></a></li>
                                       <li class="disabled"><a href=""><i class="material-icons md-48">last_page</i></a></li>';
                             }
                                 echo '
-                                </ul>
+                                </ul></div>
                                 <!-- Pagination END -->';
                         } else {
                             echo '';
@@ -269,7 +275,7 @@
 
                                                                             $query = mysqli_query($config, "UPDATE tbl_sett SET referensi='$referensi',id_user='$id_user' WHERE id_sett='$id_sett'");
                                                                             if($query == true){
-                                                                                header("Location: ./admin.php?page=ref");
+                                                                                header("Location: index.php?page=admin&act=ref");
                                                                                 die();
                                                                             }
                                                                         } echo '
@@ -299,9 +305,9 @@
                                                 if($_SESSION['admin'] == 2 || $_SESSION['admin'] == 4){
                                                     echo '<a class="btn small blue-grey waves-effect waves-light"><i class="material-icons">error</i> NO ACTION</a>';
                                                 } else {
-                                                  echo '<a class="btn small blue waves-effect waves-light" href="?page=ref&act=edit&id_klasifikasi='.$row['id_klasifikasi'].'">
+                                                  echo '<a class="btn small blue waves-effect waves-light" href="index.php?page=admin&act=ref&sub=edit&id_klasifikasi='.$row['id_klasifikasi'].'">
                                                             <i class="material-icons">edit</i> EDIT</a>
-                                                        <a class="btn small deep-orange waves-effect waves-light" href="?page=ref&act=del&id_klasifikasi='.$row['id_klasifikasi'].'">
+                                                        <a class="btn small deep-orange waves-effect waves-light" href="index.php?page=admin&act=ref&sub=del&id_klasifikasi='.$row['id_klasifikasi'].'">
                                                             <i class="material-icons">delete</i> DEL</a>';
                                                 } echo '
                                                 </td>
@@ -309,7 +315,7 @@
                                         </tbody>';
                                         }
                                     } else {
-                                        echo '<tr><td colspan="5"><center><p class="add">Tidak ada data yang ditemukan. <u><a href="?page=ref&act=add">Tambah data baru</a></u></p></center></td></tr>';
+                                        echo '<tr><td colspan="5"><center><p class="add">Tidak ada data yang ditemukan. <u><a href="index.php?page=admin&act=ref&sub=add">Tambah data baru</a></u></p></center></td></tr>';
                                     }
                                   echo '</table><br/><br/>
                             </div>
@@ -320,16 +326,22 @@
                         $cdata = mysqli_num_rows($query);
                         $cpg = ceil($cdata/$limit);
 
+                        // Info bar: showing X to Y of N
+                        $start = ($cdata > 0) ? ($curr + 1) : 0;
+                        $end = min($curr + $limit, $cdata);
+                        $label = 'Showing '.number_format($start).' to '.number_format($end).' of '.number_format($cdata).' entries';
+                        echo '<div class="center-align grey-text text-darken-1" style="margin:10px 0 6px;">'.$label.'</div>';
+
                         echo '<!-- Pagination START -->
-                              <ul class="pagination">';
+                              <div class="center-align"><ul class="pagination">';
 
                         if($cdata > $limit ){
 
                             //first and previous pagging
                             if($pg > 1){
                                 $prev = $pg - 1;
-                                echo '<li><a href="?page=ref&pg=1"><i class="material-icons md-48">first_page</i></a></li>
-                                      <li><a href="?page=ref&pg='.$prev.'"><i class="material-icons md-48">chevron_left</i></a></li>';
+                      echo '<li><a href="index.php?page=admin&act=ref&pg=1"><i class="material-icons md-48">first_page</i></a></li>
+                          <li><a href="index.php?page=admin&act=ref&pg='.$prev.'"><i class="material-icons md-48">chevron_left</i></a></li>';
                             } else {
                                 echo '<li class="disabled"><a href=""><i class="material-icons md-48">first_page</i></a></li>
                                       <li class="disabled"><a href=""><i class="material-icons md-48">chevron_left</i></a></li>';
@@ -346,14 +358,14 @@
                             //last and next pagging
                             if($pg < $cpg){
                                 $next = $pg + 1;
-                                echo '<li><a href="?page=ref&pg='.$next.'"><i class="material-icons md-48">chevron_right</i></a></li>
-                                      <li><a href="?page=ref&pg='.$cpg.'"><i class="material-icons md-48">last_page</i></a></li>';
+                      echo '<li><a href="index.php?page=admin&act=ref&pg='.$next.'"><i class="material-icons md-48">chevron_right</i></a></li>
+                          <li><a href="index.php?page=admin&act=ref&pg='.$cpg.'"><i class="material-icons md-48">last_page</i></a></li>';
                             } else {
                                 echo '<li class="disabled"><a href=""><i class="material-icons md-48">chevron_right</i></a></li>
                                       <li class="disabled"><a href=""><i class="material-icons md-48">last_page</i></a></li>';
                             }
                             echo '
-                            </ul>
+                            </ul></div>
                             <!-- Pagination END -->';
                     } else {
                         echo '';
