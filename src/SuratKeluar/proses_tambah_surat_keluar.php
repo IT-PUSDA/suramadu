@@ -6,6 +6,7 @@ error_reporting(E_ALL);
 
 // TAMBAHKAN BARIS INI untuk memastikan koneksi database selalu ada
 require_once __DIR__ . '/../include/config.php';
+require_once __DIR__ . '/../include/bidang_mapping.php';
 
 if (empty($_SESSION['admin'])) {
     $_SESSION['err'] = '<center>Anda harus login terlebih dahulu!</center>';
@@ -31,7 +32,13 @@ if (empty($_SESSION['admin'])) {
             $tgl_surat = $_REQUEST['tgl_surat'];
             $isi = $_REQUEST['isi'];
             $id_user = $_SESSION['id_user'];
-            $bidang = $_REQUEST['bidang'];
+            $bidang_input = $_REQUEST['bidang'];
+            // Auto lock bidang untuk role operator (3) & bidang (4)
+            $bidang_resolved = null;
+            if (in_array((int)$_SESSION['admin'], [3,4], true)) {
+                $bidang_resolved = resolve_bidang_code_from_session();
+            }
+            $bidang = $bidang_resolved ?: $bidang_input;
             $nama_pembuat = $_REQUEST['nama_pembuat'];
 
             // Validasi PIN: harus 6 digit angka
@@ -159,8 +166,22 @@ if (empty($_SESSION['admin'])) {
                                             }
 
                                             // Query INSERT hanya satu kali
-                                            $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang, nama_pembuat, pin)
-                                                                    VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang', '$nama_pembuat', '$pin')");
+                                            // Pastikan kolom jenis ada (default 'umum')
+                                            $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+                                            if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
+                                            else {
+                                                mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN jenis VARCHAR(20) NOT NULL DEFAULT 'umum'");
+                                                $resJenis2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+                                                if ($resJenis2 && mysqli_num_rows($resJenis2) === 1) { $hasJenis = true; }
+                                            }
+
+                                            if ($hasJenis) {
+                                                $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin,jenis)
+                                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang', '$nama_pembuat', '$pin','umum')");
+                                            } else {
+                                                $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin)
+                                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang', '$nama_pembuat', '$pin')");
+                                            }
 
                                             if ($query == true) {
                                                 $_SESSION['succAdd'] = 'SUKSES! Data berhasil ditambahkan';

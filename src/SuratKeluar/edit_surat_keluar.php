@@ -6,27 +6,37 @@
         die();
     } else {
 
-        if(isset($_REQUEST['submit'])){
+    if(isset($_REQUEST['submit'])){
             // Enforce edit access ticket server-side for non-super-admin
             $id_surat = isset($_REQUEST['id_surat']) ? mysqli_real_escape_string($config, $_REQUEST['id_surat']) : '';
             if ($_SESSION['admin'] != 1) {
-                if (empty($_SESSION['edit_access_granted'][$id_surat])) {
-                    $_SESSION['err'] = '<center>ERROR! Verifikasi PIN diperlukan untuk mengedit</center>';
-                    $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
-                    header("Location: index.php?page=admin&act=".$ret_act);
-                    die();
+                $is_operator = ((int)$_SESSION['admin'] === 3);
+                $is_bidang   = ((int)$_SESSION['admin'] === 4);
+                $q_owner = mysqli_query($config, "SELECT id_user FROM tbl_surat_keluar WHERE id_surat='".$id_surat."'");
+                $owner_id_chk = null;
+                if ($q_owner && mysqli_num_rows($q_owner) === 1) { list($owner_id_chk) = mysqli_fetch_array($q_owner); }
+
+                // Centralized operator group detection
+                if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
+                $operator_group_access = false;
+                if ($is_operator && $owner_id_chk !== null) {
+                    $opInfo = operator_access_info($config, $_SESSION, (int)$owner_id_chk);
+                    $operator_group_access = $opInfo['operator_group_access'];
                 }
-                // Tambahan: jika level Bidang (4), pastikan hanya boleh edit milik sendiri
-                if ((int)$_SESSION['admin'] === 4) {
-                    $q_owner = mysqli_query($config, "SELECT id_user FROM tbl_surat_keluar WHERE id_surat='".$id_surat."'");
-                    if ($q_owner && mysqli_num_rows($q_owner) === 1) {
-                        list($owner_id_chk) = mysqli_fetch_array($q_owner);
-                        if ((int)$owner_id_chk !== (int)$_SESSION['id_user']) {
-                            $_SESSION['err'] = '<center>ERROR! Anda tidak berhak mengedit data milik bidang lain</center>';
-                            $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
-                            header("Location: index.php?page=admin&act=".$ret_act);
-                            die();
-                        }
+
+                // Bidang (4) hanya boleh edit miliknya sendiri
+                if ($is_bidang && (int)$owner_id_chk !== (int)$_SESSION['id_user']) {
+                    $_SESSION['err'] = '<center>ERROR! Anda tidak berhak mengedit data milik bidang lain</center>';
+                    $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+                    header("Location: index.php?page=admin&act=".$ret_act); die();
+                }
+
+                // Operator boleh tanpa PIN pada bidangnya; selain itu ikuti mekanisme tiket PIN
+                if (!$operator_group_access) {
+                    if (empty($_SESSION['edit_access_granted'][$id_surat])) {
+                        $_SESSION['err'] = '<center>ERROR! Verifikasi PIN diperlukan untuk mengedit</center>';
+                        $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+                        header("Location: index.php?page=admin&act=".$ret_act); die();
                     }
                 }
             }
@@ -203,11 +213,25 @@
             $id_surat = mysqli_real_escape_string($config, $_REQUEST['id_surat']);
             $query = mysqli_query($config, "SELECT id_surat, no_agenda, perihal, no_surat, tujuan, kode, tgl_surat, isi, file, id_user, bidang FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
             list($id_surat, $no_agenda, $perihal, $no_surat, $tujuan, $kode, $tgl_surat, $isi, $file, $id_user, $bidang) = mysqli_fetch_array($query);
-            $is_super_admin = ($_SESSION['admin'] == 1); // hanya super admin bebas
-            $can_manage_any = in_array($_SESSION['admin'], [2,3]); // level 2/3 bisa kelola semua jika ada tiket
-            $is_owner = ($_SESSION['id_user'] == $id_user);
-            // Non-super-admin: butuh tiket, dan harus pemilik atau memiliki kewenangan global (2/3)
-            if(!$is_super_admin && (empty($_SESSION['edit_access_granted'][$id_surat]) || (!$is_owner && !$can_manage_any))){
+            $is_super_admin = ($_SESSION['admin'] == 1);
+            $is_operator = ($_SESSION['admin'] == 3);
+            if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
+            $is_bidang   = ($_SESSION['admin'] == 4);
+            $is_owner = ((int)$_SESSION['id_user'] == (int)$id_user);
+            $operator_group_access = false;
+            if ($is_operator) {
+                $opInfo = operator_access_info($config, $_SESSION, (int)$id_user);
+                $operator_group_access = $opInfo['operator_group_access'];
+            }
+            // Bidang: hanya milik sendiri (tanpa PIN sangat terbatas—harus punya tiket jika bukan super-admin)
+            if (!$is_super_admin) {
+                if ($is_bidang && !$is_owner) {
+                    echo '<script language="javascript">window.alert("ERROR! Anda tidak memiliki hak akses untuk mengedit data ini"); var params=(function(q){var o={}; q.replace(/^[?]/,"").split("&").forEach(function(p){if(!p) return; var s=p.split("="); o[decodeURIComponent(s[0])] = decodeURIComponent(s[1]||"");}); return o;})(window.location.search); var act=params.act||"tsk"; window.location.href="index.php?page=admin&act="+act;</script>';
+                } elseif (!$operator_group_access && !$is_owner && empty($_SESSION['edit_access_granted'][$id_surat])) {
+                    echo '<script language="javascript">window.alert("ERROR! Anda tidak memiliki hak akses untuk mengedit data ini"); var params=(function(q){var o={}; q.replace(/^[?]/,"").split("&").forEach(function(p){if(!p) return; var s=p.split("="); o[decodeURIComponent(s[0])] = decodeURIComponent(s[1]||"");}); return o;})(window.location.search); var act=params.act||"tsk"; window.location.href="index.php?page=admin&act="+act;</script>';
+                }
+            }
+            if(!$is_super_admin && !$operator_group_access && !$is_owner && empty($_SESSION['edit_access_granted'][$id_surat])){
                                 echo '<script language="javascript">
                                                 window.alert("ERROR! Anda tidak memiliki hak akses untuk mengedit data ini");
                                                 var params = (function(q){ var o={}; q.replace(/^[?]/,"").split("&").forEach(function(p){ if(!p) return; var s=p.split("="); o[decodeURIComponent(s[0])] = decodeURIComponent(s[1]||""); }); return o; })(window.location.search);

@@ -69,11 +69,25 @@ foreach (['succAdd','succEdit','succDel'] as $k) {
     if (isset($_SESSION[$k])) { $msg = $_SESSION[$k]; echo '<div id="alert-message" class="row"><div class="col m12"><div class="card green lighten-5"><div class="card-content notif"><span class="card-title green-text"><i class="material-icons md-36">done</i> '.$msg.'</span></div></div></div></div>'; unset($_SESSION[$k]); }
 }
 
-$is_admin_user = ($_SESSION['admin'] == 4);
+// Gunakan helper akses operator terpusat
+$is_admin_user = ($_SESSION['admin'] == 4); $is_operator = ($_SESSION['admin'] == 3);
+if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
 $base_query = "FROM tbl_surat_keluar";
 $where_clause = '';
 if ($hasJenis) { $where_clause .= " WHERE jenis='nota_dinas'"; }
-if ($is_admin_user) { $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='".intval($id_user)."'"; }
+// Scoping
+$operator_allowed_ids = [];
+if ($is_operator) {
+  $opInfo = operator_access_info($config, $_SESSION);
+  $operator_allowed_ids = $opInfo['allowed_ids'];
+  if (!empty($operator_allowed_ids)) {
+    $where_clause .= ($where_clause? ' AND ':' WHERE ') . ' id_user IN (' . implode(',', array_map('intval',$operator_allowed_ids)) . ')';
+  } else { // fallback ke diri sendiri
+    $where_clause .= ($where_clause? ' AND ':' WHERE ') . ' id_user=' . intval($id_user);
+  }
+} elseif ($is_admin_user) {
+  $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='".intval($id_user)."'";
+}
 
 // Bidang filter (sama seperti halaman umum)
 $map = [
@@ -119,21 +133,22 @@ $query = mysqli_query($config, "SELECT * " . $base_query . $where_clause . " ORD
               <?php if (mysqli_num_rows($query) > 0) { while ($row = mysqli_fetch_array($query)) { ?>
                 <tr style="vertical-align: top;">
                   <td class="center-align"><?php echo $row['no_agenda']; ?><hr class="grey lighten-3" style="margin:4px 0;"/><?php echo $row['kode']; ?></td>
-                  <td><?php echo $row['isi']; if (!empty($row['file'])) { echo '<br/><br/><strong>File : </strong>'; if ($_SESSION['admin']==1) { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank" rel="noopener" style="text-decoration: underline;">'.$row['file'].'</a>'; } else { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" class="pin-trigger" data-action-type="view" data-id-surat="'.$row['id_surat'].'" style="text-decoration: underline;">'.$row['file'].'</a>'; } } ?></td>
+                  <td><?php echo $row['isi']; if (!empty($row['file'])) { echo '<br/><br/><strong>File : </strong>'; $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true); if ($_SESSION['admin']==1 || $_SESSION['admin']==2 || $is_operator_file) { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank" rel="noopener" style="text-decoration: underline;">'.$row['file'].'</a>'; } else { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" class="pin-trigger" data-action-type="view" data-id-surat="'.$row['id_surat'].'" style="text-decoration: underline;">'.$row['file'].'</a>'; } } ?></td>
                   <td class="center-align"><?php echo $row['tujuan']; ?><br/><small class="grey-text text-darken-1"><?php echo $row['perihal']; ?></small></td>
                   <td class="center-align"><?php echo $row['no_surat']; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo indoDate($row['tgl_surat']); ?></small></td>
                   <td class="center-align"><?php echo $row['nama_pembuat'] ?? ''; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : ''; ?></small></td>
                   <td class="center-align">
-                    <?php $can_manage = in_array($_SESSION['admin'], [1,2,3]); $is_owner = ($row['id_user'] == $_SESSION['id_user']);
-                    if ($can_manage || $is_owner) { echo '<div class="actions-compact" style="display:flex; justify-content:center; gap:0px; padding-top:5px;">';
-                        if ($_SESSION['admin']==1) {
+                    <?php if ($_SESSION['admin']==2) { echo '<div class="grey-text" style="padding-top: 15px;">-</div>'; } else { $can_manage = in_array($_SESSION['admin'], [1,3]); $is_owner = ($row['id_user'] == $_SESSION['id_user']);
+          $is_operator_owner = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true);
+          if ($can_manage || $is_owner || $is_operator_owner) { echo '<div class="actions-compact" style="display:flex; justify-content:center; gap:0px; padding-top:5px;">';
+            if ($_SESSION['admin']==1 || $is_operator_owner) {
                             echo '<a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk_nd&sub=edit&id_surat='.$row['id_surat'].'"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
                             echo '<a class="btn small deep-orange waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk_nd&sub=del&id_surat='.$row['id_surat'].'" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
                         } else {
                             echo '<a class="btn small blue waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk_nd&sub=edit&id_surat='.$row['id_surat'].'" data-action-type="edit" data-id-surat="'.$row['id_surat'].'"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
                             echo '<a class="btn small deep-orange waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk_nd&sub=del&id_surat='.$row['id_surat'].'" data-action-type="delete" data-id-surat="'.$row['id_surat'].'"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
                         }
-                        echo '</div>'; } else { echo '<div class="grey-text" style="padding-top: 15px;">-</div>'; } ?>
+                        echo '</div>'; } else { echo '<div class="grey-text" style="padding-top: 15px;">-</div>'; } } ?>
                   </td>
                 </tr>
               <?php } } else { echo '<tr><td colspan="6" class="center-align"><div class="card-panel grey lighten-4" style="margin: 20px;"><i class="material-icons large grey-text">inbox</i><p class="grey-text">Tidak ada data untuk ditampilkan.</p></div></td></tr>'; } ?>

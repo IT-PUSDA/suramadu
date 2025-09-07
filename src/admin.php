@@ -141,28 +141,94 @@ if (!isset($_SESSION['admin'])) {
                         } else {
                             $count1 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_masuk"));
                         }
-                        //menghitung jumlah surat masuk
-                        if ($_SESSION['admin'] == 4) {
-                            $id_user = $_SESSION['id_user'];
-                            $count2 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_keluar where id_user='$id_user' "));
-                        } else {
+                        // Menghitung jumlah Surat Keluar (scoping khusus operator & bidang)
+                        $operator_id_list_sql = '';
+                        if ($_SESSION['admin'] == 4) { // level Bidang: hanya dirinya sendiri
+                            $id_user = (int)$_SESSION['id_user'];
+                            $count2 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE id_user='$id_user'"));
+                        } elseif ($_SESSION['admin'] == 3) { // level Operator: semua user dalam 1 kelompok bidang
+                            // Peta grup -> username (samakan dengan file transaksi_surat_keluar*)
+                            $BIDANG_USERNAMES_DASH = [
+                                'sekretariat'   => ['SEKRETARIAT','TU'],
+                                'psda'          => ['PSDA'],
+                                'irigasi'       => ['IRIGASI'],
+                                'swp'           => ['SWP'],
+                                'binfat'        => ['BINFAT'],
+                                'upt-kediri'    => ['KEDIRI'],
+                                'korwil-malang' => ['MALANG'],
+                                'korwil-surabaya'=> ['SURABAYA'],
+                                'upt-bojonegoro'=> ['BOJONEGORO'],
+                                'korwil-madiun' => ['MADIUN'],
+                                'upt-bondowoso' => ['BONDOWOSO'],
+                                'upt-lumajang'  => ['LUMAJANG'],
+                                'upt-pasuruan'  => ['PASURUAN'],
+                                'upt-madura'    => ['MADURA'],
+                            ];
+                            $uname = strtoupper($_SESSION['username']);
+                            // Tambahan: coba juga nama lengkap bila ada
+                            if (isset($_SESSION['nama'])) {
+                                $namaUpper = strtoupper($_SESSION['nama']);
+                            } else { $namaUpper = ''; }
+                            $foundGroup = null;
+                            foreach ($BIDANG_USERNAMES_DASH as $gKey => $arrU) {
+                                foreach ($arrU as $uChk) {
+                                    $token = strtoupper($uChk);
+                                    // cocokkan penuh atau sebagai substring di username / nama tampil
+                                    if ($uname === $token || strpos($uname, $token) !== false || ($namaUpper && (strpos($namaUpper, $token) !== false))) {
+                                        $foundGroup = $gKey; break 2;
+                                    }
+                                }
+                            }
+                            // Fallback: ganti spasi/underscore lalu ulang substring sederhana
+                            if ($foundGroup === null) {
+                                $unameFlat = str_replace(['_', ' '], '', $uname);
+                                foreach ($BIDANG_USERNAMES_DASH as $gKey => $arrU) {
+                                    foreach ($arrU as $uChk) {
+                                        $tokenFlat = str_replace(['_', ' '], '', strtoupper($uChk));
+                                        if (strpos($unameFlat, $tokenFlat) !== false) { $foundGroup = $gKey; break 2; }
+                                    }
+                                }
+                            }
+                            $idsOperator = [];
+                            if ($foundGroup !== null) {
+                                $names = array_map('strtoupper', $BIDANG_USERNAMES_DASH[$foundGroup]);
+                                $esc = [];
+                                foreach ($names as $n) { $esc[] = "'" . mysqli_real_escape_string($config, $n) . "'"; }
+                                $sqlUsers = "SELECT id_user FROM tbl_user WHERE UPPER(username) IN (" . implode(',', $esc) . ")";
+                                $ru = mysqli_query($config, $sqlUsers);
+                                if ($ru) { while ($r = mysqli_fetch_assoc($ru)) { $idsOperator[] = (int)$r['id_user']; } }
+                            }
+                            if (empty($idsOperator)) { // fallback minimal: dirinya sendiri
+                                $idsOperator[] = (int)$_SESSION['id_user'];
+                            }
+                            $operator_id_list_sql = implode(',', array_map('intval', $idsOperator));
+                            $sqlCountOp = "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_user IN ($operator_id_list_sql)";
+                            $rOp = mysqli_query($config, $sqlCountOp);
+                            $count2 = ($rOp ? (int)mysqli_fetch_assoc($rOp)['c'] : 0);
+                        } else { // selain operator & bidang: total
                             $count2 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_keluar"));
                         }
                         // cek apakah kolom jenis ada
-                        $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+                        $hasJenis = false;
+                        $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
                         if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
-                        // hitung jumlah per jenis (mengikuti batasan operator bila ada)
-                        $whereUser = ($_SESSION['admin'] == 4) ? (" AND id_user='" . intval($_SESSION['id_user']) . "'") : '';
+                        // hitung jumlah per jenis mengikuti scope
+                        if ($_SESSION['admin'] == 4) {
+                            $whereUser = " AND id_user='" . (int)$_SESSION['id_user'] . "'";
+                        } elseif ($_SESSION['admin'] == 3 && $operator_id_list_sql !== '') {
+                            $whereUser = " AND id_user IN (" . $operator_id_list_sql . ")";
+                        } else {
+                            $whereUser = '';
+                        }
                         if ($hasJenis) {
-                            $qND = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='nota_dinas'".$whereUser);
-                            $qPH = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='produk_hukum'".$whereUser);
-                            $qKEU = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='keuangan'".$whereUser);
+                            $qND = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='nota_dinas'" . $whereUser);
+                            $qPH = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='produk_hukum'" . $whereUser);
+                            $qKEU = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE jenis='keuangan'" . $whereUser);
                             $countND = ($qND ? (int)mysqli_fetch_assoc($qND)['c'] : 0);
                             $countPH = ($qPH ? (int)mysqli_fetch_assoc($qPH)['c'] : 0);
                             $countKEU = ($qKEU ? (int)mysqli_fetch_assoc($qKEU)['c'] : 0);
                         } else {
-                            // fallback bila kolom belum ada
-                            $countND = 0; $countPH = 0; $countKEU = 0;
+                            $countND = $countPH = $countKEU = 0; // kolom belum ada
                         }
                         //menghitung jumlah surat masuk
                         if ($_SESSION['admin'] == 4) {
@@ -255,7 +321,7 @@ if (!isset($_SESSION['admin'])) {
                 </div>
     			-->
 
-                        <?php if ($_SESSION['id_user'] == 1 || $_SESSION['admin'] == 3) { ?>
+                        <?php if ((int)$_SESSION['admin'] === 1) { ?>
                         <div class="col s12">
                             <div class="row home-stats" style="margin-top:16px; margin-bottom:0;">
                             <div class="col s12 m6 l3">

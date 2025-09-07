@@ -158,7 +158,8 @@ if (empty($_SESSION['admin'])) {
                                     <tbody id="tbody-data">
                                         <?php
                                         // PENERAPAN LOGIKA HAK AKSES DIMULAI DI SINI
-                                        $is_admin_user = ($_SESSION['admin'] == 4);
+                                        $is_admin_user = ($_SESSION['admin'] == 4); // level Bidang
+                                        $is_operator   = ($_SESSION['admin'] == 3); // level Operator
                                         $base_query = "FROM tbl_surat_keluar";
                                         $where_clause = "";
                                         // Mapping bidang (sama dengan di dashboard)
@@ -196,9 +197,20 @@ if (empty($_SESSION['admin'])) {
                                             'upt-madura' => 'UPT Madura',
                                         ];
 
-                                        // 1. Filter Data: Jika Admin User, hanya tampilkan data miliknya
-                                        if ($is_admin_user) {
-                                            $where_clause .= " WHERE id_user='$id_user'";
+                                        // 1. Filter Data:
+                                        //    - Level Bidang (4): hanya data miliknya sendiri
+                                        //    - Level Operator (3): hanya data dalam kelompok bidang operator (berdasarkan username mapping)
+                                        // Gunakan helper terpusat untuk konsistensi
+                                        if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
+                                        $operator_allowed_ids = [];
+                                        if ($is_operator) {
+                                            $opInfo = operator_access_info($config, $_SESSION);
+                                            $operator_allowed_ids = $opInfo['allowed_ids'];
+                                            if (empty($operator_allowed_ids)) { $operator_allowed_ids[] = (int)$id_user; }
+                                            $idListAllowed = implode(',', array_map('intval', $operator_allowed_ids));
+                                            $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user IN ($idListAllowed)";
+                                        } elseif ($is_admin_user) {
+                                            $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='" . intval($id_user) . "'"; // Level Bidang hanya dirinya
                                         }
 
                                         // Jika Super Admin mengklik kartu bidang di beranda, terapkan filter bidang
@@ -222,10 +234,26 @@ if (empty($_SESSION['admin'])) {
                                         if (isset($_REQUEST['submit'])) {
                                             $cari = mysqli_real_escape_string($config, $_REQUEST['cari']);
                                             $search_condition = "(isi LIKE '%$cari%' OR perihal LIKE '%$cari%' OR tujuan LIKE '%$cari%' OR No_Surat LIKE '%$cari%')";
-                                            $where_clause .= ($is_admin_user ? " AND " : " WHERE ") . $search_condition;
+                                            $where_clause .= (($is_admin_user || $is_operator) ? " AND " : " WHERE ") . $search_condition;
                                         }
 
-                                        // Query untuk mengambil data sesuai hak akses
+                                        // Pastikan kolom jenis ada; jika belum, buat (default 'umum')
+                                        $hasJenisCol = false;
+                                        $chkJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+                                        if ($chkJenis && mysqli_num_rows($chkJenis) === 1) {
+                                            $hasJenisCol = true;
+                                        } else {
+                                            mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN jenis VARCHAR(20) NOT NULL DEFAULT 'umum'");
+                                            $chkJenis2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+                                            if ($chkJenis2 && mysqli_num_rows($chkJenis2) === 1) { $hasJenisCol = true; }
+                                        }
+
+                                        // Halaman umum hanya menampilkan jenis 'umum' saja (bukan nota_dinas, produk_hukum, keuangan)
+                                        if ($hasJenisCol) {
+                                            $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " jenis='umum'";
+                                        }
+
+                                        // Query untuk mengambil data sesuai hak akses + filter jenis umum
                                         $query = mysqli_query($config, "SELECT * " . $base_query . $where_clause . " ORDER BY id_surat DESC LIMIT $curr, $limit");
 
                                         if (mysqli_num_rows($query) > 0) {
@@ -237,11 +265,11 @@ if (empty($_SESSION['admin'])) {
 
                                                 if (!empty($row['file'])) {
                                                     echo '<br/><br/><strong>File : </strong>';
-                                                    if ($_SESSION['admin'] == 1) {
-                                                        // Super Admin: langsung buka di tab baru tanpa PIN modal
+                                                    $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true);
+                                                    if ($_SESSION['admin'] == 1 || $_SESSION['admin'] == 2 || $is_operator_file) {
+                                                        // Super Admin & Operator (data bidangnya) langsung buka
                                                         echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" rel="noopener" style="text-decoration: underline;">' . $row['file'] . '</a>';
                                                     } else {
-                                                        // Selain Super Admin: gunakan PIN modal
                                                         echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" class="pin-trigger" data-action-type="view" data-id-surat="' . $row['id_surat'] . '" style="text-decoration: underline;">' . $row['file'] . '</a>';
                                                     }
                                                     if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) {
@@ -255,14 +283,16 @@ if (empty($_SESSION['admin'])) {
                                                     <td class="center-align">' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>
                                                     <td class="center-align">';
 
-                                                // 2. Batasi Tombol: Super Admin & Verifikator bisa semua, Admin User hanya data miliknya
-                                                $can_manage = in_array($_SESSION['admin'], [1, 2, 3]); // Super Admin & Verifikator
-                                                $is_owner = $row['id_user'] == $_SESSION['id_user'];
-
-                                                if ($can_manage || $is_owner) {
+                                                // 2. Batasi Tombol: Super Admin & Operator (bidangnya), Bidang (milik sendiri)
+                                                $can_manage = in_array($_SESSION['admin'], [1]);
+                                                $is_owner = ($row['id_user'] == $_SESSION['id_user']);
+                                                $is_operator_owner = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true);
+                                                if ($_SESSION['admin'] == 2) {
+                                                    echo '<div class="grey-text" style="padding-top: 15px;">-</div>';
+                                                } elseif ($can_manage || $is_owner || $is_operator_owner) {
                                                     echo '<div class="actions-compact" style="display: flex; justify-content: center; gap: 0px; padding-top: 5px;">';
-                                                    if ($_SESSION['admin'] == 1) {
-                                                        // Super Admin: langsung edit/hapus tanpa PIN modal
+                                                    if ($_SESSION['admin'] == 1 || $is_operator_owner) {
+                                                        // Super Admin & Operator (data bidangnya): tanpa PIN
                                                         echo '<a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
                                                         echo '<a class="btn small deep-orange waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
                                                     } else {

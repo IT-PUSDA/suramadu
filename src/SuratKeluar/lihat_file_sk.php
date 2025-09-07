@@ -5,6 +5,8 @@ session_start();
 
 // Memuat file konfigurasi database
 require_once __DIR__ . '/../include/config.php';
+// Centralized operator access helper
+if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
 
 // Keamanan: Pastikan pengguna sudah login
 if (empty($_SESSION['admin'])) {
@@ -18,11 +20,13 @@ if (!isset($_GET['id_surat']) || empty($_GET['id_surat'])) {
 
 $id_surat = mysqli_real_escape_string($config, $_GET['id_surat']);
 
-// Keamanan tambahan: izinkan akses hanya jika memiliki tiket session atau super admin
-if (empty($_SESSION['file_access_granted'][$id_surat]) && (!isset($_SESSION['admin']) || $_SESSION['admin'] != 1)) {
-    http_response_code(403); // Forbidden
-    die('Akses tidak sah. Silakan lakukan verifikasi PIN terlebih dahulu melalui halaman transaksi.');
-}
+// Keamanan tambahan: izinkan akses jika:
+//  - Super admin (1)
+//  - Sudah punya tiket verifikasi PIN
+//  - Operator (3) yang mengakses surat di dalam kelompok bidangnya sendiri
+// Flag awal
+$is_operator = (isset($_SESSION['admin']) && (int)$_SESSION['admin'] === 3);
+$operator_group_access = false;
 
 // Mengambil data file dari database
 $query = mysqli_query($config, "SELECT file,id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
@@ -32,6 +36,18 @@ if (mysqli_num_rows($query) == 0) {
 }
 
 list($file, $owner_id) = mysqli_fetch_array($query);
+
+// Tentukan akses operator menggunakan helper setelah tahu owner
+if ($is_operator && function_exists('operator_access_info')) {
+    $opInfo = operator_access_info($config, $_SESSION, (int)$owner_id);
+    $operator_group_access = $opInfo['operator_group_access'];
+}
+
+// Pimpinan (2) juga boleh melihat file tanpa PIN
+if (empty($_SESSION['file_access_granted'][$id_surat]) && (!isset($_SESSION['admin']) || (!in_array((int)$_SESSION['admin'], [1,2]) && !$operator_group_access))) {
+    http_response_code(403); // Forbidden
+    die('Akses tidak sah. Verifikasi PIN dibutuhkan atau Anda bukan operator dalam bidang surat ini.');
+}
 
 // Pembatasan tambahan untuk level Bidang (4): hanya boleh melihat file milik sendiri
 if ((int)$_SESSION['admin'] === 4 && (int)$owner_id !== (int)$_SESSION['id_user']) {

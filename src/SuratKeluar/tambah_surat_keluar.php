@@ -167,22 +167,11 @@ if (empty($_SESSION['admin'])) {
                 <div class="input-field col s6">
                     <i class="material-icons prefix md-prefix">low_priority</i><label>Bidang</label><br />
                     <div class="input-field col s11 right">
-                        <select name="bidang" id="bidang" required>
-                            <option value="104.1">Sekretariat</option>
-                            <option value="104.2">PSDA</option>
-                            <option value="104.3">Irigasi</option>
-                            <option value="104.4">SWP</option>
-                            <option value="104.5">Binfat</option>
-                            <option value="104.6">UPT Kediri</option>
-                            <option value="104.7">Korwil Malang</option>
-                            <option value="104.8">Korwil Surabaya</option>
-                            <option value="104.9">UPT Bojonegoro</option>
-                            <option value="104.10">Korwil Madiun</option>
-                            <option value="104.11">UPT Bondowoso</option>
-                            <option value="104.12">UPT Lumajang</option>
-                            <option value="104.13">UPT Pasuruan</option>
-                            <option value="104.14">UPT Madura</option>
+                        <?php require_once __DIR__ . '/../include/bidang_mapping.php'; $lockCode = (in_array((int)$_SESSION['admin'],[3,4],true) ? resolve_bidang_code_from_session() : null); if($lockCode){ echo '<input type="hidden" name="bidang" value="'.htmlspecialchars($lockCode).'" />'; } ?>
+                        <select name="bidang" id="bidang" required <?php echo $lockCode? 'disabled' : ''; ?>>
+                            <?php print_bidang_options($lockCode); ?>
                         </select>
+                        <?php if($lockCode){ echo '<small class="grey-text">(Bidang otomatis: '.$lockCode.')</small>'; } ?>
                     </div>
                     <?php
                     if (isset($_SESSION['bidangk'])) {

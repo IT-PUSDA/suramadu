@@ -4,6 +4,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 require_once __DIR__ . '/../include/config.php';
+require_once __DIR__ . '/../include/bidang_mapping.php';
 
 if (empty($_SESSION['admin'])) { $_SESSION['err']='<center>Anda harus login terlebih dahulu!</center>'; header('Location: index.php'); die(); }
 
@@ -18,7 +19,8 @@ if (isset($_REQUEST['submit1'])) {
     $tgl_surat = $_REQUEST['tgl_surat'];
     $isi = $_REQUEST['isi'];
     $id_user = $_SESSION['id_user'];
-    $bidang = $_REQUEST['bidang'];
+    $bidang_input = $_REQUEST['bidang'];
+    $bidang = (in_array((int)$_SESSION['admin'], [3,4], true) && ($auto = resolve_bidang_code_from_session())) ? $auto : $bidang_input;
     $nama_pembuat = $_REQUEST['nama_pembuat'];
 
     $raw_pin = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
@@ -66,8 +68,14 @@ if (isset($_REQUEST['submit1'])) {
         if (in_array($eks, $ekstensi)) { if ($ukuran < $max) { $nfile = rand(1,10000).'-'.$file; if (!move_uploaded_file($_FILES['file']['tmp_name'],$target_dir.$nfile)) { $_SESSION['errQ']='ERROR! Gagal mengupload file.'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); } } else { $_SESSION['errSize']='Ukuran file terlalu besar! Maks 2 MB.'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); } } else { $_SESSION['errFormat']='Format file yang diperbolehkan hanya *.PDF!'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
     }
 
-    // Insert with jenis if column exists
-    $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'"); if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
+    // Ensure jenis column exists and insert with jenis = produk_hukum
+    $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+    if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
+    else {
+        mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN jenis VARCHAR(20) NOT NULL DEFAULT 'umum'");
+        $resJenis2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
+        if ($resJenis2 && mysqli_num_rows($resJenis2) === 1) { $hasJenis = true; }
+    }
     if ($hasJenis) {
         $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin,jenis) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin','produk_hukum')";
     } else {

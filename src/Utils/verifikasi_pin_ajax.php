@@ -1,6 +1,8 @@
 <?php
 session_start();
 require_once __DIR__ . '/../include/config.php';
+// Centralized operator access helper
+if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
 
 header('Content-Type: application/json');
 
@@ -25,8 +27,16 @@ if (mysqli_num_rows($query) > 0) {
         exit();
     }
 
-    // If PIN is not set in DB (for old data), or if user is super admin, grant access
-    if (empty($pin_hash) || (isset($_SESSION['admin']) && $_SESSION['admin'] == 1)) {
+    // Operator bidang grouping bypass: gunakan helper terpusat
+    $is_operator = (isset($_SESSION['admin']) && (int)$_SESSION['admin'] === 3);
+    $operator_group_access = false;
+    if ($is_operator && function_exists('operator_access_info')) {
+        $opInfo = operator_access_info($config, $_SESSION, (int)$owner_id);
+        $operator_group_access = $opInfo['operator_group_access'];
+    }
+
+    // If PIN is not set, super admin, pimpinan (2), or operator group has access: grant access
+    if (empty($pin_hash) || (isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1,2])) || $operator_group_access) {
         // Set session untuk memberikan izin akses
         $_SESSION['file_access_granted'][$id_surat] = true;
         $_SESSION['edit_access_granted'][$id_surat] = true;

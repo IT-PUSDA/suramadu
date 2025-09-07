@@ -24,7 +24,8 @@ if (!function_exists('indoDate')) {
 }
 
 $id_user = $_SESSION['id_user'];
-$is_admin_user = ($_SESSION['admin'] == 4); // Admin biasa (hanya data miliknya)
+$is_admin_user = ($_SESSION['admin'] == 4); // Level Bidang
+$is_operator   = ($_SESSION['admin'] == 3); // Level Operator
 
 // Pagination size from settings
 $limit = 10; // fallback
@@ -42,8 +43,41 @@ $curr = ($pg - 1) * $limit;
 $base_query = "FROM tbl_surat_keluar";
 $where_clause = '';
 
-// Filter kepemilikan untuk admin user
-if ($is_admin_user) {
+// Scoping data:
+//  - Bidang (4): hanya data miliknya
+//  - Operator (3): data seluruh anggota bidangnya (mapping username -> grup)
+$operator_allowed_ids = [];
+if ($is_operator) {
+    $username_current = strtoupper($_SESSION['username'] ?? '');
+    $map_for_operator = [
+        'sekretariat'   => ['SEKRETARIAT', 'TU'],
+        'psda'          => ['PSDA'],
+        'irigasi'       => ['IRIGASI'],
+        'swp'           => ['SWP'],
+        'binfat'        => ['BINFAT'],
+        'upt-kediri'    => ['KEDIRI'],
+        'korwil-malang' => ['MALANG'],
+        'korwil-surabaya'=> ['SURABAYA'],
+        'upt-bojonegoro'=> ['BOJONEGORO'],
+        'korwil-madiun' => ['MADIUN'],
+        'upt-bondowoso' => ['BONDOWOSO'],
+        'upt-lumajang'  => ['LUMAJANG'],
+        'upt-pasuruan'  => ['PASURUAN'],
+        'upt-madura'    => ['MADURA'],
+    ];
+    foreach ($map_for_operator as $grp => $names) {
+        $upperNames = array_map('strtoupper', $names);
+        if (in_array($username_current, $upperNames, true)) {
+            $in = "'" . implode("','", array_map(function($s) use ($config){ return mysqli_real_escape_string($config, strtoupper($s)); }, $upperNames)) . "'";
+            $resOp = mysqli_query($config, "SELECT id_user FROM tbl_user WHERE UPPER(username) IN ($in)");
+            if ($resOp) { while($rOp = mysqli_fetch_assoc($resOp)) { $operator_allowed_ids[] = (int)$rOp['id_user']; } }
+            break;
+        }
+    }
+    if (empty($operator_allowed_ids)) { $operator_allowed_ids[] = (int)$id_user; }
+    $idListAllowed = implode(',', array_map('intval', $operator_allowed_ids));
+    $where_clause .= " WHERE id_user IN ($idListAllowed)";
+} elseif ($is_admin_user) {
     $where_clause .= " WHERE id_user='" . mysqli_real_escape_string($config, $id_user) . "'";
 }
 
@@ -103,7 +137,8 @@ if ($q && mysqli_num_rows($q) > 0) {
         echo '<td>' . $row['isi'];
         if (!empty($row['file'])) {
             echo '<br/><br/><strong>File : </strong>';
-            if ($_SESSION['admin'] == 1) {
+            $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true);
+            if ($_SESSION['admin'] == 1 || $is_operator_file) {
                 echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" rel="noopener" style="text-decoration: underline;">' . $row['file'] . '</a>';
             } else {
                 echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" class="pin-trigger" data-action-type="view" data-id-surat="' . $row['id_surat'] . '" style="text-decoration: underline;">' . $row['file'] . '</a>';
@@ -117,12 +152,13 @@ if ($q && mysqli_num_rows($q) > 0) {
         echo '<td class="center-align">' . $row['no_surat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . indoDate($row['tgl_surat']) . '</small></td>';
         echo '<td class="center-align">' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>';
 
-        $can_manage = in_array($_SESSION['admin'], [1, 2, 3]);
-        $is_owner = ($row['id_user'] == $_SESSION['id_user']);
+    $can_manage = in_array($_SESSION['admin'], [1, 2]);
+    $is_owner = ($row['id_user'] == $_SESSION['id_user']);
+    $is_operator_owner = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true);
         echo '<td class="center-align">';
-        if ($can_manage || $is_owner) {
+        if ($can_manage || $is_owner || $is_operator_owner) {
             echo '<div class="actions-compact" style="display: flex; justify-content: center; gap: 0px; padding-top: 5px;">';
-            if ($_SESSION['admin'] == 1) {
+            if ($_SESSION['admin'] == 1 || $is_operator_owner) {
                 echo '<a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
                 echo '<a class="btn small deep-orange waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
             } else {

@@ -11,19 +11,30 @@
         // Cek hak akses server-side: hanya Super Admin bebas PIN, lainnya wajib tiket delete + kewenangan
         $is_super_admin = ($_SESSION['admin'] == 1);
     if (!$is_super_admin) {
-            // Ambil pemilik data untuk validasi owner
-            $q_owner = mysqli_query($config, "SELECT id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
-            list($owner_id) = mysqli_fetch_array($q_owner);
-            $can_manage = in_array($_SESSION['admin'], [2,3]); // level ini boleh kelola semua jika punya tiket
-            $is_owner = ($owner_id == $_SESSION['id_user']);
-
-            if ((!$can_manage && !$is_owner) || empty($_SESSION['delete_access_granted'][$id_surat])) {
-                $_SESSION['err'] = '<center>ERROR! Anda tidak memiliki izin menghapus surat ini</center>';
-                $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
-                header("Location: index.php?page=admin&act=".$ret_act);
-                die();
-            }
+        $is_operator = ((int)$_SESSION['admin'] === 3);
+        $is_bidang   = ((int)$_SESSION['admin'] === 4);
+        $q_owner = mysqli_query($config, "SELECT id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
+        list($owner_id) = mysqli_fetch_array($q_owner);
+        $is_owner = ((int)$owner_id === (int)$_SESSION['id_user']);
+        // Centralized operator access
+        if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
+        $operator_group_access = false;
+        if ($is_operator) {
+            $opInfo = operator_access_info($config, $_SESSION, (int)$owner_id);
+            $operator_group_access = $opInfo['operator_group_access'];
         }
+        // Bidang wajib pemilik; operator wajib dalam group; jika tidak, butuh tiket (PIN) yang diset saat verifikasi
+        if ($is_bidang && !$is_owner) {
+            $_SESSION['err'] = '<center>ERROR! Anda tidak memiliki izin menghapus surat bidang lain</center>';
+            $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+            header("Location: index.php?page=admin&act=".$ret_act); die();
+        }
+        if (!$operator_group_access && !$is_owner && empty($_SESSION['delete_access_granted'][$id_surat])) {
+            $_SESSION['err'] = '<center>ERROR! Anda tidak memiliki izin menghapus surat ini</center>';
+            $ret_act = isset($_REQUEST['act']) ? preg_replace('/[^a-zA-Z0-9_]/','', $_REQUEST['act']) : 'tsk';
+            header("Location: index.php?page=admin&act=".$ret_act); die();
+        }
+    }
 
         // Ambil nama file dari database SEBELUM record dihapus
         $query_file = mysqli_query($config, "SELECT file FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
