@@ -105,26 +105,41 @@
 										$_SESSION['isik'] = 'Form Isi Ringkas hanya boleh mengandung karakter huruf, angka, spasi, titik(.), koma(,), minus(-), garis miring(/), kurung(), underscore(_), dan(&) persen(%) dan at(@)';
 										echo '<script language="javascript">window.history.back();</script>';
 									} else {
-											$ekstensi = array('jpg','png','jpeg','doc','docx','pdf');
-											$file = $_FILES['file']['name'];
+                                            // Batasi hanya PDF saat edit (maks 2MB)
+                                            $ekstensi = array('pdf');
+                                            $file = $_FILES['file']['name'];
 											$x = explode('.', $file);
 											$eks = strtolower(end($x));
 											$ukuran = $_FILES['file']['size'];
-											$target_dir = "upload/surat_keluar/";
+                                            $target_dir = BASE_PATH . "/upload/surat_keluar/";
+                                            $max_size_edit = 2097152; // 2MB
 											
 											$id_surat = $_REQUEST['id_surat'];
-											$query1 = mysqli_query($config, "SELECT file FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
-                                            $data1=mysqli_fetch_array($query1);
-											$files=$data1['file'];
+                                            // Pastikan kolom file_no tersedia
+                                            $hasFileNo = false; $resFileNo = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'");
+                                            if ($resFileNo && mysqli_num_rows($resFileNo) === 1) { $hasFileNo = true; }
+                                            else { mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_no INT UNSIGNED NULL DEFAULT NULL"); $resFileNo2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'"); if ($resFileNo2 && mysqli_num_rows($resFileNo2) === 1) { $hasFileNo = true; } }
+
+                                            $query1 = mysqli_query($config, "SELECT file".($hasFileNo?", file_no":"")." FROM tbl_surat_keluar WHERE id_surat='".$id_surat."'");
+                                            $data1 = mysqli_fetch_array($query1);
+                                            $files = $data1['file'];
+                                            $existing_file_no = $hasFileNo ? (is_null($data1['file_no'])? null : (int)$data1['file_no']) : null;
+                                            // Jika kolom file_no belum terisi, coba baca dari prefix nama file lama (misal "5432-nama.pdf")
+                                            if ($existing_file_no === null && !empty($files)) {
+                                                if (preg_match('/^(\\d+)-/', $files, $m)) {
+                                                    $existing_file_no = (int)$m[1];
+                                                }
+                                            }
                                             //jika form file tidak kosong akan mengeksekusi script dibawah ini
                                             if($file != ""){
 												
-											    $rand = rand(1,10000);
-                                                $nfile = $rand."-".$file;
+                                                // gunakan nomor file yang sudah ada jika ada; jika belum, buat baru
+                                                $num = $existing_file_no !== null ? $existing_file_no : rand(1,10000);
+                                                $nfile = $num."-".$file;
 												
                                                 //validasi file
                                                 if(in_array($eks, $ekstensi) == true){
-                                                    if($ukuran < 5220350){
+                                                    if($ukuran < $max_size_edit){
 
                                                         $id_surat = $_REQUEST['id_surat'];
                                                      	
@@ -134,8 +149,9 @@
 
                                                             move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$nfile);
 
+                                                            $fileNoClause = ($hasFileNo? ", file_no='".$num."'" : "");
                                                             $query = mysqli_query($config, "UPDATE tbl_surat_keluar SET perihal='$perihal', no_surat='$no_surat', tujuan='$tujuan', kode='$nkode', 
-																tgl_surat='$tgl_surat', isi='$isi', file='$nfile', id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
+                                                                tgl_surat='$tgl_surat', isi='$isi', file='$nfile'".$fileNoClause.", id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                             if($query == true){
                                                                 // Hapus tiket akses edit setelah sukses (sekali pakai)
@@ -152,11 +168,13 @@
                                                         } else {
 
                                                             //jika file diganti baru akan mengeksekusi script dibawah ini
-															unlink($target_dir.$file);
+                                                            // hapus file lama jika ada
+                                                            if (is_file($target_dir.$files)) { @unlink($target_dir.$files); }
                                                             move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$nfile);
 
+                                                            $fileNoClause = ($hasFileNo? ", file_no='".$num."'" : "");
                                                             $query = mysqli_query($config, "UPDATE tbl_surat_keluar SET perihal='$perihal', no_surat='$no_surat', tujuan='$tujuan', kode='$nkode', 
-																tgl_surat='$tgl_surat', isi='$isi', file='$nfile', id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
+                                                                tgl_surat='$tgl_surat', isi='$isi', file='$nfile'".$fileNoClause.", id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                             if($query == true){
                                                                 // Hapus tiket akses edit setelah sukses (sekali pakai)
@@ -172,11 +190,11 @@
                                                             }
                                                         }
                                                     } else {
-                                                        $_SESSION['errSize'] = 'Ukuran file yang diupload terlalu besar!';
+                                                        $_SESSION['errSize'] = 'Ukuran file yang diupload terlalu besar! Ukuran maksimal adalah 2 MB.';
                                                         echo '<script language="javascript">window.history.back();</script>';
                                                     }
                                                 } else {
-                                                    $_SESSION['errFormat'] = 'Format file yang diperbolehkan hanya *.JPG, *.PNG, *.DOC, *.DOCX atau *.PDF!';
+                                                    $_SESSION['errFormat'] = 'Format file yang diperbolehkan hanya *.PDF!';
                                                     echo '<script language="javascript">window.history.back();</script>';
                                                 }
                                             } else {

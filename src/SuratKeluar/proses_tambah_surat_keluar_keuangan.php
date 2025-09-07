@@ -59,8 +59,13 @@ if (isset($_REQUEST['submit1'])) {
     $dup = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
     if (mysqli_num_rows($dup) > 0) { $_SESSION['errDup']='Nomor Surat sudah terpakai, gunakan yang lain!'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
 
+    // Pastikan kolom file_no tersedia
+    $hasFileNo = false; $resFileNo = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'");
+    if ($resFileNo && mysqli_num_rows($resFileNo) === 1) { $hasFileNo = true; }
+    else { mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_no INT UNSIGNED NULL DEFAULT NULL"); $resFileNo2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'"); if ($resFileNo2 && mysqli_num_rows($resFileNo2) === 1) { $hasFileNo = true; } }
+
     // Upload file (opsional, hanya PDF maks 2MB)
-    $nfile = '';
+    $nfile = ''; $file_no = null;
     if (!empty($_FILES['file']['name'])) {
         $ek = ['pdf'];
         $file = $_FILES['file']['name'];
@@ -71,7 +76,8 @@ if (isset($_REQUEST['submit1'])) {
         $max = 2097152; // 2MB
         if (in_array($eks, $ek)) {
             if ($uk < $max) {
-                $nfile = rand(1, 10000) . '-' . $file;
+                $file_no = rand(1, 10000);
+                $nfile = $file_no . '-' . $file;
                 if (!move_uploaded_file($_FILES['file']['tmp_name'], $dir . $nfile)) {
                     $_SESSION['errQ'] = 'ERROR! Gagal mengupload file.';
                     header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan');
@@ -97,8 +103,12 @@ if (isset($_REQUEST['submit1'])) {
         $resJenis2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
         if ($resJenis2 && mysqli_num_rows($resJenis2) === 1) { $hasJenis = true; }
     }
-    if ($hasJenis) {
+    if ($hasJenis && $hasFileNo) {
+        $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,file_no,id_user,bidang,nama_pembuat,pin,jenis) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile',".($file_no===null?"NULL":"'".intval($file_no)."'").",'$id_user','$bidang','$nama_pembuat','$pin','keuangan')";
+    } elseif ($hasJenis) {
         $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin,jenis) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin','keuangan')";
+    } elseif ($hasFileNo) {
+        $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,file_no,id_user,bidang,nama_pembuat,pin) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile',".($file_no===null?"NULL":"'".intval($file_no)."'").",'$id_user','$bidang','$nama_pembuat','$pin')";
     } else {
         $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin')";
     }

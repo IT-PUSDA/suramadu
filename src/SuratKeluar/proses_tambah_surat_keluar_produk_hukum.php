@@ -60,12 +60,17 @@ if (isset($_REQUEST['submit1'])) {
     $dup = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
     if (mysqli_num_rows($dup) > 0) { $_SESSION['errDup']='Nomor Surat sudah terpakai, gunakan yang lain!'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
 
+    // Pastikan kolom file_no tersedia
+    $hasFileNo = false; $resFileNo = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'");
+    if ($resFileNo && mysqli_num_rows($resFileNo) === 1) { $hasFileNo = true; }
+    else { mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_no INT UNSIGNED NULL DEFAULT NULL"); $resFileNo2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'"); if ($resFileNo2 && mysqli_num_rows($resFileNo2) === 1) { $hasFileNo = true; } }
+
     // Upload file
-    $nfile = '';
+    $nfile = ''; $file_no = null;
     if (!empty($_FILES['file']['name'])) {
         $ekstensi = ['pdf']; $file = $_FILES['file']['name']; $x = explode('.', $file); $eks = strtolower(end($x)); $ukuran = $_FILES['file']['size'];
         $target_dir = BASE_PATH . '/upload/surat_keluar/'; $max = 2097152;
-        if (in_array($eks, $ekstensi)) { if ($ukuran < $max) { $nfile = rand(1,10000).'-'.$file; if (!move_uploaded_file($_FILES['file']['tmp_name'],$target_dir.$nfile)) { $_SESSION['errQ']='ERROR! Gagal mengupload file.'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); } } else { $_SESSION['errSize']='Ukuran file terlalu besar! Maks 2 MB.'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); } } else { $_SESSION['errFormat']='Format file yang diperbolehkan hanya *.PDF!'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
+    if (in_array($eks, $ekstensi)) { if ($ukuran < $max) { $file_no = rand(1,10000); $nfile = $file_no.'-'.$file; if (!move_uploaded_file($_FILES['file']['tmp_name'],$target_dir.$nfile)) { $_SESSION['errQ']='ERROR! Gagal mengupload file.'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); } } else { $_SESSION['errSize']='Ukuran file terlalu besar! Maks 2 MB.'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); } } else { $_SESSION['errFormat']='Format file yang diperbolehkan hanya *.PDF!'; header('Location: index.php?page=admin&act=tsk_ph&sub=add_produk_hukum'); die(); }
     }
 
     // Ensure jenis column exists and insert with jenis = produk_hukum
@@ -76,8 +81,12 @@ if (isset($_REQUEST['submit1'])) {
         $resJenis2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
         if ($resJenis2 && mysqli_num_rows($resJenis2) === 1) { $hasJenis = true; }
     }
-    if ($hasJenis) {
+    if ($hasJenis && $hasFileNo) {
+        $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,file_no,id_user,bidang,nama_pembuat,pin,jenis) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile',".($file_no===null?"NULL":"'".intval($file_no)."'").",'$id_user','$bidang','$nama_pembuat','$pin','produk_hukum')";
+    } elseif ($hasJenis) {
         $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin,jenis) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin','produk_hukum')";
+    } elseif ($hasFileNo) {
+        $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,file_no,id_user,bidang,nama_pembuat,pin) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile',".($file_no===null?"NULL":"'".intval($file_no)."'").",'$id_user','$bidang','$nama_pembuat','$pin')";
     } else {
         $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin) VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang','$nama_pembuat','$pin')";
     }
