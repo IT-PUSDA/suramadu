@@ -75,7 +75,27 @@ if (empty($_SESSION['admin'])) {
 ?>
 
             <!-- Tampilan Header Halaman -->
-            <div class="row">
+            <!-- Style rapi full-width khusus halaman Surat Keluar -->
+            <script>document.body.classList.add('page-surat-keluar');</script>
+            <style>
+                /* Buat container global pada halaman ini penuh */
+                body.page-surat-keluar .container {max-width:100% !important;width:100% !important;padding-left:18px;padding-right:18px;}
+                /* Baris utama agar tidak ada offset kiri/kanan */
+                .full-bleed {width:100%;max-width:100%;margin:0 auto;}
+                .full-bleed.row {margin-left:0;margin-right:0;}
+                /* Kartu header & tabel rata penuh */
+                .full-bleed .z-depth-1, .full-bleed .card {margin:0 0 20px 0;}
+                /* Nav secondary dibulatkan sedikit */
+                .secondary-nav .nav-wrapper {border-radius:6px;}
+                /* Header tabel menempel rapi */
+                #tbl {margin:0;}
+                /* Perbaiki scroll horizontal jika ada banyak kolom */
+                .table-responsive {width:100%;overflow-x:auto;}
+                /* Responsif kecil */
+                @media (max-width:600px){body.page-surat-keluar .container{padding-left:10px;padding-right:10px}}
+            </style>
+
+            <div class="row full-bleed">
                 <div class="col s12">
                     <div class="z-depth-1">
                         <nav class="secondary-nav">
@@ -124,7 +144,7 @@ if (empty($_SESSION['admin'])) {
             ?>
 
             <!-- Tampilan Tabel Data -->
-            <div class="row jarak-form">
+            <div class="row jarak-form full-bleed">
                 <div class="col m12" id="colres">
                     <div class="card">
                         <div class="card-content">
@@ -140,17 +160,18 @@ if (empty($_SESSION['admin'])) {
                             ?>
                             <div class="table-responsive">
                                 <table class="striped highlight responsive-table" id="tbl">
-                                    <thead class="blue lighten-4" id="head">
+                    <thead class="blue lighten-4" id="head">
                                         <tr>
-                                            <th width="12%" class="center-align no-wrap">No. Agenda<br /><small>Kode</small></th>
+                                            <th width="1%" class="center-align no-wrap" style="padding:6px 2px;">No</th>
                                             <th width="15%">Isi Ringkas<br /><small>File</small></th>
-                                            <th width="20%" class="center-align">Tujuan<br /><small>Perihal</small></th>
-                                            <th width="15%" class="center-align">No. Surat<br /><small>Tgl Surat</small></th>
-                                            <th width="23%" class="center-align">Pembuat<br /><small>Tgl Dibuat</small></th>
-                                            <th width="10%" class="center-align">
-                                                <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
-                                                    Tindakan
-                                                    <a class="modal-trigger tooltipped" href="#modal" data-position="left" data-tooltip="Atur jumlah data"><i class="material-icons" style="color: #333;">settings</i></a>
+                                            <th width="18%" class="center-align">Tujuan<br /><small>Perihal</small></th>
+                                            <th width="14%" class="center-align">No. Surat<br /><small>Tgl Surat</small></th>
+                                            <th width="14%" class="center-align">Pembuat<br /><small>Tgl Dibuat</small></th>
+                                            <th width="8%" class="center-align">Status</th>
+                                            <th width="14%" class="center-align">
+                                                <div style="display: flex; justify-content: center; align-items: center; gap: 4px;">
+                                                    Aksi
+                                                    <a class="modal-trigger tooltipped" href="#modal" data-position="left" data-tooltip="Atur jumlah data"><i class="material-icons" style="color: #333; font-size:20px;">settings</i></a>
                                                 </div>
                                             </th>
                                         </tr>
@@ -277,11 +298,32 @@ if (empty($_SESSION['admin'])) {
                                                 . '</div>';
                                         }
 
+                                        // --- Inisialisasi kolom baru bila belum ada (sekali jalan aman) ---
+                                        $needCheckCols = ['status','updated_by','updated_at'];
+                                        $existingCols = [];
+                                        $colRes = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar");
+                                        if($colRes){
+                                            while($c = mysqli_fetch_assoc($colRes)) { $existingCols[] = $c['Field']; }
+                                        }
+                                        $toAdd = [];
+                                        if(!in_array('status',$existingCols)) $toAdd[] = "ADD COLUMN status ENUM('draft','finished') NOT NULL DEFAULT 'draft'";
+                                        if(!in_array('updated_by',$existingCols)) $toAdd[] = "ADD COLUMN updated_by VARCHAR(50) NULL";
+                                        if(!in_array('updated_at',$existingCols)) $toAdd[] = "ADD COLUMN updated_at DATETIME NULL";
+                                        if(!empty($toAdd)) {
+                                            if(@mysqli_query($config, "ALTER TABLE tbl_surat_keluar " . implode(', ',$toAdd))){
+                                                // Set seluruh data awal sebagai draft (default) jika kolom baru ditambah
+                                                @mysqli_query($config, "UPDATE tbl_surat_keluar SET status='draft' WHERE status IS NULL OR status=''" );
+                                            }
+                                        }
+
+                                        // Jalankan query data setelah (potensi) alter
+                                        $query = mysqli_query($config, "SELECT * " . $base_query . $where_clause . " ORDER BY id_surat DESC LIMIT $curr, $limit");
                                         if (mysqli_num_rows($query) > 0) {
+                                            $seq = $curr + 1; // nomor urut halaman
                                             while ($row = mysqli_fetch_array($query)) {
                                                 echo '
                                                 <tr style="vertical-align: top;">
-                                                    <td class="center-align">' . $row['no_agenda'] . '<hr class="grey lighten-3" style="margin: 4px 0;"/>' . $row['kode'] . '</td>
+                                                    <td class="center-align"><strong>' . $seq . '</strong></td>
                                                     <td>' . $row['isi'];
 
                                                 if (!empty($row['file'])) {
@@ -301,8 +343,39 @@ if (empty($_SESSION['admin'])) {
                                                 echo '</td>
                                                     <td class="center-align">' . $row['tujuan'] . '<br/><small class="grey-text text-darken-1">' . $row['perihal'] . '</small></td>
                                                     <td class="center-align">' . $row['no_surat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . indoDate($row['tgl_surat']) . '</small></td>
-                                                    <td class="center-align">' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>
-                                                    <td class="center-align">';
+                                                    <td class="center-align">' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>';
+
+                                                // Kolom Status (contoh logika: jika ada file -> Selesai, else Draft)
+                                                // Status dari DB (fallback: jika kolom lama, gunakan file presence)
+                                                $status_raw = isset($row['status']) ? $row['status'] : (!empty($row['file']) ? 'finished' : 'draft');
+                                                $icon_file = ($status_raw == 'finished') ? 'finished.png' : 'draft.png';
+                                                if(empty($__printedStatusStyle)){
+                                                    echo '<style>
+                                                        .status-cell{padding:2px 0!important;}
+                                                        .status-cell .status-wrap{display:flex;align-items:center;justify-content:center;height:50px;}
+                                                        /* Perbesar & turunkan lagi ikon status */
+                                                        .status-cell img.status-icon{height:48px;max-height:48px;width:auto;display:block;position:relative;top:8px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15));}
+                                                        .actions-compact{align-items:center;min-height:46px;}
+                                                        .action-round{background:#1976d2!important;border-radius:50%;width:46px;height:46px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:.25s}
+                                                        .action-round i{line-height:46px;font-size:22px;color:#fff}
+                                                        .action-round.delete{background:#e64a19!important;}
+                                                        .action-round.toggle{background:#2e7d32!important;}
+                                                        .action-round:hover{filter:brightness(1.08);} .action-round:active{transform:scale(.92);}
+                                                        @media (max-width:600px){
+                                                            .status-cell .status-wrap{height:46px;}
+                                                            .status-cell img.status-icon{height:44px;top:6px;}
+                                                            .action-round{width:40px;height:40px;}
+                                                            .action-round i{font-size:20px;line-height:40px;}
+                                                        }
+                                                    </style>';
+                                                    $__printedStatusStyle = true;
+                                                }
+                                                echo '<td class="center-align status-cell">'
+                                                    . '<div class="status-wrap">'
+                                                    . '<img class="status-icon status-icon-' . $row['id_surat'] . '" src="asset/img/' . $icon_file . '" alt="status" />'
+                                                    . '</div></td>';
+
+                                                echo '<td class="center-align">';
 
                                                 // 2. Batasi Tombol: Super Admin & Operator (bidangnya), Bidang (milik sendiri)
                                                 $can_manage = in_array($_SESSION['admin'], [1]);
@@ -311,26 +384,36 @@ if (empty($_SESSION['admin'])) {
                                                 if ($_SESSION['admin'] == 2) {
                                                     echo '<div class="grey-text" style="padding-top: 15px;">-</div>';
                                                 } elseif ($can_manage || $is_owner || $is_operator_owner) {
-                                                    echo '<div class="actions-compact" style="display: flex; justify-content: center; gap: 0px; padding-top: 5px;">';
+                                                    echo '<div class="actions-compact" style="display:flex;justify-content:center;gap:10px;padding-top:2px;flex-wrap:wrap;">';
+                                                    $btnBase = 'data-position="top"';
+                                                    // Inject style untuk tombol bulat hanya sekali (gunakan flag)
+                                                    if(empty($__printedActionStyle)){
+                                                        echo '<style>.action-round{background:#1976d2;border-radius:50%;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:.25s} .action-round i{line-height:44px;font-size:22px;color:#fff} .action-round.delete{background:#e64a19} .action-round.toggle{background:#2e7d32} .action-round:hover{filter:brightness(1.08);} .action-round:active{transform:scale(.92);} @media (max-width:600px){.action-round{width:40px;height:40px;} .action-round i{font-size:20px;line-height:40px;}} </style>';
+                                                        $__printedActionStyle = true;
+                                                    }
+                                                    $is_operator_level = ($_SESSION['admin'] == 3);
+                                                    // Tombol toggle status hanya operator
+                                                    if($is_operator_level) {
+                                                        $toggleTitle = ($status_raw=='finished') ? 'Set Draft' : 'Set Finished';
+                                                        echo '<a class="waves-effect waves-light tooltipped action-round toggle" ' . $btnBase . ' data-tooltip="' . $toggleTitle . '" href="#" onclick="return toggleStatus(' . $row['id_surat'] . ', event);"><i class="material-icons">autorenew</i></a>';
+                                                    }
                                                     if ($_SESSION['admin'] == 1 || $is_operator_owner) {
-                                                        // Super Admin & Operator (data bidangnya): tanpa PIN
-                                                        echo '<a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
-                                                        echo '<a class="btn small deep-orange waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
+                                                        echo '<a class="waves-effect waves-light tooltipped action-round" ' . $btnBase . ' data-tooltip="Edit" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons">edit</i></a>';
+                                                        echo '<a class="waves-effect waves-light tooltipped action-round delete" ' . $btnBase . ' data-tooltip="Hapus" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons">delete</i></a>';
                                                     } else {
-                                                        // Selain Super Admin: gunakan PIN modal
-                                                        echo '<a class="btn small blue waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '" data-action-type="edit" data-id-surat="' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
-                                                        echo '<a class="btn small deep-orange waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" data-action-type="delete" data-id-surat="' . $row['id_surat'] . '"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
+                                                        echo '<a class="waves-effect waves-light tooltipped action-round pin-trigger" ' . $btnBase . ' data-tooltip="Edit (PIN)" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '" data-action-type="edit" data-id-surat="' . $row['id_surat'] . '"><i class="material-icons">edit</i></a>';
+                                                        echo '<a class="waves-effect waves-light tooltipped action-round delete pin-trigger" ' . $btnBase . ' data-tooltip="Hapus (PIN)" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" data-action-type="delete" data-id-surat="' . $row['id_surat'] . '"><i class="material-icons">delete</i></a>';
                                                     }
                                                     echo '</div>';
                                                 } else {
                                                     echo '<div class="grey-text" style="padding-top: 15px;">-</div>';
                                                 }
 
-                                                echo '</td>
-                                                </tr>';
+                                                echo '</td></tr>';
+                                                $seq++;
                                             }
                                         } else {
-                                            echo '<tr><td colspan="5" class="center-align"><div class="card-panel grey lighten-4" style="margin: 20px;">';
+                                            echo '<tr><td colspan="7" class="center-align"><div class="card-panel grey lighten-4" style="margin: 20px;">';
                                             if (isset($_REQUEST['submit'])) {
                                                 echo '<i class="material-icons large grey-text">search</i><p class="grey-text">Tidak ada data yang ditemukan untuk pencarian "<strong>' . stripslashes($cari) . '</strong>"</p>';
                                             } else {
@@ -445,12 +528,13 @@ if (empty($_SESSION['admin'])) {
     #tbl { table-layout: fixed; width: 100%; border-collapse: collapse; }
     #tbl thead th, #tbl tbody td { box-sizing: border-box; }
     /* Enforce column widths via CSS to be consistent across browsers */
-    #tbl thead th:nth-child(1) { width: 10%; }
+    #tbl thead th:nth-child(1) { width: 3%; }
     #tbl thead th:nth-child(2) { width: 30%; }
     #tbl thead th:nth-child(3) { width: 14%; }
     #tbl thead th:nth-child(4) { width: 18%; }
     #tbl thead th:nth-child(5) { width: 12%; }
-    #tbl thead th:nth-child(6) { width: 15%; }
+    #tbl thead th:nth-child(6) { width: 10%; }
+    #tbl thead th:nth-child(7) { width: 17%; }
     /* Make second-line text consistent across browsers */
     #tbl small { display: block; margin-top: 2px; line-height: 1.2; font-size: 0.9rem; }
     /* Better wrapping for long content like numbers/paths */
@@ -703,6 +787,39 @@ document.addEventListener('DOMContentLoaded', function () {
             closeModal();
         }
     });
+
+    // Toggle Status (Operator Only)
+    window.toggleStatus = function(id, ev){
+        if(!id) return false;
+        const e = ev || window.event;
+        const btn = e && e.currentTarget ? e.currentTarget : document.activeElement;
+        if(btn) btn.classList.add('disabled');
+        fetch('src/SuratKeluar/update_status.php',{
+            method:'POST',
+            credentials:'same-origin',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:'id='+encodeURIComponent(id)
+        })
+        .then(async r=>{ const t = await r.text(); try { return JSON.parse(t); } catch(e){ console.error('Raw response toggleStatus:', t); throw new Error('Response bukan JSON valid'); } })
+        .then(j=>{
+            if(!j.ok){ throw new Error(j.msg||'Gagal'); }
+            const img = document.querySelector('.status-icon-'+id);
+            if(img){ img.src = 'asset/img/'+(j.status==='finished'?'finished.png':'draft.png'); }
+            // Update tooltip text
+            if(btn && btn.getAttribute && btn.getAttribute('data-tooltip')){
+                btn.setAttribute('data-tooltip', j.status==='finished' ? 'Set Draft' : 'Set Finished');
+            }
+            if(typeof M !== 'undefined' && M.Tooltip && btn){
+                // re-init tooltip
+                const instance = M.Tooltip.getInstance(btn);
+                if(instance){ instance.destroy(); }
+                M.Tooltip.init(btn, {});
+            }
+        })
+        .catch(err=>{ alert('Gagal toggle status: '+err.message); })
+        .finally(()=>{ if(btn) btn.classList.remove('disabled'); });
+        return false;
+    }
 
     // Logika input PIN
     pinInputs.forEach((input, index) => {
