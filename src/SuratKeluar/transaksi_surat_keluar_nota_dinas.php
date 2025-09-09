@@ -37,7 +37,17 @@ if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; } else {
 
 ?>
 
-<div class="row">
+<script>document.body.classList.add('page-surat-keluar');</script>
+<style>
+/* Full width styling match utama */
+body.page-surat-keluar .container {max-width:100%!important;width:100%!important;padding-left:18px;padding-right:18px;}
+.full-bleed{width:100%;max-width:100%;margin:0 auto;}
+.full-bleed.row{margin-left:0;margin-right:0;}
+#tbl{margin:0;}
+@media (max-width:600px){body.page-surat-keluar .container{padding-left:10px;padding-right:10px}}
+</style>
+
+<div class="row full-bleed">
     <div class="col s12">
         <div class="z-depth-1">
             <nav class="secondary-nav">
@@ -139,7 +149,7 @@ if ($filterKey && isset($map[$filterKey])) {
 }
 ?>
 
-<div class="row jarak-form">
+<div class="row jarak-form full-bleed">
   <div class="col m12" id="colres">
     <div class="card">
       <div class="card-content">
@@ -148,37 +158,38 @@ if ($filterKey && isset($map[$filterKey])) {
           <table class="striped highlight responsive-table" id="tbl">
             <thead class="blue lighten-4" id="head">
               <tr>
-                <th width="12%" class="center-align no-wrap">No. Agenda<br /><small>Kode</small></th>
-                <th width="15%">Isi Ringkas<br /><small>File</small></th>
-                <th width="20%" class="center-align">Tujuan<br /><small>Perihal</small></th>
-                <th width="15%" class="center-align">No. Surat<br /><small>Tgl Surat</small></th>
-                <th width="23%" class="center-align">Pembuat<br /><small>Tgl Dibuat</small></th>
-                <th width="10%" class="center-align">Tindakan</th>
+                <th class="center-align no-wrap" style="width:3%">No</th>
+                <th style="width:30%">Isi Ringkas<br /><small>File</small></th>
+                <th class="center-align" style="width:14%">Tujuan<br /><small>Perihal</small></th>
+                <th class="center-align" style="width:18%">No. Surat<br /><small>Tgl Surat</small></th>
+                <th class="center-align" style="width:12%">Pembuat<br /><small>Tgl Dibuat</small></th>
+                <th class="center-align" style="width:10%">Status</th>
+                <th class="center-align" style="width:17%">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              <?php if (mysqli_num_rows($query) > 0) { while ($row = mysqli_fetch_array($query)) { ?>
+              <?php if (mysqli_num_rows($query) > 0) { $seq = $curr + 1; while ($row = mysqli_fetch_array($query)) { ?>
                 <tr style="vertical-align: top;">
-                  <td class="center-align"><?php echo $row['no_agenda']; ?><hr class="grey lighten-3" style="margin:4px 0;"/><?php echo $row['kode']; ?></td>
-                  <td><?php echo $row['isi']; if (!empty($row['file'])) { echo '<br/><br/><strong>File : </strong>'; $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true); if ($_SESSION['admin']==1 || $_SESSION['admin']==2 || $is_operator_file) { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank" rel="noopener" style="text-decoration: underline;">'.$row['file'].'</a>'; } else { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" class="pin-trigger" data-action-type="view" data-id-surat="'.$row['id_surat'].'" style="text-decoration: underline;">'.$row['file'].'</a>'; } } ?></td>
+                  <td class="center-align"><strong><?php echo $seq; ?></strong></td>
+                  <td><?php echo $row['isi']; if (!empty($row['file'])) { echo '<br/><br/><strong>File : </strong>'; $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true); if ($_SESSION['admin']==1 || $_SESSION['admin']==2 || $is_operator_file) { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank" rel="noopener" style="text-decoration: underline;">'.$row['file'].'</a>'; } else { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" class="pin-trigger" data-action-type="view" data-id-surat="'.$row['id_surat'].'" style="text-decoration: underline;">'.$row['file'].'</a>'; } if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) { echo ' <span class="new badge blue" data-badge-caption="PIN diubah"></span>'; } } ?></td>
                   <td class="center-align"><?php echo $row['tujuan']; ?><br/><small class="grey-text text-darken-1"><?php echo $row['perihal']; ?></small></td>
                   <td class="center-align"><?php echo $row['no_surat']; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo indoDate($row['tgl_surat']); ?></small></td>
                   <td class="center-align"><?php echo $row['nama_pembuat'] ?? ''; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : ''; ?></small></td>
+                  <?php // Status icon
+                    $status_raw = isset($row['status']) ? $row['status'] : (!empty($row['file']) ? 'finished':'draft');
+                    $icon_file = ($status_raw=='finished') ? 'finished.png' : 'draft.png';
+                    if(empty($__printedStatusStyleND)){
+                      echo '<style>.status-cell{padding:2px 0!important;} .status-cell .status-wrap{display:flex;align-items:center;justify-content:center;height:50px;} .status-cell img.status-icon{height:48px;position:relative;top:8px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15));} .actions-compact{align-items:center;min-height:46px;} .action-round{background:#1976d2!important;border-radius:50%;width:46px;height:46px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:.25s} .action-round i{line-height:46px;font-size:22px;color:#fff} .action-round.delete{background:#e64a19!important;} .action-round.toggle{background:#2e7d32!important;} .action-round:hover{filter:brightness(1.08);} .action-round:active{transform:scale(.92);} @media(max-width:600px){.status-cell .status-wrap{height:46px;} .status-cell img.status-icon{height:44px;top:6px;} .action-round{width:40px;height:40px;} .action-round i{font-size:20px;line-height:40px;}}</style>';
+                      $__printedStatusStyleND = true;
+                    }
+                  ?>
+                  <td class="center-align status-cell"><div class="status-wrap"><img class="status-icon status-icon-<?php echo $row['id_surat']; ?>" src="asset/img/<?php echo $icon_file; ?>" alt="status" /></div></td>
                   <td class="center-align">
-                    <?php if ($_SESSION['admin']==2) { echo '<div class="grey-text" style="padding-top: 15px;">-</div>'; } else { $can_manage = in_array($_SESSION['admin'], [1,3]); $is_owner = ($row['id_user'] == $_SESSION['id_user']);
-          $is_operator_owner = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true);
-          if ($can_manage || $is_owner || $is_operator_owner) { echo '<div class="actions-compact" style="display:flex; justify-content:center; gap:0px; padding-top:5px;">';
-            if ($_SESSION['admin']==1 || $is_operator_owner) {
-                            echo '<a class="btn small blue waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk_nd&sub=edit&id_surat='.$row['id_surat'].'"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
-                            echo '<a class="btn small deep-orange waves-effect waves-light" style="color:white;" href="?page=admin&act=tsk_nd&sub=del&id_surat='.$row['id_surat'].'" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
-                        } else {
-                            echo '<a class="btn small blue waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk_nd&sub=edit&id_surat='.$row['id_surat'].'" data-action-type="edit" data-id-surat="'.$row['id_surat'].'"><i class="material-icons" style="color:white;">edit</i> EDIT</a>';
-                            echo '<a class="btn small deep-orange waves-effect waves-light pin-trigger" style="color:white;" href="?page=admin&act=tsk_nd&sub=del&id_surat='.$row['id_surat'].'" data-action-type="delete" data-id-surat="'.$row['id_surat'].'"><i class="material-icons" style="color:white;">delete</i> DEL</a>';
-                        }
-                        echo '</div>'; } else { echo '<div class="grey-text" style="padding-top: 15px;">-</div>'; } } ?>
+                    <?php if ($_SESSION['admin']==2) { echo '<div class="grey-text" style="padding-top: 15px;">-</div>'; }
+                    else { $can_manage = in_array($_SESSION['admin'], [1]); $is_owner = ($row['id_user'] == $_SESSION['id_user']); $is_operator_owner = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true); if ($can_manage || $is_owner || $is_operator_owner) { echo '<div class="actions-compact" style="display:flex;justify-content:center;gap:10px;padding-top:2px;flex-wrap:wrap;">'; $btnBase='data-position="top"'; if(empty($__printedActionStyleND)){ echo '<style>.action-round{background:#1976d2;border-radius:50%;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:.25s} .action-round i{line-height:44px;font-size:22px;color:#fff} .action-round.delete{background:#e64a19} .action-round.toggle{background:#2e7d32} .action-round:hover{filter:brightness(1.08);} .action-round:active{transform:scale(.92);} @media(max-width:600px){.action-round{width:40px;height:40px;} .action-round i{font-size:20px;line-height:40px;}}</style>'; $__printedActionStyleND=true; } $is_operator_level = ($_SESSION['admin']==3); if($is_operator_level){ $toggleTitle = ($status_raw=='finished')?'Set Draft':'Set Finished'; echo '<a class="waves-effect waves-light tooltipped action-round toggle" '.$btnBase.' data-tooltip="'.$toggleTitle.'" href="#" onclick="return toggleStatus('.$row['id_surat'].', event);"><i class="material-icons">autorenew</i></a>'; } if ($_SESSION['admin']==1 || $is_operator_owner) { echo '<a class="waves-effect waves-light tooltipped action-round" '.$btnBase.' data-tooltip="Edit" href="?page=admin&act=tsk_nd&sub=edit&id_surat='.$row['id_surat'].'"><i class="material-icons">edit</i></a>'; echo '<a class="waves-effect waves-light tooltipped action-round delete" '.$btnBase.' data-tooltip="Hapus" href="?page=admin&act=tsk_nd&sub=del&id_surat='.$row['id_surat'].'" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons">delete</i></a>'; } else { echo '<a class="waves-effect waves-light tooltipped action-round pin-trigger" '.$btnBase.' data-tooltip="Edit (PIN)" href="?page=admin&act=tsk_nd&sub=edit&id_surat='.$row['id_surat'].'" data-action-type="edit" data-id-surat="'.$row['id_surat'].'"><i class="material-icons">edit</i></a>'; echo '<a class="waves-effect waves-light tooltipped action-round delete pin-trigger" '.$btnBase.' data-tooltip="Hapus (PIN)" href="?page=admin&act=tsk_nd&sub=del&id_surat='.$row['id_surat'].'" data-action-type="delete" data-id-surat="'.$row['id_surat'].'"><i class="material-icons">delete</i></a>'; } echo '</div>'; } else { echo '<div class="grey-text" style="padding-top: 15px;">-</div>'; } } ?>
                   </td>
                 </tr>
-              <?php } } else { echo '<tr><td colspan="6" class="center-align"><div class="card-panel grey lighten-4" style="margin: 20px;"><i class="material-icons large grey-text">inbox</i><p class="grey-text">Tidak ada data untuk ditampilkan.</p></div></td></tr>'; } ?>
+              <?php $seq++; } } else { echo '<tr><td colspan="7" class="center-align"><div class="card-panel grey lighten-4" style="margin: 20px;"><i class="material-icons large grey-text">inbox</i><p class="grey-text">Tidak ada data untuk ditampilkan.</p></div></td></tr>'; } ?>
             </tbody>
           </table>
         </div>
@@ -207,15 +218,16 @@ echo '</ul></div>';
     .actions-compact a.btn:last-child { margin-right:0!important; }
     #tbl { table-layout: fixed; width:100%; border-collapse: collapse; }
     #tbl thead th, #tbl tbody td { box-sizing: border-box; }
-    #tbl thead th:nth-child(1){ width:10%; }
-    #tbl thead th:nth-child(2){ width:30%; }
-    #tbl thead th:nth-child(3){ width:14%; }
-    #tbl thead th:nth-child(4){ width:18%; }
-    #tbl thead th:nth-child(5){ width:12%; }
-    #tbl thead th:nth-child(6){ width:15%; }
+    #tbl thead th:nth-child(1) { width: 3%; }
+    #tbl thead th:nth-child(2) { width: 30%; }
+    #tbl thead th:nth-child(3) { width: 14%; }
+    #tbl thead th:nth-child(4) { width: 18%; }
+    #tbl thead th:nth-child(5) { width: 12%; }
+    #tbl thead th:nth-child(6) { width: 10%; }
+    #tbl thead th:nth-child(7) { width: 17%; }
 </style>
 
-<!-- PIN modal + styles (consisten dengan transaksi_surat_keluar.php) -->
+<!-- PIN modal + styles (consisten) -->
 <style>
     /* Modal PIN */
     .pin-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1002; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
@@ -311,4 +323,8 @@ document.addEventListener('DOMContentLoaded', function () {
       .catch(()=>{ errorMessage.textContent='Terjadi kesalahan. Silakan coba lagi.'; });
   });
 });
+</script>
+<script>
+// Toggle Status (Operator) reuse
+function toggleStatus(id, ev){ if(!id) return false; const e=ev||window.event; const btn=e && e.currentTarget ? e.currentTarget : null; if(btn) btn.classList.add('disabled'); fetch('src/SuratKeluar/update_status.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+encodeURIComponent(id)}) .then(async r=>{const t=await r.text(); try{return JSON.parse(t);}catch(err){console.error('Raw response toggleStatus ND:',t); throw new Error('Response bukan JSON valid');}}) .then(j=>{ if(!j.ok) throw new Error(j.msg||'Gagal'); const img=document.querySelector('.status-icon-'+id); if(img){ img.src='asset/img/'+(j.status==='finished'?'finished.png':'draft.png'); } if(btn && btn.getAttribute){ btn.setAttribute('data-tooltip', j.status==='finished'?'Set Draft':'Set Finished'); if(typeof M!=='undefined' && M.Tooltip){ const inst=M.Tooltip.getInstance(btn); if(inst) inst.destroy(); M.Tooltip.init(btn,{}); } } }) .catch(err=>alert('Gagal toggle status: '+err.message)) .finally(()=>{ if(btn) btn.classList.remove('disabled'); }); return false; }
 </script>
