@@ -167,7 +167,7 @@ if ($filterKey && isset($map[$filterKey])) {
                 <th class="center-align" style="width:17%">Aksi</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="tbody-data">
               <?php if (mysqli_num_rows($query) > 0) { $seq = $curr + 1; while ($row = mysqli_fetch_array($query)) { ?>
                 <tr style="vertical-align: top;">
                   <td class="center-align"><strong><?php echo $seq; ?></strong></td>
@@ -197,6 +197,28 @@ if ($filterKey && isset($map[$filterKey])) {
     </div>
   </div>
 </div>
+
+<script>
+// Live search Nota Dinas
+document.addEventListener('DOMContentLoaded', function(){
+  const searchInput=document.getElementById('search');
+  const tbody=document.getElementById('tbody-data');
+  if(!searchInput||!tbody) return;
+  const originalHTML=tbody.innerHTML; const jenis='nota_dinas';
+  const infoPanelId='search-info-panel';
+  if(!document.getElementById(infoPanelId)){
+    const panel=document.createElement('div'); panel.id=infoPanelId; panel.className='card-panel blue-grey lighten-5'; panel.style.cssText='margin-bottom:20px;display:none'; panel.innerHTML='<p class="blue-grey-text">Hasil pencarian untuk: <strong class="black-text" id="search-info-text"></strong></p>';
+    const cardContent=tbody.closest('.card-content'); if(cardContent) cardContent.insertBefore(panel, cardContent.firstChild);
+  }
+  const infoPanel=document.getElementById(infoPanelId); const infoText=document.getElementById('search-info-text');
+  function debounce(fn,w){ let t; return function(...a){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),w);} }
+  function getFilterBidangParam(){ const p=new URLSearchParams(window.location.search); const v=p.get('filter_bidang'); return v?`&filter_bidang=${encodeURIComponent(v)}`:''; }
+  function updateInfo(q){ if(q){ infoText.textContent=q; infoPanel.style.display='block'; } else { infoText.textContent=''; infoPanel.style.display='none'; } }
+  function rebindPins(){ if(typeof attachPinHandlers==='function'){ attachPinHandlers(); } else if(typeof attachPin==='function'){ attachPin(); } }
+  const doSearch=debounce(()=>{ const q=searchInput.value.trim(); if(q===''){ tbody.innerHTML=originalHTML; updateInfo(''); rebindPins(); return; } updateInfo(q); fetch(`src/SuratKeluar/ajax_search_surat_keluar.php?jenis=${jenis}&cari=${encodeURIComponent(q)}${getFilterBidangParam()}`,{credentials:'same-origin'}).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }).then(html=>{ tbody.innerHTML=html; rebindPins(); }).catch(err=>console.error('Live search error (ND):',err)); },300);
+  searchInput.addEventListener('input', doSearch);
+});
+</script>
 
 <?php
 $query_pg = mysqli_query($config, "SELECT 1 " . $base_query . $where_clause);

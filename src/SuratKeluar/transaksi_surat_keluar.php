@@ -671,6 +671,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const infoPanel = document.getElementById('search-info-panel');
     const infoText = document.getElementById('search-info-text');
     let searchTimer;
+    // Simpan HTML awal untuk restore saat pencarian dikosongkan
+    const originalTableHTML = tbody ? tbody.innerHTML : '';
 
     function debounce(fn, wait) {
         let t;
@@ -707,9 +709,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const doLiveSearch = debounce(() => {
-        const q = searchInput.value;
+        const q = searchInput.value.trim();
+        // Jika kosong -> kembalikan ke tampilan awal (hindari 'halaman acak')
+        if(q === '') {
+            if(tbody) { tbody.innerHTML = originalTableHTML; }
+            updateInfoPanel('');
+            return; // tidak panggil AJAX
+        }
         updateInfoPanel(q);
-        const url = `src/SuratKeluar/ajax_search_surat_keluar.php?cari=${encodeURIComponent(q || '')}${getFilterBidangParam()}`;
+        const url = `src/SuratKeluar/ajax_search_surat_keluar.php?cari=${encodeURIComponent(q)}${getFilterBidangParam()}`;
         fetch(url, { credentials: 'same-origin' })
             .then(r => {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
