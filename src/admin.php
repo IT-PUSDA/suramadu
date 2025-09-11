@@ -103,6 +103,9 @@ if (!isset($_SESSION['admin'])) {
                         case 'arsip':
                             include(BASE_PATH . '/src/SuratKeluar/arsip_per_bidang.php');
                             break;
+                        case 'arsip_op':
+                            include(BASE_PATH . '/src/SuratKeluar/arsip_operator.php');
+                            break;
                     }
                 } else {
                 ?>
@@ -309,14 +312,20 @@ if (!isset($_SESSION['admin'])) {
                             </div>
                             <?php if (in_array((int)$_SESSION['admin'], [1,2,3], true)) { ?>
                             <div class="col s12 m6 l3">
-                                <?php if (in_array((int)$_SESSION['admin'], [1,2], true)) { ?><a href="index.php?page=admin&act=arsip" class="hs-link"><?php } ?>
+                                    <?php if (in_array((int)$_SESSION['admin'], [1,2], true)) { ?>
+                                        <a href="index.php?page=admin&act=arsip" class="hs-link">
+                                    <?php } elseif ((int)$_SESSION['admin'] === 3) { ?>
+                                        <a href="index.php?page=admin&act=arsip_op" class="hs-link">
+                                    <?php } ?>
                                 <div class="card black hs-card">
                                     <div class="card-content white-text">
                                         <span class="card-title" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">archive</i> Arsip</span>
                                         <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countArsip); ?> SURAT TERARSIP</h5>
                                     </div>
                                 </div>
-                                <?php if (in_array((int)$_SESSION['admin'], [1,2], true)) { ?></a><?php } ?>
+                                    </a>
+                                </div>
+                                <?php } ?>
                             </div>
                             <?php } ?>
                             </div>
@@ -514,5 +523,4 @@ if (!isset($_SESSION['admin'])) {
     </html>
 
 <?php
-}
 ?>

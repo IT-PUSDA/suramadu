@@ -396,6 +396,11 @@ if (empty($_SESSION['admin'])) {
                                                     if($is_operator_level) {
                                                         $toggleTitle = ($status_raw=='finished') ? 'Set Draft' : 'Set Finished';
                                                         echo '<a class="waves-effect waves-light tooltipped action-round toggle" ' . $btnBase . ' data-tooltip="' . $toggleTitle . '" href="#" onclick="return toggleStatus(' . $row['id_surat'] . ', event);"><i class="material-icons">autorenew</i></a>';
+                                                        // Tombol arsip (hanya jika finished & belum terhubung arsip)
+                                                        if($status_raw=='finished'){
+                                                            // Pastikan kolom relasi tersedia (ditambah di bawah sekali saja)
+                                                            echo '<a class="waves-effect waves-light tooltipped action-round" ' . $btnBase . ' data-tooltip="Arsipkan" href="#" onclick="return openArsipModal(' . $row['id_surat'] . ');"><i class="material-icons">archive</i></a>';
+                                                        }
                                                     }
                                                     if ($_SESSION['admin'] == 1 || $is_operator_owner) {
                                                         echo '<a class="waves-effect waves-light tooltipped action-round" ' . $btnBase . ' data-tooltip="Edit" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons">edit</i></a>';
@@ -515,6 +520,36 @@ if (empty($_SESSION['admin'])) {
 }
 ?>
 
+<?php
+// Tambah kolom relasi arsip bila belum ada
+$chkArsipRel = mysqli_query($config,"SHOW COLUMNS FROM tbl_surat_keluar LIKE 'id_arsip_berkas'");
+if(!$chkArsipRel || mysqli_num_rows($chkArsipRel)==0){
+    @mysqli_query($config,"ALTER TABLE tbl_surat_keluar ADD COLUMN id_arsip_berkas INT NULL AFTER status, ADD INDEX idx_arsip_rel (id_arsip_berkas)");
+}
+// Endpoint mini untuk proses pengarsipan via fetch
+if(isset($_POST['__ajax']) && $_POST['__ajax']=='arsip_surat' && $is_operator){
+    header('Content-Type: application/json');
+    $idSurat = (int)($_POST['id_surat']??0); $idArsip = (int)($_POST['id_arsip']??0);
+    if($idSurat<1||$idArsip<1){ echo json_encode(['ok'=>false,'msg'=>'Data tidak valid']); exit; }
+    // Pastikan surat milik scope operator & status finished
+    $cek = mysqli_query($config,"SELECT id_surat,id_user,status,id_arsip_berkas FROM tbl_surat_keluar WHERE id_surat=$idSurat LIMIT 1");
+    if(!$cek||mysqli_num_rows($cek)!=1){ echo json_encode(['ok'=>false,'msg'=>'Surat tidak ditemukan']); exit; }
+    $s = mysqli_fetch_assoc($cek);
+    if($s['status']!='finished'){ echo json_encode(['ok'=>false,'msg'=>'Surat belum berstatus finished']); exit; }
+    if(!in_array((int)$s['id_user'],$operator_allowed_ids,true)){ echo json_encode(['ok'=>false,'msg'=>'Akses ditolak']); exit; }
+    // Pastikan arsip target milik operator (via id_user pemilik arsip)
+    $cekArsip = mysqli_query($config,"SELECT id,id_user FROM tbl_arsip_berkas WHERE id=$idArsip LIMIT 1");
+    if(!$cekArsip||mysqli_num_rows($cekArsip)!=1){ echo json_encode(['ok'=>false,'msg'=>'Berkas arsip tidak ditemukan']); exit; }
+    $a = mysqli_fetch_assoc($cekArsip);
+    if((int)$a['id_user']!=$_SESSION['id_user']){ echo json_encode(['ok'=>false,'msg'=>'Berkas arsip bukan milik Anda']); exit; }
+    if($s['id_arsip_berkas'] && (int)$s['id_arsip_berkas']===$idArsip){ echo json_encode(['ok'=>true,'msg'=>'Sudah terarsip']); exit; }
+    if(mysqli_query($config,"UPDATE tbl_surat_keluar SET id_arsip_berkas=$idArsip WHERE id_surat=$idSurat")){
+        echo json_encode(['ok'=>true,'msg'=>'Surat berhasil diarsipkan']);
+    } else { echo json_encode(['ok'=>false,'msg'=>'Gagal menyimpan']); }
+    exit;
+}
+?>
+
 <style>
     /* Utility: prevent wrapping for specific header text */
     th.no-wrap { white-space: nowrap; }
@@ -622,6 +657,19 @@ if (empty($_SESSION['admin'])) {
         min-height: 21px;
     }
 </style>
+
+<!-- Modal pilih arsip berkas -->
+<div id="arsipModal" class="modal" style="max-height:80%;">
+    <div class="modal-content" style="padding-bottom:8px;">
+        <h5>Pilih Berkas Arsip</h5>
+        <div id="arsipList" style="max-height:320px; overflow:auto; border:1px solid #eceff1; border-radius:6px;">
+            <div class="progress"><div class="indeterminate"></div></div>
+        </div>
+        <div style="margin-top:14px;" class="right-align">
+            <a href="#!" class="modal-close btn-flat">Tutup</a>
+        </div>
+    </div>
+</div>
 
 <style>
 /* Pagination styles (Surat Keluar) */
@@ -784,6 +832,40 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    // Arsip modal logic
+    let arsipTargetSurat = 0;
+    window.openArsipModal = function(id){
+        arsipTargetSurat = id;
+        const modalEl = document.getElementById('arsipModal');
+        const inst = M.Modal.getInstance(modalEl) || M.Modal.init(modalEl, {dismissible:true});
+        document.getElementById('arsipList').innerHTML='<div class="progress"><div class="indeterminate"></div></div>';
+        inst.open();
+        fetch('src/SuratKeluar/arsip_list_ajax.php')
+            .then(r=>r.ok?r.json():[])
+            .then(d=>renderArsipList(d))
+            .catch(()=>{ document.getElementById('arsipList').innerHTML='<div class="red-text" style="padding:12px;">Gagal memuat.</div>'; });
+        return false;
+    }
+    function renderArsipList(data){
+        if(!Array.isArray(data) || !data.length){ document.getElementById('arsipList').innerHTML='<div style="padding:12px;">Belum ada berkas arsip.</div>'; return; }
+        const html = data.map(r=>`
+            <a href="#" data-id="${r.id}" class="collection-item" style="display:block;padding:10px 14px;border-bottom:1px solid #eceff1;">
+                <strong>${r.kode_klasifikasi}</strong> - ${r.nama_berkas}<br>
+                <small class="grey-text">${r.uraian||''}</small>
+            </a>`).join('');
+        document.getElementById('arsipList').innerHTML='<div class="collection" style="margin:0;">'+html+'</div>';
+        document.querySelectorAll('#arsipList a.collection-item').forEach(a=>{
+            a.addEventListener('click',e=>{ e.preventDefault(); pilihArsip(parseInt(a.getAttribute('data-id'),10)); });
+        });
+    }
+    function pilihArsip(id){
+        if(!arsipTargetSurat) return;
+        const fd = new FormData(); fd.append('__ajax','arsip_surat'); fd.append('id_surat', arsipTargetSurat); fd.append('id_arsip', id);
+        fetch(window.location.href,{method:'POST', body:fd, credentials:'same-origin'})
+            .then(r=>r.json()).then(j=>{
+                if(j.ok){ location.reload(); } else { alert(j.msg||'Gagal'); }
+            }).catch(()=>alert('Gagal'));    }
 
     // Initial bind for existing content
     attachPinHandlers();
