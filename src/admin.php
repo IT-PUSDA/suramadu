@@ -61,9 +61,6 @@ if (!isset($_SESSION['admin'])) {
                         case 'ctk':
                             include(BASE_PATH . '/src/Disposisi/cetak_disposisi.php');
                             break;
-                        case 'ctk_ter':
-                            include(BASE_PATH . '/src/Utils/cetak_terusan.php');
-                            break;
                         case 'tsk':
                             include(BASE_PATH . '/src/SuratKeluar/transaksi_surat_keluar.php');
                             break;
@@ -102,6 +99,9 @@ if (!isset($_SESSION['admin'])) {
                             break;
                         case 'gsk':
                             include(BASE_PATH . '/src/SuratKeluar/galeri_sk.php');
+                            break;
+                        case 'arsip':
+                            include(BASE_PATH . '/src/SuratKeluar/arsip_per_bidang.php');
                             break;
                     }
                 } else {
@@ -230,6 +230,15 @@ if (!isset($_SESSION['admin'])) {
                         } else {
                             $countND = $countPH = $countKEU = 0; // kolom belum ada
                         }
+                        // Hitung jumlah Arsip (sementara gunakan status='finished' bila kolom status tersedia)
+                        $countArsip = 0;
+                        $hasStatus = false;
+                        $resStatus = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'status'");
+                        if ($resStatus && mysqli_num_rows($resStatus) === 1) { $hasStatus = true; }
+                        if ($hasStatus) {
+                            $qArsip = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE status='finished'" . $whereUser);
+                            $countArsip = ($qArsip ? (int)mysqli_fetch_assoc($qArsip)['c'] : 0);
+                        }
                         //menghitung jumlah surat masuk
                         if ($_SESSION['admin'] == 4) {
                             $id_user = $_SESSION['id_user'];
@@ -298,6 +307,18 @@ if (!isset($_SESSION['admin'])) {
                                     </div>
                                 </a>
                             </div>
+                            <?php if (in_array((int)$_SESSION['admin'], [1,2,3], true)) { ?>
+                            <div class="col s12 m6 l3">
+                                <?php if (in_array((int)$_SESSION['admin'], [1,2], true)) { ?><a href="index.php?page=admin&act=arsip" class="hs-link"><?php } ?>
+                                <div class="card black hs-card">
+                                    <div class="card-content white-text">
+                                        <span class="card-title" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">archive</i> Arsip</span>
+                                        <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countArsip); ?> SURAT TERARSIP</h5>
+                                    </div>
+                                </div>
+                                <?php if (in_array((int)$_SESSION['admin'], [1,2], true)) { ?></a><?php } ?>
+                            </div>
+                            <?php } ?>
                             </div>
                         </div>
                         <!--
