@@ -498,6 +498,10 @@ require_once(BASE_PATH . '/src/include/config.php');
                 font-size: 14px;
             }
         }
+
+        /* Global override: warna tombol Arsip */
+        .action-round.arch { background: #fbc02d !important; }
+        .action-round.arch.done { background: #9e9e9e !important; }
     </style>
     <!-- Global style END -->
 

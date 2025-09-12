@@ -384,11 +384,13 @@ if (empty($_SESSION['admin'])) {
                                                 if ($_SESSION['admin'] == 2) {
                                                     echo '<div class="grey-text" style="padding-top: 15px;">-</div>';
                                                 } elseif ($can_manage || $is_owner || $is_operator_owner) {
-                                                    echo '<div class="actions-compact" style="display:flex;justify-content:center;gap:10px;padding-top:2px;flex-wrap:wrap;">';
+                                                    // Kontainer aksi: rapikan jarak antar ikon (gunakan margin agar fallback ke browser lama)
+                                                    echo '<div class="actions-compact" style="display:flex;justify-content:center;flex-wrap:wrap;padding-top:2px;">';
                                                     $btnBase = 'data-position="top"';
                                                     // Inject style untuk tombol bulat hanya sekali (gunakan flag)
                                                     if(empty($__printedActionStyle)){
-                                                        echo '<style>.action-round{background:#1976d2;border-radius:50%;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:.25s} .action-round i{line-height:44px;font-size:22px;color:#fff} .action-round.delete{background:#e64a19} .action-round.toggle{background:#2e7d32} .action-round:hover{filter:brightness(1.08);} .action-round:active{transform:scale(.92);} @media (max-width:600px){.action-round{width:40px;height:40px;} .action-round i{font-size:20px;line-height:40px;}} </style>';
+                                                        // .arch (arsip) warna kuning, .arch.done abu-abu
+                                                        echo '<style>.action-round{background:#1976d2;border-radius:50%;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:.25s;margin:3px 4px} .action-round i{line-height:44px;font-size:22px;color:#fff} .action-round.delete{background:#e64a19} .action-round.toggle{background:#2e7d32} .action-round.arch{background:#fbc02d!important} .action-round.arch.done{background:#9e9e9e!important} .action-round:hover{filter:brightness(1.08);} .action-round:active{transform:scale(.92);} @media (max-width:600px){.action-round{width:40px;height:40px;} .action-round i{font-size:20px;line-height:40px;}} </style>';
                                                         $__printedActionStyle = true;
                                                     }
                                                     $is_operator_level = ($_SESSION['admin'] == 3);
@@ -396,18 +398,28 @@ if (empty($_SESSION['admin'])) {
                                                     if($is_operator_level) {
                                                         $toggleTitle = ($status_raw=='finished') ? 'Set Draft' : 'Set Finished';
                                                         echo '<a class="waves-effect waves-light tooltipped action-round toggle" ' . $btnBase . ' data-tooltip="' . $toggleTitle . '" href="#" onclick="return toggleStatus(' . $row['id_surat'] . ', event);"><i class="material-icons">autorenew</i></a>';
-                                                        // Tombol arsip (hanya jika finished & belum terhubung arsip)
-                                                        if($status_raw=='finished'){
-                                                            // Pastikan kolom relasi tersedia (ditambah di bawah sekali saja)
-                                                            echo '<a class="waves-effect waves-light tooltipped action-round" ' . $btnBase . ' data-tooltip="Arsipkan" href="#" onclick="return openArsipModal(' . $row['id_surat'] . ');"><i class="material-icons">archive</i></a>';
-                                                        }
                                                     }
                                                     if ($_SESSION['admin'] == 1 || $is_operator_owner) {
                                                         echo '<a class="waves-effect waves-light tooltipped action-round" ' . $btnBase . ' data-tooltip="Edit" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '"><i class="material-icons">edit</i></a>';
                                                         echo '<a class="waves-effect waves-light tooltipped action-round delete" ' . $btnBase . ' data-tooltip="Hapus" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons">delete</i></a>';
+                                                        // Ikon arsip (operator saja) diposisikan setelah delete; admin penuh tidak perlu
+                                                        if($is_operator_level){
+                                                            $alreadyArsip = !empty($row['id_arsip_berkas']);
+                                                            $archTooltip = $alreadyArsip ? 'Sudah diarsipkan' : 'Arsipkan';
+                                                            $archExtraCls = $alreadyArsip ? ' arch done' : ' arch';
+                                                            $archOnclick = $alreadyArsip ? 'return false;' : 'return openArsipModal(' . $row['id_surat'] . ');';
+                                                            echo '<a class="waves-effect waves-light tooltipped action-round' . $archExtraCls . '" ' . $btnBase . ' data-tooltip="' . $archTooltip . '" href="#" onclick="' . $archOnclick . '"><i class="material-icons">archive</i></a>';
+                                                        }
                                                     } else {
                                                         echo '<a class="waves-effect waves-light tooltipped action-round pin-trigger" ' . $btnBase . ' data-tooltip="Edit (PIN)" href="?page=admin&act=tsk&sub=edit&id_surat=' . $row['id_surat'] . '" data-action-type="edit" data-id-surat="' . $row['id_surat'] . '"><i class="material-icons">edit</i></a>';
                                                         echo '<a class="waves-effect waves-light tooltipped action-round delete pin-trigger" ' . $btnBase . ' data-tooltip="Hapus (PIN)" href="?page=admin&act=tsk&sub=del&id_surat=' . $row['id_surat'] . '" data-action-type="delete" data-id-surat="' . $row['id_surat'] . '"><i class="material-icons">delete</i></a>';
+                                                        if($is_operator_level){
+                                                            $alreadyArsip = !empty($row['id_arsip_berkas']);
+                                                            $archTooltip = $alreadyArsip ? 'Sudah diarsipkan' : 'Arsipkan';
+                                                            $archExtraCls = $alreadyArsip ? ' arch done' : ' arch';
+                                                            $archOnclick = $alreadyArsip ? 'return false;' : 'return openArsipModal(' . $row['id_surat'] . ');';
+                                                            echo '<a class="waves-effect waves-light tooltipped action-round' . $archExtraCls . '" ' . $btnBase . ' data-tooltip="' . $archTooltip . '" href="#" onclick="' . $archOnclick . '"><i class="material-icons">archive</i></a>';
+                                                        }
                                                     }
                                                     echo '</div>';
                                                 } else {

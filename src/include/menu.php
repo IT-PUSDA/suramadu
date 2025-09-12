@@ -158,6 +158,15 @@
                 <li><a href="index.php?page=admin&act=ask">Surat Keluar</a></li>
                 <!--<li><a href="?page=not">Nota Dinas</a></li>-->
             </ul>
+            <?php if(isset($_SESSION['admin']) && $_SESSION['admin']==3){ ?>
+            <li><a class="dropdown-button" href="#!" data-activates="arsip_menu">Arsip <i class="material-icons md-18">arrow_drop_down</i></a></li>
+            <ul id='arsip_menu' class='dropdown-content'>
+                <li><a href="index.php?page=admin&act=arsip_sk">Surat Keluar</a></li>
+                <li><a href="index.php?page=admin&act=arsip_nd">Nota Dinas</a></li>
+                <li><a href="index.php?page=admin&act=arsip_ph">Produk Hukum</a></li>
+                <li><a href="index.php?page=admin&act=arsip_keu">Keuangan</a></li>
+            </ul>
+            <?php } ?>
             <!--<li><a class="dropdown-button" href="#!" data-activates="agenda">Galeri File <i class="material-icons md-18">arrow_drop_down</i></a></li>
                 <ul id='agenda' class='dropdown-content'>
                     <li><a href="index.php?page=admin&act=gsm">Surat Masuk</a></li>
