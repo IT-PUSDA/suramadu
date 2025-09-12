@@ -274,7 +274,7 @@ if (!isset($_SESSION['admin'])) {
                                 <div class="card lime darken-1 hs-card">
                                     <div class="card-content">
                                         <span class="card-title white-text"><i class="material-icons md-36">drafts</i> Surat Keluar</span>
-                                        <a href="index.php?page=admin&act=tsk" class="white-text" style="text-decoration:none;"><h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($count2); ?> SURAT KELUAR</h5></a>
+                                        <a href="index.php?page=admin&act=tsk" class="white-text" style="text-decoration:none;"><h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format((int)$count2); ?> SURAT KELUAR</h5></a>
                                     </div>
                                 </div>
                             </div>
@@ -285,7 +285,7 @@ if (!isset($_SESSION['admin'])) {
                                     <div class="card teal hs-card">
                                         <div class="card-content">
                                             <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">assignment</i> Nota Dinas</span>
-                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countND); ?> SURAT NOTA DINAS</h5>
+                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format((int)$countND); ?> SURAT NOTA DINAS</h5>
                                         </div>
                                     </div>
                                 </a>
@@ -295,7 +295,7 @@ if (!isset($_SESSION['admin'])) {
                                     <div class="card deep-orange hs-card">
                                         <div class="card-content">
                                             <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">gavel</i> Produk Hukum</span>
-                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countPH); ?> SURAT PRODUK HUKUM</h5>
+                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format((int)$countPH); ?> SURAT PRODUK HUKUM</h5>
                                         </div>
                                     </div>
                                 </a>
@@ -305,7 +305,7 @@ if (!isset($_SESSION['admin'])) {
                                     <div class="card indigo hs-card">
                                         <div class="card-content">
                                             <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">attach_money</i> Keuangan</span>
-                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countKEU); ?> SURAT KEUANGAN</h5>
+                                            <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format((int)$countKEU); ?> SURAT KEUANGAN</h5>
                                         </div>
                                     </div>
                                 </a>
@@ -320,16 +320,16 @@ if (!isset($_SESSION['admin'])) {
                                 <div class="card black hs-card">
                                     <div class="card-content white-text">
                                         <span class="card-title" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">archive</i> Arsip</span>
-                                        <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format($countArsip); ?> SURAT TERARSIP</h5>
+                                        <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format((int)$countArsip); ?> SURAT TERARSIP</h5>
                                     </div>
                                 </div>
                                     </a>
                                 </div>
                                 <?php } ?>
                             </div>
-                            <?php } ?>
                             </div>
                         </div>
+                        
                         <!--
     			<div class="col s12 m4">
                     <div class="card yellow darken-1">
@@ -358,7 +358,7 @@ if (!isset($_SESSION['admin'])) {
                                 <div class="card blue accent-2 hs-card">
                                     <div class="card-content">
                                         <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">people</i> Jumlah Pengguna</span>
-                                        <h5 class="white-text" style="margin:8px 0 0;"><?php echo number_format($count5); ?> PENGGUNA</h5>
+                                        <h5 class="white-text" style="margin:8px 0 0;"><?php echo number_format((int)$count5); ?> PENGGUNA</h5>
                                     </div>
                                 </div>
                                 </div>
@@ -463,7 +463,7 @@ if (!isset($_SESSION['admin'])) {
                                                     <div class="card <?php echo $COLOR_CLASS[$key] ?? 'blue-grey'; ?>" style="border-radius:12px;">
                                                         <div class="card-content white-text" style="min-height:110px;">
                                                             <span class="card-title" style="display:flex; align-items:center; gap:8px;"><i class="material-icons md-36">drafts</i> <?php echo $BIDANG_LABELS[$key]; ?></span>
-                                                            <h5 class="white-text" style="margin-top:6px; letter-spacing:.2px;"><?php echo number_format($counts[$key]); ?> SURAT KELUAR</h5>
+                                                            <h5 class="white-text" style="margin-top:6px; letter-spacing:.2px;"><?php echo number_format((int)$counts[$key]); ?> SURAT KELUAR</h5>
                                                         </div>
                                                     </div>
                                                 </a>
@@ -523,4 +523,8 @@ if (!isset($_SESSION['admin'])) {
     </html>
 
 <?php
+// Tutup blok else besar yang dimulai setelah pengecekan session
+}
+// Selesaikan output buffering jika digunakan
+if (function_exists('ob_get_level') && ob_get_level() > 0) { @ob_end_flush(); }
 ?>

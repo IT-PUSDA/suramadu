@@ -106,7 +106,7 @@ foreach ($groups as $key => $usernames) {
                                 <div class="card <?php echo $color[$key] ?? 'blue-grey'; ?>" style="border-radius:12px;">
                                     <div class="card-content white-text" style="min-height:110px;">
                                         <span class="card-title" style="display:flex; align-items:center; gap:8px;"><i class="material-icons md-36">drafts</i> <?php echo $labels[$key]; ?></span>
-                                        <h5 class="white-text" style="margin-top:6px; letter-spacing:.2px;"><?php echo number_format($counts[$key]); ?> SURAT TERARSIP</h5>
+                                        <h5 class="white-text" style="margin-top:6px; letter-spacing:.2px;"><?php echo number_format((int)$counts[$key]); ?> SURAT TERARSIP</h5>
                                     </div>
                                 </div>
                             </a>

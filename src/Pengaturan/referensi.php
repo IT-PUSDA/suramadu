@@ -191,7 +191,7 @@
                         // Info bar: showing X to Y of N
                         $start = ($cdata > 0) ? ($curr + 1) : 0;
                         $end = min($curr + $limit, $cdata);
-                        $label = 'Showing '.number_format($start).' to '.number_format($end).' of '.number_format($cdata).' entries';
+                        $label = 'Showing '.number_format((int)$start).' to '.number_format((int)$end).' of '.number_format((int)$cdata).' entries';
                         echo '<div class="center-align grey-text text-darken-1" style="margin:10px 0 6px;">'.$label.'</div>';
 
                         echo '<!-- Pagination START -->
