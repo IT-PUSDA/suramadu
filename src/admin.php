@@ -233,13 +233,16 @@ if (!isset($_SESSION['admin'])) {
                         } else {
                             $countND = $countPH = $countKEU = 0; // kolom belum ada
                         }
-                        // Hitung jumlah Arsip (sementara gunakan status='finished' bila kolom status tersedia)
+                        // Hitung jumlah Arsip: hanya surat yang benar-benar sudah dimasukkan ke berkas arsip
+                        // yaitu memiliki relasi id_arsip_berkas (bukan sekadar status finished)
                         $countArsip = 0;
-                        $hasStatus = false;
-                        $resStatus = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'status'");
-                        if ($resStatus && mysqli_num_rows($resStatus) === 1) { $hasStatus = true; }
-                        if ($hasStatus) {
-                            $qArsip = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE status='finished'" . $whereUser);
+                        // Pastikan kolom relasi tersedia agar query aman
+                        $hasRel = false;
+                        $resRel = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'id_arsip_berkas'");
+                        if ($resRel && mysqli_num_rows($resRel) === 1) { $hasRel = true; }
+                        if (!$hasRel) { @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN id_arsip_berkas INT NULL, ADD INDEX idx_arsip_rel (id_arsip_berkas)"); $hasRel = true; }
+                        if ($hasRel) {
+                            $qArsip = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_arsip_berkas IS NOT NULL" . $whereUser);
                             $countArsip = ($qArsip ? (int)mysqli_fetch_assoc($qArsip)['c'] : 0);
                         }
                         //menghitung jumlah surat masuk
