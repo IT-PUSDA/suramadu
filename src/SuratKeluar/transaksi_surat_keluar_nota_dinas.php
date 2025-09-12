@@ -249,6 +249,19 @@ echo '</ul></div>';
     #tbl thead th:nth-child(7) { width: 17%; }
 </style>
 
+<?php
+// Pastikan kolom relasi arsip tersedia pada tbl_surat_keluar (Nota Dinas)
+$__chk_rel_nd = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'id_arsip_berkas'");
+if(!$__chk_rel_nd || mysqli_num_rows($__chk_rel_nd) == 0){
+  @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN id_arsip_berkas INT NULL AFTER status, ADD INDEX idx_arsip_rel (id_arsip_berkas)");
+}
+
+// Handler AJAX sederhana untuk mengarsipkan surat (Operator saja)
+// Pengarsipan dipusatkan via src/SuratKeluar/arsip_assign_ajax.php (lihat arsip_modal.js)
+?>
+
+<!-- Modal Arsip dipusatkan via src/SuratKeluar/arsip_modal.js (sudah di-include global di footer) -->
+
 <!-- PIN modal + styles (consisten) -->
 <style>
     /* Modal PIN */

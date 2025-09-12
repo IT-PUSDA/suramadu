@@ -54,6 +54,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" integrity="sha512-uto9mlQzrs59VwILcLiRYeLKPPbS/bT71da/OEBYEwcdNUk8jYIy+D176RYoop1Da+f9mvkYrmj5MCLZWEtQuA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script type="text/javascript" src="asset/js/bootstrap.min.js"></script>
 <script data-pace-options='{ "ajax": false }' src='asset/js/pace.min.js'></script>
+<script type="text/javascript" src="src/SuratKeluar/arsip_modal.js"></script>
 <script type="text/javascript">
     //jquery dropdown
     $(".dropdown-button").dropdown({
@@ -99,5 +100,32 @@
     $(document).ready(function() {
         $('.modal-trigger').leanModal();
     });
+
+    // Global delegated click for Archive button (works for AJAX and CSP)
+    (function(){
+        var bound = false;
+        function bindArchiveDelegation(){
+            if (bound || !window.jQuery) return; bound = true;
+            $(document).on('click', '.action-round.arch', function(e){
+                var $btn = $(this);
+                if ($btn.hasClass('done')) { e.preventDefault(); return false; }
+                // if inline onclick is present, let it handle it; fallback only if not defined
+                var id = $btn.attr('data-id-surat');
+                if (!id) { return; }
+                e.preventDefault();
+                try {
+                    if (window.openArsipModal) { return openArsipModal(parseInt(id,10)); }
+                    var s = document.createElement('script');
+                    s.async = true;
+                    s.src = 'src/SuratKeluar/arsip_modal.js?v=' + Date.now();
+                    s.onload = function(){ if (window.openArsipModal) { openArsipModal(parseInt(id,10)); } else { alert('Modul arsip tidak siap. Coba ulangi.'); } };
+                    s.onerror = function(){ alert('Gagal memuat modul arsip.'); };
+                    (document.head||document.body).appendChild(s);
+                } catch(err){ alert('Terjadi kesalahan: ' + (err && err.message ? err.message : err)); }
+                return false;
+            });
+        }
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', bindArchiveDelegation); } else { bindArchiveDelegation(); }
+    })();
 </script>
 <!-- Javascript END -->

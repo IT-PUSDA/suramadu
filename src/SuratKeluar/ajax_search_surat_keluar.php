@@ -105,6 +105,7 @@ $alter = [];
 if (!in_array('status',$existingCols)) $alter[] = "ADD COLUMN status ENUM('draft','finished') NOT NULL DEFAULT 'draft'";
 if (!in_array('updated_by',$existingCols)) $alter[] = "ADD COLUMN updated_by VARCHAR(50) NULL";
 if (!in_array('updated_at',$existingCols)) $alter[] = "ADD COLUMN updated_at DATETIME NULL";
+if (!in_array('id_arsip_berkas',$existingCols)) $alter[] = "ADD COLUMN id_arsip_berkas INT NULL, ADD INDEX idx_arsip_rel (id_arsip_berkas)";
 if (!empty($alter)) { @mysqli_query($config, 'ALTER TABLE tbl_surat_keluar '.implode(', ',$alter)); }
 
 // Ambil data
@@ -160,9 +161,33 @@ if ($q && mysqli_num_rows($q) > 0) {
             if ($level==1 || $is_operator_owner) {
                 echo '<a class="waves-effect waves-light tooltipped action-round" data-position="top" data-tooltip="Edit" href="?page=admin&act=tsk&sub=edit&id_surat='.(int)$row['id_surat'].'"><i class="material-icons">edit</i></a>';
                 echo '<a class="waves-effect waves-light tooltipped action-round delete" data-position="top" data-tooltip="Hapus" href="?page=admin&act=tsk&sub=del&id_surat='.(int)$row['id_surat'].'" onclick="return confirm(\'Yakin ingin menghapus surat ini?\');"><i class="material-icons">delete</i></a>';
+                if($is_operator_level){
+                    $alreadyArsip = !empty($row['id_arsip_berkas']);
+                    $archTip = $alreadyArsip ? 'Sudah diarsipkan' : 'Arsipkan';
+                    $archCls = $alreadyArsip ? ' arch done' : ' arch';
+                    if ($alreadyArsip) {
+                        $archOnclick = 'return false;';
+                    } else {
+                        $sid = (int)$row['id_surat'];
+                        $archOnclick = "try{if(window.openArsipModal){return openArsipModal($sid);}console && console.debug && console.debug('Memuat modul arsip...');var s=document.createElement('script');s.async=true;s.src='src/SuratKeluar/arsip_modal.js?v='+Date.now();s.onload=function(){if(window.openArsipModal){openArsipModal($sid);}else{alert('Modul arsip tidak siap. Coba ulangi.');}};s.onerror=function(){alert('Gagal memuat modul arsip.');};(document.head||document.body).appendChild(s);}catch(e){alert('Terjadi kesalahan: '+e.message);}return false;";
+                    }
+                    echo '<a class="waves-effect waves-light tooltipped action-round'.$archCls.'" data-position="top" data-tooltip="'.$archTip.'" href="#" data-id-surat="'.(int)$row['id_surat'].'" onclick="'.$archOnclick.'"><i class="material-icons">archive</i></a>';
+                }
             } else {
                 echo '<a class="waves-effect waves-light tooltipped action-round pin-trigger" data-position="top" data-tooltip="Edit (PIN)" href="?page=admin&act=tsk&sub=edit&id_surat='.(int)$row['id_surat'].'" data-action-type="edit" data-id-surat="'.(int)$row['id_surat'].'"><i class="material-icons">edit</i></a>';
                 echo '<a class="waves-effect waves-light tooltipped action-round delete pin-trigger" data-position="top" data-tooltip="Hapus (PIN)" href="?page=admin&act=tsk&sub=del&id_surat='.(int)$row['id_surat'].'" data-action-type="delete" data-id-surat="'.(int)$row['id_surat'].'"><i class="material-icons">delete</i></a>';
+                if($is_operator_level){
+                    $alreadyArsip = !empty($row['id_arsip_berkas']);
+                    $archTip = $alreadyArsip ? 'Sudah diarsipkan' : 'Arsipkan';
+                    $archCls = $alreadyArsip ? ' arch done' : ' arch';
+                    if ($alreadyArsip) {
+                        $archOnclick = 'return false;';
+                    } else {
+                        $sid = (int)$row['id_surat'];
+                        $archOnclick = "try{if(window.openArsipModal){return openArsipModal($sid);}console && console.debug && console.debug('Memuat modul arsip...');var s=document.createElement('script');s.async=true;s.src='src/SuratKeluar/arsip_modal.js?v='+Date.now();s.onload=function(){if(window.openArsipModal){openArsipModal($sid);}else{alert('Modul arsip tidak siap. Coba ulangi.');}};s.onerror=function(){alert('Gagal memuat modul arsip.');};(document.head||document.body).appendChild(s);}catch(e){alert('Terjadi kesalahan: '+e.message);}return false;";
+                    }
+                    echo '<a class="waves-effect waves-light tooltipped action-round'.$archCls.'" data-position="top" data-tooltip="'.$archTip.'" href="#" data-id-surat="'.(int)$row['id_surat'].'" onclick="'.$archOnclick.'"><i class="material-icons">archive</i></a>';
+                }
             }
             echo '</div>';
         } else {
@@ -181,5 +206,132 @@ if ($q && mysqli_num_rows($q) > 0) {
     }
     echo '</div></td></tr>';
 }
+// Inject required modal + handlers so archive button works from AJAX results (idempotent)
+echo <<<'HTML'
+<script>(function(){
+    // Re-init tooltips for newly injected elements
+    try { if (window.M) { M.Tooltip.init(document.querySelectorAll('.tooltipped')); } } catch(e){}
+    // Delegated fallback: click handler for archive buttons if inline onclick is blocked
+    try {
+        var tbl = document.getElementById('tbl');
+        if (tbl && !tbl.__arsipDelegated) {
+            tbl.__arsipDelegated = true;
+            tbl.addEventListener('click', function(ev){
+                var t = ev.target;
+                if (t && t.closest) {
+                    var btn = t.closest('.action-round.arch');
+                    if (btn && btn.getAttribute('onclick')) return; // let inline handle
+                    if (btn && !btn.classList.contains('done')) {
+                        ev.preventDefault();
+                        var id = btn.getAttribute('data-id-surat');
+                        try{ if(window.openArsipModal){ return openArsipModal(parseInt(id,10)); }
+                            var s=document.createElement('script');
+                            s.async=true; s.src='src/SuratKeluar/arsip_modal.js?v='+Date.now();
+                            s.onload=function(){ if(window.openArsipModal){ openArsipModal(parseInt(id,10)); } };
+                            s.onerror=function(){ alert('Gagal memuat modul arsip.'); };
+                            (document.head||document.body).appendChild(s);
+                        }catch(e){ alert('Terjadi kesalahan: '+e.message); }
+                    }
+                }
+            });
+        }
+    } catch(e){}
+    // Ensure Arsip modal exists once, appended to body (not inside table)
+    if (!document.getElementById('arsipModal')) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = `
+            <div id="arsipModal" class="modal">
+                <div class="modal-content">
+                    <h5>Pilih Berkas Arsip</h5>
+                    <p class="grey-text">Silakan pilih berkas arsip tujuan. Daftar diambil dari Arsip Berkas Bidang Anda.</p>
+                    <ul class="collection" id="arsipList"><li class="collection-item">Memuat...</li></ul>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="modal-close waves-effect waves-green btn-flat">Tutup</a>
+                </div>
+            </div>`;
+        // Append the actual modal element (first child) to body
+        document.body.appendChild(wrap.firstElementChild);
+        try { if (window.M) { M.Modal.init(document.querySelectorAll('#arsipModal')); } } catch(e){}
+    }
+    // Define handlers once
+    if (typeof window.openArsipModal !== 'function') {
+        window.__arsipTargetSurat = null;
+        window.openArsipModal = function(idSurat){
+            window.__arsipTargetSurat = idSurat;
+            var modalEl = document.getElementById('arsipModal');
+            var listEl = document.getElementById('arsipList');
+            if (listEl) { listEl.innerHTML = '<li class="collection-item">Memuat...</li>'; }
+            // fetch list of berkas
+            fetch('src/SuratKeluar/arsip_list_ajax.php')
+                .then(function(r){ return r.json(); })
+                .then(function(list){
+                    if (!listEl) return;
+                    listEl.innerHTML = '';
+                    if (!list || !list.length) {
+                        listEl.innerHTML = '<li class="collection-item">Belum ada berkas. Tambahkan di menu Arsip Berkas Bidang.</li>';
+                    } else {
+                        list.forEach(function(it){
+                            var li = document.createElement('li');
+                            li.className = 'collection-item';
+                            var kode = (it.kode_klasifikasi||'').toString();
+                            var nama = (it.nama_berkas||'').toString();
+                            var uraian = (it.uraian||'').toString();
+                            li.innerHTML = '<div><strong>'+kode+'</strong> - '+nama+'<a href="#" class="secondary-content" data-id="'+it.id+'">Pilih</a><br/><small>'+uraian+'</small></div>';
+                            li.querySelector('a').addEventListener('click', function(ev){ ev.preventDefault(); window.pilihArsip(it.id); });
+                            listEl.appendChild(li);
+                        });
+                    }
+                })
+                .catch(function(){ if (listEl) listEl.innerHTML = '<li class="collection-item red-text">Gagal memuat daftar berkas.</li>'; });
+            try {
+                if (window.M) {
+                    var inst = M.Modal.getInstance(modalEl) || M.Modal.init(modalEl);
+                    inst.open();
+                } else {
+                    // fallback: show element
+                    modalEl.style.display = 'block';
+                }
+            } catch(e){}
+            return false;
+        };
+        window.pilihArsip = function(idArsip){
+            if (!window.__arsipTargetSurat) return false;
+            var fd = new FormData();
+            fd.append('__ajax','arsip_surat');
+            fd.append('id_surat', String(window.__arsipTargetSurat));
+            fd.append('id_arsip_berkas', String(idArsip));
+            fetch(window.location.href, { method: 'POST', body: fd })
+                .then(function(r){ return r.json(); })
+                .then(function(res){
+                    if (res && res.ok) {
+                        try {
+                            var modalEl = document.getElementById('arsipModal');
+                            if (window.M) { var inst = M.Modal.getInstance(modalEl) || M.Modal.init(modalEl); inst.close(); }
+                        } catch(e){}
+                        // mark the corresponding archive buttons as done
+                        var selector = '.action-round.arch[onclick="return openArsipModal('+window.__arsipTargetSurat+');"]';
+                        document.querySelectorAll(selector).forEach(function(btn){
+                            btn.classList.add('done');
+                            btn.setAttribute('onclick','return false;');
+                            if (btn.classList.contains('tooltipped')) {
+                                try {
+                                    var tt = window.M && M.Tooltip.getInstance(btn);
+                                    if (tt) tt.destroy();
+                                } catch(e){}
+                                btn.setAttribute('data-tooltip','Sudah diarsipkan');
+                                try { if (window.M) { M.Tooltip.init(btn); } } catch(e){}
+                            }
+                        });
+                    } else {
+                        alert((res && res.error) ? res.error : 'Gagal mengarsipkan surat.');
+                    }
+                })
+                .catch(function(){ alert('Terjadi kesalahan saat menyimpan data.'); });
+            return false;
+        };
+    }
+})();</script>
+HTML;
 exit;
 ?>

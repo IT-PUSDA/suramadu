@@ -290,3 +290,87 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 function toggleStatus(id,ev){ if(!id) return false; const e=ev||window.event; const btn=e&&e.currentTarget?e.currentTarget:null; if(btn) btn.classList.add('disabled'); fetch('src/SuratKeluar/update_status.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+encodeURIComponent(id)}) .then(async r=>{const t=await r.text(); try{return JSON.parse(t);}catch(err){console.error('Raw response toggleStatus KEU:',t); throw new Error('Response bukan JSON valid');}}) .then(j=>{ if(!j.ok) throw new Error(j.msg||'Gagal'); const img=document.querySelector('.status-icon-'+id); if(img){ img.src='asset/img/'+(j.status==='finished'?'finished.png':'draft.png'); } if(btn && btn.getAttribute){ btn.setAttribute('data-tooltip', j.status==='finished'?'Set Draft':'Set Finished'); if(typeof M!=='undefined' && M.Tooltip){ const inst=M.Tooltip.getInstance(btn); if(inst) inst.destroy(); M.Tooltip.init(btn,{}); } } }) .catch(err=>alert('Gagal toggle status: '+err.message)) .finally(()=>{ if(btn) btn.classList.remove('disabled'); }); return false; }
 </script>
+
+<?php
+// Pastikan kolom relasi arsip tersedia pada tbl_surat_keluar
+$__chk_rel_keu = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'id_arsip_berkas'");
+if(!$__chk_rel_keu || mysqli_num_rows($__chk_rel_keu) == 0){
+    @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN id_arsip_berkas INT NULL AFTER status, ADD INDEX idx_arsip_rel (id_arsip_berkas)");
+}
+
+// Handler AJAX sederhana untuk mengarsipkan surat (Operator saja)
+if(isset($_POST['__ajax']) && $_POST['__ajax'] === 'arsip_surat' && $is_operator){
+    header('Content-Type: application/json');
+    $idSurat = (int)($_POST['id_surat'] ?? 0);
+    $idArsip = (int)($_POST['id_arsip'] ?? 0);
+    if($idSurat < 1 || $idArsip < 1){ echo json_encode(['ok'=>false,'msg'=>'Data tidak valid']); exit; }
+    // Cek surat berada pada scope operator dan sudah finished
+    $cek = mysqli_query($config, "SELECT id_surat,id_user,status,id_arsip_berkas FROM tbl_surat_keluar WHERE id_surat=$idSurat LIMIT 1");
+    if(!$cek || mysqli_num_rows($cek) != 1){ echo json_encode(['ok'=>false,'msg'=>'Surat tidak ditemukan']); exit; }
+    $s = mysqli_fetch_assoc($cek);
+    if($s['status'] != 'finished'){ echo json_encode(['ok'=>false,'msg'=>'Surat belum berstatus finished']); exit; }
+    if(!in_array((int)$s['id_user'], $operator_allowed_ids, true)){ echo json_encode(['ok'=>false,'msg'=>'Akses ditolak']); exit; }
+    // Cek arsip milik operator bersangkutan
+    $cekArsip = mysqli_query($config, "SELECT id,id_user FROM tbl_arsip_berkas WHERE id=$idArsip LIMIT 1");
+    if(!$cekArsip || mysqli_num_rows($cekArsip) != 1){ echo json_encode(['ok'=>false,'msg'=>'Berkas arsip tidak ditemukan']); exit; }
+    $a = mysqli_fetch_assoc($cekArsip);
+    if((int)$a['id_user'] !== (int)$_SESSION['id_user']){ echo json_encode(['ok'=>false,'msg'=>'Berkas arsip bukan milik Anda']); exit; }
+    if($s['id_arsip_berkas'] && (int)$s['id_arsip_berkas'] === $idArsip){ echo json_encode(['ok'=>true,'msg'=>'Sudah terarsip']); exit; }
+    if(mysqli_query($config, "UPDATE tbl_surat_keluar SET id_arsip_berkas=$idArsip WHERE id_surat=$idSurat")){
+        echo json_encode(['ok'=>true,'msg'=>'Surat berhasil diarsipkan']);
+    } else {
+        echo json_encode(['ok'=>false,'msg'=>'Gagal menyimpan']);
+    }
+    exit;
+}
+?>
+
+<!-- Modal pilih arsip berkas (Operator) -->
+<div id="arsipModal" class="modal" style="max-height:80%;">
+  <div class="modal-content" style="padding-bottom:8px;">
+    <h5>Pilih Berkas Arsip</h5>
+    <div id="arsipList" style="max-height:320px; overflow:auto; border:1px solid #eceff1; border-radius:6px;">
+      <div class="progress"><div class="indeterminate"></div></div>
+    </div>
+    <div style="margin-top:14px;" class="right-align">
+      <a href="#!" class="modal-close btn-flat">Tutup</a>
+    </div>
+  </div>
+  <script>
+  // Arsip modal logic khusus halaman Keuangan
+  (function(){
+    let arsipTargetSurat = 0;
+    window.openArsipModal = function(id){
+      arsipTargetSurat = id;
+      const modalEl = document.getElementById('arsipModal');
+      const inst = (window.M && M.Modal.getInstance(modalEl)) || (window.M && M.Modal.init(modalEl,{dismissible:true}));
+      document.getElementById('arsipList').innerHTML = '<div class="progress"><div class="indeterminate"></div></div>';
+      if(inst) inst.open();
+      fetch('src/SuratKeluar/arsip_list_ajax.php', {credentials:'same-origin'})
+        .then(r=>r.ok?r.json():[])
+        .then(d=>renderArsipList(d))
+        .catch(()=>{ document.getElementById('arsipList').innerHTML='<div class="red-text" style="padding:12px;">Gagal memuat.</div>'; });
+      return false;
+    };
+    function renderArsipList(data){
+      if(!Array.isArray(data) || !data.length){ document.getElementById('arsipList').innerHTML='<div style="padding:12px;">Belum ada berkas arsip.</div>'; return; }
+      const html = data.map(r=>`\n            <a href="#" data-id="${r.id}" class="collection-item" style="display:block;padding:10px 14px;border-bottom:1px solid #eceff1;">\n                <strong>${r.kode_klasifikasi}</strong> - ${r.nama_berkas}<br>\n                <small class="grey-text">${r.uraian||''}</small>\n            </a>`).join('');
+      document.getElementById('arsipList').innerHTML = '<div class="collection" style="margin:0;">'+html+'</div>';
+      document.querySelectorAll('#arsipList a.collection-item').forEach(a=>{
+        a.addEventListener('click', function(e){ e.preventDefault(); pilihArsip(parseInt(this.getAttribute('data-id'),10)); });
+      });
+    }
+    function pilihArsip(id){
+      if(!arsipTargetSurat) return;
+      const fd = new FormData();
+      fd.append('__ajax','arsip_surat');
+      fd.append('id_surat', arsipTargetSurat);
+      fd.append('id_arsip', id);
+      fetch(window.location.href, {method:'POST', body: fd, credentials:'same-origin'})
+        .then(r=>r.json())
+        .then(j=>{ if(j.ok){ location.reload(); } else { alert(j.msg||'Gagal'); } })
+        .catch(()=>alert('Gagal'));
+    }
+  })();
+  </script>
+</div>

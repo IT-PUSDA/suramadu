@@ -61,6 +61,7 @@ $idList=implode(',',array_map('intval',$ids));
 // Handle add form
 $isAdd  = (isset($_GET['sub']) && $_GET['sub']==='add');
 $isEdit = (isset($_GET['sub']) && $_GET['sub']==='edit' && isset($_GET['id']) && ctype_digit($_GET['id']));
+$isView = (isset($_GET['sub']) && $_GET['sub']==='view' && isset($_GET['id']) && ctype_digit($_GET['id']));
 $errors=[]; $successMsg='';
 if ($isAdd && isset($_POST['simpan'])) {
     $nama = trim($_POST['nama_berkas']??'');
@@ -165,7 +166,7 @@ $filterNama = isset($_GET['nama'])?trim($_GET['nama']):'';
 $where = "WHERE id_user IN ($idList)";
 if($filterKode!==''){ $e=mysqli_real_escape_string($config,$filterKode); $where.=" AND kode_klasifikasi LIKE '%$e%'"; }
 if($filterNama!==''){ $e=mysqli_real_escape_string($config,$filterNama); $where.=" AND nama_berkas LIKE '%$e%'"; }
-$sqlList = "SELECT a.id,a.kode_klasifikasi,a.nama_berkas,a.uraian,a.tgl_buat,a.file_path,(SELECT COUNT(1) FROM tbl_surat_keluar s WHERE s.id_arsip_berkas=a.id) AS jml_surat FROM tbl_arsip_berkas a $where ORDER BY a.tgl_buat DESC, a.id DESC";
+$sqlList = "SELECT a.id,a.kode_klasifikasi,a.nama_berkas,a.uraian,a.tgl_buat,a.file_path,(SELECT COUNT(1) FROM tbl_surat_keluar s WHERE s.id_arsip_berkas=a.id AND s.status='finished') AS jml_surat FROM tbl_arsip_berkas a $where ORDER BY a.tgl_buat DESC, a.id DESC";
 $resList = mysqli_query($config,$sqlList);
 $rows=[]; if($resList){ while($r=mysqli_fetch_assoc($resList)){ $rows[]=$r; } }
 
@@ -298,6 +299,97 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             if(input.value.trim()!==''){ M.updateTextFields(); }
         })();
         </script>
+    <?php elseif($isView): ?>
+        <?php
+        $viewId = (int)$_GET['id'];
+        // Validasi kepemilikan berkas
+        $cekB = mysqli_query($config, "SELECT id, kode_klasifikasi, nama_berkas FROM tbl_arsip_berkas WHERE id=$viewId AND id_user IN ($idList) LIMIT 1");
+        if(!$cekB || mysqli_num_rows($cekB)!==1){
+            echo '<div class="card-panel red lighten-5" style="border-radius:10px;margin-top:14px;padding:10px 16px;color:#c62828;font-weight:600;">Berkas tidak ditemukan atau bukan milik Anda.</div>';
+        } else {
+            $berkas = mysqli_fetch_assoc($cekB);
+            // Handle unlink (keluarkan dari berkas), bukan hapus surat
+            if(isset($_GET['rem']) && ctype_digit($_GET['rem'])){
+                $rid = (int)$_GET['rem'];
+                $username = isset($_SESSION['username']) ? mysqli_real_escape_string($config, $_SESSION['username']) : 'system';
+                $now = date('Y-m-d H:i:s');
+                mysqli_query($config, "UPDATE tbl_surat_keluar SET id_arsip_berkas=NULL, updated_by='$username', updated_at='$now' WHERE id_surat=$rid AND id_arsip_berkas=$viewId");
+                echo '<script>location.href="index.php?page=admin&act=arsip_op&sub=view&id='.$viewId.'";</script>';
+                exit;
+            }
+            // Ensure needed columns exist
+            $cols=[]; $rc=mysqli_query($config,"SHOW COLUMNS FROM tbl_surat_keluar"); if($rc){ while($c=mysqli_fetch_assoc($rc)){ $cols[]=$c['Field']; } }
+            if(!in_array('jenis',$cols)){ @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN jenis VARCHAR(20) NOT NULL DEFAULT 'umum'"); }
+            if(!in_array('updated_at',$cols)){ @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN updated_at DATETIME NULL"); }
+
+            // Query daftar isi berkas (hanya finished)
+            $qList = mysqli_query($config, "SELECT id_surat, jenis, no_surat, tgl_surat, isi, file, updated_at FROM tbl_surat_keluar WHERE id_arsip_berkas=$viewId AND status='finished' ORDER BY id_surat DESC");
+            $items=[]; if($qList){ while($r=mysqli_fetch_assoc($qList)){ $items[]=$r; } }
+
+            function mapJenis($j){
+                switch($j){
+                    case 'nota_dinas': return 'Nota Dinas';
+                    case 'produk_hukum': return 'Produk Hukum';
+                    case 'keuangan': return 'Keuangan';
+                    case 'umum': default: return 'Surat Keluar';
+                }
+            }
+            function fileIcon($fname){
+                if(!$fname) return '';
+                $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+                if($ext==='pdf') return 'asset/img/pdf.png';
+                if(in_array($ext,['doc','docx'])) return 'asset/img/word.png';
+                return 'asset/img/pdf.png';
+            }
+        ?>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
+            <h5 style="margin:0;display:flex;align-items:center;gap:8px;">
+                <i class="material-icons">visibility</i> Daftar Isi Berkas Arsip Aktif
+            </h5>
+            <a href="index.php?page=admin&act=arsip_op" class="btn grey lighten-1 btn-pill" style="color:#263238;">Kembali</a>
+        </div>
+        <div class="grey-text" style="margin-top:4px;">Berkas: <strong><?php echo htmlspecialchars($berkas['kode_klasifikasi']); ?></strong> - <?php echo htmlspecialchars($berkas['nama_berkas']); ?></div>
+
+        <div class="table-responsive" style="margin-top:14px;">
+            <table class="table-arsip-op" id="tbl-isi-berkas">
+                <thead>
+                    <tr>
+                        <th style="width:50px;" class="center-align">No</th>
+                        <th>Jenis Surat</th>
+                        <th>Nomor Surat</th>
+                        <th>Tanggal Diarsipkan</th>
+                        <th>Isi Ringkas</th>
+                        <th style="width:80px;" class="center-align">File</th>
+                        <th style="width:80px;" class="center-align">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if(empty($items)): ?>
+                        <tr><td colspan="7" class="center-align" style="padding:18px;color:#777;">Belum ada surat pada berkas ini.</td></tr>
+                    <?php else: $no=1; foreach($items as $it): ?>
+                        <tr>
+                            <td class="center-align"><?php echo $no++; ?></td>
+                            <td><?php echo htmlspecialchars(mapJenis($it['jenis'])); ?></td>
+                            <td><?php echo htmlspecialchars($it['no_surat']); ?></td>
+                            <td><?php echo htmlspecialchars(!empty($it['updated_at']) ? date('d M Y', strtotime($it['updated_at'])) : (!empty($it['tgl_surat']) ? date('d M Y', strtotime($it['tgl_surat'])) : '-')); ?></td>
+                            <td><?php echo htmlspecialchars($it['isi']); ?></td>
+                            <td class="center-align">
+                                <?php if(!empty($it['file'])): $icon=fileIcon($it['file']); ?>
+                                    <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=<?php echo (int)$it['id_surat']; ?>" target="_blank" title="Buka File"><img src="<?php echo $icon; ?>" alt="file" style="height:28px;width:auto;"/></a>
+                                <?php else: ?>
+                                    <span class="btn grey lighten-3" style="padding:2px 8px;border-radius:14px;color:#455a64;font-weight:600;">TIDAK ADA</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="center-align">
+                                <a href="index.php?page=admin&act=arsip_op&sub=view&id=<?php echo $viewId; ?>&rem=<?php echo (int)$it['id_surat']; ?>" onclick="return confirm('Keluarkan surat ini dari berkas?');" class="btn-flat tooltipped" data-position="top" data-tooltip="Keluarkan" style="color:#e53935;"><i class="material-icons">delete</i></a>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <script>document.addEventListener('DOMContentLoaded',function(){ try{ if(window.jQuery && jQuery.fn.tooltip){ jQuery('.tooltipped').tooltip({delay:10}); } else if(window.M && M.Tooltip){ M.Tooltip.init(document.querySelectorAll('.tooltipped')); } }catch(e){} });</script>
+        <?php } ?>
     <?php else: ?>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
             <h5 style="margin:0;display:flex;align-items:center;gap:8px;">
@@ -346,11 +438,7 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                             <td><?php echo indoDateShort(substr($r['tgl_buat'],0,10)); ?></td>
                             <td class="center-align"><?php echo (int)$r['jml_surat']; ?></td>
                             <td class="center-align" style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
-                                <?php if($r['file_path'] && file_exists(BASE_PATH.'/'.$r['file_path'])): ?>
-                                    <a href="<?php echo htmlspecialchars($r['file_path']); ?>" target="_blank" class="btn-flat tooltipped" data-position="top" data-tooltip="Lihat File" style="color:#0277bd;"><i class="material-icons">visibility</i></a>
-                                <?php else: ?>
-                                    <span class="btn-flat disabled tooltipped" data-position="top" data-tooltip="Tidak ada file" style="color:#b0bec5;"><i class="material-icons">visibility_off</i></span>
-                                <?php endif; ?>
+                                <a href="index.php?page=admin&act=arsip_op&sub=view&id=<?php echo (int)$r['id']; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Lihat Surat Arsip" style="color:#0277bd;"><i class="material-icons">visibility</i></a>
                                 <a href="index.php?page=admin&act=arsip_op&sub=edit&id=<?php echo (int)$r['id']; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Edit" style="color:#ef6c00;"><i class="material-icons">edit</i></a>
                                 <a href="index.php?page=admin&act=arsip_op&del=<?php echo (int)$r['id']; ?>" onclick="return confirm('Hapus berkas arsip ini?');" class="btn-flat tooltipped" data-position="top" data-tooltip="Hapus" style="color:#e53935;"><i class="material-icons">delete</i></a>
                             </td>
@@ -366,4 +454,38 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             if($cek && mysqli_num_rows($cek)==1){ $d=mysqli_fetch_assoc($cek); if((int)$d['id_user']===(int)$_SESSION['id_user']){ if(!empty($d['file_path']) && file_exists(BASE_PATH.'/'.$d['file_path'])) @unlink(BASE_PATH.'/'.$d['file_path']); mysqli_query($config,"DELETE FROM tbl_arsip_berkas WHERE id=$did"); echo '<script>location.href="index.php?page=admin&act=arsip_op";</script>'; } }
         } ?>
     <?php endif; ?>
+</div>
+
+<!-- Modal daftar surat pada berkas -->
+<div id="modalListSurat" class="modal" style="max-height:80%;">
+    <div class="modal-content" style="padding-bottom:8px;">
+        <h5>Daftar Surat pada Berkas</h5>
+        <div id="wrapListSurat" style="max-height:360px; overflow:auto; border:1px solid #eceff1; border-radius:6px;">
+            <div class="progress"><div class="indeterminate"></div></div>
+        </div>
+        <div class="right-align" style="margin-top:10px;">
+            <a href="#" class="modal-close btn-flat">Tutup</a>
+        </div>
+    </div>
+    <script>
+    function lihatSurat(id){
+        const el = document.getElementById('modalListSurat');
+        document.getElementById('wrapListSurat').innerHTML = '<div class="progress"><div class="indeterminate"></div></div>';
+        try{
+            if (window.jQuery && jQuery.fn.openModal) {
+                jQuery('#modalListSurat').openModal();
+            } else if (window.M && M.Modal) {
+                const inst = M.Modal.getInstance(el) || M.Modal.init(el,{dismissible:true});
+                inst.open();
+            } else {
+                el.style.display='block';
+            }
+        }catch(e){ el.style.display='block'; }
+        fetch('src/SuratKeluar/arsip_berkas_surat_list.php?id='+encodeURIComponent(id), {credentials:'same-origin'})
+            .then(r=>r.text())
+            .then(html=>{ document.getElementById('wrapListSurat').innerHTML=html; })
+            .catch(()=>{ document.getElementById('wrapListSurat').innerHTML='<div class="red-text" style="padding:12px;">Gagal memuat.</div>'; });
+        return false;
+    }
+    </script>
 </div>

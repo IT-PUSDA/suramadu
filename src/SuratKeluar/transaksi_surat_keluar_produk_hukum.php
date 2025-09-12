@@ -203,6 +203,18 @@ document.addEventListener('DOMContentLoaded', function(){
     #tbl thead th:nth-child(7) { width: 17%; }
 </style>
 
+<?php
+// Pastikan kolom relasi arsip tersedia pada tbl_surat_keluar (Produk Hukum)
+$__chk_rel_ph = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'id_arsip_berkas'");
+if(!$__chk_rel_ph || mysqli_num_rows($__chk_rel_ph) == 0){
+  @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN id_arsip_berkas INT NULL AFTER status, ADD INDEX idx_arsip_rel (id_arsip_berkas)");
+}
+
+// Pengarsipan dipusatkan via src/SuratKeluar/arsip_assign_ajax.php (lihat arsip_modal.js)
+?>
+
+<!-- Modal Arsip dipusatkan via src/SuratKeluar/arsip_modal.js (sudah di-include global di footer) -->
+
 <!-- PIN modal + styles (match transaksi_surat_keluar.php) -->
 <style>
     .pin-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1002; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
