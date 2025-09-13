@@ -1,8 +1,19 @@
 <?php
-// Arsip Berkas Operator (level 3) - Fullscreen + Form Add
+// Arsip Berkas Operator (level 3)
+// Read-Only Proxy untuk Super Admin/Pimpinan: tambahkan query view_as=su&bidang=<key>
 if (!isset($_SESSION)) { session_start(); }
 require_once(BASE_PATH . '/src/include/config.php');
-if ((int)$_SESSION['admin'] !== 3) {
+
+$readOnly = false;
+$proxyBidang = null;
+if (in_array((int)$_SESSION['admin'], [1,2], true)
+    && isset($_GET['view_as']) && $_GET['view_as'] === 'su'
+    && isset($_GET['bidang']) && $_GET['bidang'] !== '') {
+    $readOnly = true;
+    $proxyBidang = $_GET['bidang'];
+}
+
+if ((int)$_SESSION['admin'] !== 3 && !$readOnly) {
     $_SESSION['err'] = '<center>Akses ditolak.</center>';
     header('Location: index.php?page=admin');
     exit;
@@ -45,17 +56,45 @@ $mapping = [
     'korwil-madiun'=>['MADIUN'],'upt-bondowoso'=>['BONDOWOSO'],'upt-lumajang'=>['LUMAJANG'],'upt-pasuruan'=>['PASURUAN'],
     'upt-madura'=>['MADURA']
 ];
-$uname = strtoupper($_SESSION['username']);
-$namaUpper = isset($_SESSION['nama']) ? strtoupper($_SESSION['nama']) : '';
-$groupFound = null;
-foreach ($mapping as $g => $list) {
-    foreach ($list as $u) { $t=strtoupper($u); if($uname===$t||strpos($uname,$t)!==false||($namaUpper&&strpos($namaUpper,$t)!==false)){ $groupFound=$g; break 2;} }
+$ids=[];
+if ($readOnly) {
+    // Scope by bidang yang diminta
+    $g = $proxyBidang;
+    if (isset($mapping[$g])) {
+        $tokens = array_map('strtoupper', (array)$mapping[$g]);
+        $ors=[];
+        foreach($tokens as $t){ $e=mysqli_real_escape_string($config,$t); $ors[]="UPPER(username) LIKE '%$e%'"; $ors[]="UPPER(nama) LIKE '%$e%'"; }
+        if(!empty($ors)){
+            $ru = mysqli_query($config, 'SELECT id_user FROM tbl_user WHERE ('.implode(' OR ',$ors).')');
+            if($ru){ while($r=mysqli_fetch_assoc($ru)){ $ids[]=(int)$r['id_user']; } }
+        }
+        // Fallback via kode bidang di no_surat
+        $bidangCodes = [
+            'sekretariat'=>'104.1','psda'=>'104.2','swp'=>'104.3','irigasi'=>'104.4','binfat'=>'104.5',
+            'upt-kediri'=>'104.6.02','korwil-malang'=>'104.6.02','korwil-surabaya'=>'104.6.02',
+            'upt-bojonegoro'=>'104.6.05','korwil-madiun'=>'104.6.05','upt-bondowoso'=>'104.6.06',
+            'upt-lumajang'=>'104.6.07','upt-pasuruan'=>'104.6.08','upt-madura'=>'104.6.09'
+        ];
+        if(isset($bidangCodes[$g])){
+            $code = mysqli_real_escape_string($config,$bidangCodes[$g]);
+            $rs = mysqli_query($config, "SELECT DISTINCT id_user FROM tbl_surat_keluar WHERE no_surat LIKE '%$code%'");
+            if($rs){ while($r=mysqli_fetch_assoc($rs)){ $ids[]=(int)$r['id_user']; } }
+        }
+    }
+    $ids = array_values(array_unique($ids));
+    if (empty($ids)) { $ids = [0]; }
+} else {
+    $uname = strtoupper($_SESSION['username']);
+    $namaUpper = isset($_SESSION['nama']) ? strtoupper($_SESSION['nama']) : '';
+    $groupFound = null;
+    foreach ($mapping as $g => $list) {
+        foreach ($list as $u) { $t=strtoupper($u); if($uname===$t||strpos($uname,$t)!==false||($namaUpper&&strpos($namaUpper,$t)!==false)){ $groupFound=$g; break 2;} }
+    }
+    if ($groupFound===null){ $flat=str_replace(['_',' '],'',$uname); foreach($mapping as $g=>$list){ foreach($list as $u){ $tok=str_replace(['_',' '],'',strtoupper($u)); if(strpos($flat,$tok)!==false){$groupFound=$g; break 2;} } } }
+    if($groupFound!==null){ $names=array_map('strtoupper',$mapping[$groupFound]); $esc=[]; foreach($names as $n){$esc[]="'".mysqli_real_escape_string($config,$n)."'";} $sqlUsers="SELECT id_user FROM tbl_user WHERE UPPER(username) IN (".implode(',',$esc).")"; $ru=mysqli_query($config,$sqlUsers); if($ru){ while($r=mysqli_fetch_assoc($ru)){ $ids[]=(int)$r['id_user']; } } }
+    if(empty($ids)){$ids[]=(int)$_SESSION['id_user'];}
+    if(!in_array((int)$_SESSION['id_user'],$ids,true)) { $ids[] = (int)$_SESSION['id_user']; }
 }
-if ($groupFound===null){ $flat=str_replace(['_',' '],'',$uname); foreach($mapping as $g=>$list){ foreach($list as $u){ $tok=str_replace(['_',' '],'',strtoupper($u)); if(strpos($flat,$tok)!==false){$groupFound=$g; break 2;} } } }
-$ids=[]; if($groupFound!==null){ $names=array_map('strtoupper',$mapping[$groupFound]); $esc=[]; foreach($names as $n){$esc[]="'".mysqli_real_escape_string($config,$n)."'";} $sqlUsers="SELECT id_user FROM tbl_user WHERE UPPER(username) IN (".implode(',',$esc).")"; $ru=mysqli_query($config,$sqlUsers); if($ru){ while($r=mysqli_fetch_assoc($ru)){ $ids[]=(int)$r['id_user']; } } }
-if(empty($ids)){$ids[]=(int)$_SESSION['id_user'];}
-// Always include current operator id to ensure visibility of its own entries
-if(!in_array((int)$_SESSION['id_user'],$ids,true)) { $ids[] = (int)$_SESSION['id_user']; }
 $idList=implode(',',array_map('intval',$ids));
 
 // Handle add form
@@ -63,7 +102,7 @@ $isAdd  = (isset($_GET['sub']) && $_GET['sub']==='add');
 $isEdit = (isset($_GET['sub']) && $_GET['sub']==='edit' && isset($_GET['id']) && ctype_digit($_GET['id']));
 $isView = (isset($_GET['sub']) && $_GET['sub']==='view' && isset($_GET['id']) && ctype_digit($_GET['id']));
 $errors=[]; $successMsg='';
-if ($isAdd && isset($_POST['simpan'])) {
+if (!$readOnly && $isAdd && isset($_POST['simpan'])) {
     $nama = trim($_POST['nama_berkas']??'');
     $kode = trim($_POST['kode_klasifikasi']??'');
     $uraian = trim($_POST['uraian']??'');
@@ -105,6 +144,7 @@ if ($isAdd && isset($_POST['simpan'])) {
 // Edit handling
 $editRow = null;
 if($isEdit){
+    if ($readOnly) { header('Location: index.php?page=admin&act=arsip_op'.($readOnly?'&view_as=su&bidang='.urlencode($proxyBidang):'')); exit; }
     $editId = (int)$_GET['id'];
     $q = mysqli_query($config,"SELECT * FROM tbl_arsip_berkas WHERE id=$editId LIMIT 1");
     if($q && mysqli_num_rows($q)==1){
@@ -205,7 +245,7 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             <h5 style="margin:0;display:flex;align-items:center;gap:8px;">
                 <i class="material-icons"><?php echo $isEdit? 'edit' : 'add_circle'; ?></i> <?php echo $isEdit? 'Edit' : 'Tambah'; ?> Berkas Arsip
             </h5>
-            <a href="index.php?page=admin&act=arsip_op" class="btn grey lighten-1 btn-pill" style="color:#263238;">Kembali</a>
+            <a href="index.php?page=admin&act=arsip_op<?php echo $readOnly? '&view_as=su&bidang='.urlencode($proxyBidang) : ''; ?>" class="btn grey lighten-1 btn-pill" style="color:#263238;">Kembali</a>
         </div>
         <?php if(!empty($errors)): ?>
             <div class="card-panel red lighten-5" style="border-radius:10px;padding:14px 18px;">
@@ -309,12 +349,12 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
         } else {
             $berkas = mysqli_fetch_assoc($cekB);
             // Handle unlink (keluarkan dari berkas), bukan hapus surat
-            if(isset($_GET['rem']) && ctype_digit($_GET['rem'])){
+            if(!$readOnly && isset($_GET['rem']) && ctype_digit($_GET['rem'])){
                 $rid = (int)$_GET['rem'];
                 $username = isset($_SESSION['username']) ? mysqli_real_escape_string($config, $_SESSION['username']) : 'system';
                 $now = date('Y-m-d H:i:s');
                 mysqli_query($config, "UPDATE tbl_surat_keluar SET id_arsip_berkas=NULL, updated_by='$username', updated_at='$now' WHERE id_surat=$rid AND id_arsip_berkas=$viewId");
-                echo '<script>location.href="index.php?page=admin&act=arsip_op&sub=view&id='.$viewId.'";</script>';
+                echo '<script>location.href="index.php?page=admin&act=arsip_op&sub=view&id='.$viewId.($readOnly?'&view_as=su&bidang='.urlencode($proxyBidang):'').'";</script>';
                 exit;
             }
             // Ensure needed columns exist
@@ -346,7 +386,7 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             <h5 style="margin:0;display:flex;align-items:center;gap:8px;">
                 <i class="material-icons">visibility</i> Daftar Isi Berkas Arsip Aktif
             </h5>
-            <a href="index.php?page=admin&act=arsip_op" class="btn grey lighten-1 btn-pill" style="color:#263238;">Kembali</a>
+            <a href="index.php?page=admin&act=arsip_op<?php echo $readOnly? '&view_as=su&bidang='.urlencode($proxyBidang) : ''; ?>" class="btn grey lighten-1 btn-pill" style="color:#263238;">Kembali</a>
         </div>
         <div class="grey-text" style="margin-top:4px;">Berkas: <strong><?php echo htmlspecialchars($berkas['kode_klasifikasi']); ?></strong> - <?php echo htmlspecialchars($berkas['nama_berkas']); ?></div>
 
@@ -395,7 +435,9 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             <h5 style="margin:0;display:flex;align-items:center;gap:8px;">
                 <i class="material-icons">archive</i> Arsip Berkas Bidang
             </h5>
+            <?php if(!$readOnly): ?>
             <a href="index.php?page=admin&act=arsip_op&sub=add" class="badge-round-btn" title="Tambah Berkas"><i class="material-icons">add</i></a>
+            <?php endif; ?>
         </div>
         <?php if(isset($_SESSION['succAdd'])): ?><div class="card-panel green lighten-5" style="border-radius:10px;margin-top:14px;padding:10px 16px;color:#2e7d32;font-weight:600;"><?php echo $_SESSION['succAdd']; unset($_SESSION['succAdd']); ?></div><?php endif; ?>
         <form method="get" style="margin-top:16px;">
@@ -438,9 +480,11 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                             <td><?php echo indoDateShort(substr($r['tgl_buat'],0,10)); ?></td>
                             <td class="center-align"><?php echo (int)$r['jml_surat']; ?></td>
                             <td class="center-align" style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
-                                <a href="index.php?page=admin&act=arsip_op&sub=view&id=<?php echo (int)$r['id']; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Lihat Surat Arsip" style="color:#0277bd;"><i class="material-icons">visibility</i></a>
+                                <a href="index.php?page=admin&act=arsip_op&sub=view&id=<?php echo (int)$r['id']; ?><?php echo $readOnly? '&view_as=su&bidang='.urlencode($proxyBidang) : ''; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Lihat Surat Arsip" style="color:#0277bd;"><i class="material-icons">visibility</i></a>
+                                <?php if(!$readOnly): ?>
                                 <a href="index.php?page=admin&act=arsip_op&sub=edit&id=<?php echo (int)$r['id']; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Edit" style="color:#ef6c00;"><i class="material-icons">edit</i></a>
                                 <a href="index.php?page=admin&act=arsip_op&del=<?php echo (int)$r['id']; ?>" onclick="return confirm('Hapus berkas arsip ini?');" class="btn-flat tooltipped" data-position="top" data-tooltip="Hapus" style="color:#e53935;"><i class="material-icons">delete</i></a>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; endif; ?>
@@ -448,7 +492,7 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             </table>
         </div>
         <?php // Proses hapus sederhana
-        if(isset($_GET['del']) && ctype_digit($_GET['del'])){
+        if(!$readOnly && isset($_GET['del']) && ctype_digit($_GET['del'])){
             $did = (int)$_GET['del'];
             $cek = mysqli_query($config,"SELECT id_user,file_path FROM tbl_arsip_berkas WHERE id=$did");
             if($cek && mysqli_num_rows($cek)==1){ $d=mysqli_fetch_assoc($cek); if((int)$d['id_user']===(int)$_SESSION['id_user']){ if(!empty($d['file_path']) && file_exists(BASE_PATH.'/'.$d['file_path'])) @unlink(BASE_PATH.'/'.$d['file_path']); mysqli_query($config,"DELETE FROM tbl_arsip_berkas WHERE id=$did"); echo '<script>location.href="index.php?page=admin&act=arsip_op";</script>'; } }
