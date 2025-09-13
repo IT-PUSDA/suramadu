@@ -502,6 +502,37 @@ require_once(BASE_PATH . '/src/include/config.php');
         /* Global override: warna tombol Arsip */
         .action-round.arch { background: #fbc02d !important; }
         .action-round.arch.done { background: #9e9e9e !important; }
+
+        /* ========== Archive Modal (New) ========== */
+    .archives-modal.modal { max-height: none !important; height: auto !important; border-radius: 14px; overflow: hidden; backdrop-filter: blur(6px); }
+    .modal.archives-modal .modal-content { max-height: none !important; }
+    .modal.archives-modal { bottom: auto !important; }
+    .archives-modal .modal-content { padding: 0; }
+    .archives-modal .am-header { display:flex; align-items:center; padding:16px 18px; background: linear-gradient(135deg,#e3f2fd,#fff); border-bottom:1px solid #e0e0e0; }
+        .archives-modal .am-icon { color:#1976d2; margin-right:10px; }
+        .archives-modal .am-title h5 { margin:0 0 2px; font-weight:600; }
+        .archives-modal .am-title p { margin:0; font-size:.9rem; }
+
+    /* search removed */
+        .archives-modal .am-input { margin:0; }
+        .archives-modal .am-input .prefix { top:0.35rem; color:#90a4ae; }
+        .archives-modal #amSearch { padding-left:2.2rem; border-radius:10px; background:#fff; border:1px solid #e0e0e0; height:42px; box-shadow: inset 0 1px 2px rgba(0,0,0,.04); }
+        .archives-modal .am-clear { position:absolute; right:10px; top:8px; cursor:pointer; color:#b0bec5; }
+        .archives-modal .am-clear:hover { color:#607d8b; }
+
+    /* Dropdown layout */
+    .archives-modal .am-select-wrap { padding: 14px 18px 12px; }
+    .archives-modal .am-select { width:100%; height: 42px; border-radius:10px; border:1px solid #e0e0e0; padding: 8px 12px; background:#fff; box-shadow: inset 0 1px 2px rgba(0,0,0,.04); }
+    .archives-modal .am-select:focus { outline:none; border-color:#90caf9; box-shadow:0 0 0 3px rgba(144,202,249,.35); }
+    .archives-modal .am-empty { color:#90a4ae; padding:16px 18px; }
+
+    /* skeleton for old grid removed in dropdown mode */
+
+    .archives-modal .am-footer { display:flex; align-items:center; justify-content:flex-end; gap:8px; border-top:1px solid #eee; padding:10px 16px !important; }
+
+        @media (max-width: 520px){
+            .archives-modal .am-select { height: 44px; }
+        }
     </style>
     <!-- Global style END -->
 
