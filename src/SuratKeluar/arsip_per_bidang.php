@@ -81,6 +81,20 @@ if (!in_array((int)$_SESSION['admin'], [1,2], true)) {
             return $out;
         }
     }
+    // Helper: ambil id_user berdasarkan username exact sesuai mapping (tanpa LIKE agar tidak melebar)
+    if (!function_exists('arsip_get_user_ids_by_username_exact')) {
+        function arsip_get_user_ids_by_username_exact($config, $key, $groups) {
+            if (!isset($groups[$key]) || empty($groups[$key])) return [];
+            $tokens = array_map('strtoupper', (array)$groups[$key]);
+            $esc = [];
+            foreach ($tokens as $t) { $esc[] = "'" . mysqli_real_escape_string($config, $t) . "'"; }
+            $sql = 'SELECT id_user FROM tbl_user WHERE UPPER(username) IN (' . implode(',', $esc) . ')';
+            $res = mysqli_query($config, $sql);
+            $out = [];
+            if ($res) { while($r=mysqli_fetch_assoc($res)){ $out[]=(int)$r['id_user']; } }
+            return $out;
+        }
+    }
 
     // Helper: where-clause scope bidang (tokens pada user OR fallback berdasarkan kode no_surat)
     if (!function_exists('arsip_where_user_scope')) {
@@ -379,12 +393,22 @@ $color = [
     'upt-madura' => 'pink darken-1',
 ];
 
-// Hitung jumlah terarsip per bidang via JOIN user + token bidang
+// Hitung jumlah terarsip per bidang menggunakan scope yang sama seperti list (tokens + fallback kode),
+// dihitung berdasarkan surat yang terikat ke berkas (berkas milik user bidang), dan hanya 'finished' jika kolom status ada
+$hasStatusCol = false;
+$resStat = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'status'");
+if ($resStat && mysqli_num_rows($resStat) === 1) { $hasStatusCol = true; }
+
 $counts = [];
 foreach ($groups as $key => $_unused) {
     if (!$hasRel) { $counts[$key] = 0; continue; }
-    $whereU = arsip_where_user_scope($config, $key, $groups, $bidangCodes);
-    $sql = "SELECT COUNT(*) AS c FROM tbl_surat_keluar s JOIN tbl_user u ON s.id_user=u.id_user WHERE s.id_arsip_berkas IS NOT NULL AND ($whereU)";
+    $whereU = arsip_where_user_scope($config, $key, $groups, $bidangCodes); // uses alias u
+    $extra = $hasStatusCol ? " AND s.status='finished'" : '';
+    $sql = "SELECT COUNT(*) AS c
+            FROM tbl_surat_keluar s
+            JOIN tbl_arsip_berkas a ON s.id_arsip_berkas=a.id
+            JOIN tbl_user u ON a.id_user=u.id_user
+            WHERE s.id_arsip_berkas IS NOT NULL$extra AND ($whereU)";
     $res = mysqli_query($config, $sql);
     $row = $res ? mysqli_fetch_assoc($res) : ['c' => 0];
     $counts[$key] = (int)$row['c'];
