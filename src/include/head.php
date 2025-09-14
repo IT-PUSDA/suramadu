@@ -254,6 +254,8 @@ require_once(BASE_PATH . '/src/include/config.php');
         }
 
         @media print {
+            /* Ensure the browser reserves space around the page so headers aren't clipped */
+            @page { size: A4; margin: 15mm 12mm 15mm 12mm; }
 
             .side-nav,
             .secondary-nav,
@@ -270,6 +272,8 @@ require_once(BASE_PATH . '/src/include/config.php');
             body {
                 font-size: 12px;
                 color: #212121;
+                /* Add a little padding at the very top for extra safety on some browsers */
+                padding-top: 6mm;
             }
 
             .hid {
@@ -312,8 +316,16 @@ require_once(BASE_PATH . '/src/include/config.php');
                 color: #212121;
             }
 
+            /* Previously we used a negative margin that could push content
+               above the printable area and clip the title on some printers.
+               Reset to zero and provide small positive spacing instead. */
             .container {
-                margin-top: -20px !important;
+                margin-top: 0 !important;
+            }
+
+            /* Make printed headings sit nicely without being cut */
+            h1, h2, h3, h4, h5.hid {
+                margin-top: 0;
             }
         }
 
