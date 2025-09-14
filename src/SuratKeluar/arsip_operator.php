@@ -101,6 +101,7 @@ $idList=implode(',',array_map('intval',$ids));
 $isAdd  = (isset($_GET['sub']) && $_GET['sub']==='add');
 $isEdit = (isset($_GET['sub']) && $_GET['sub']==='edit' && isset($_GET['id']) && ctype_digit($_GET['id']));
 $isView = (isset($_GET['sub']) && $_GET['sub']==='view' && isset($_GET['id']) && ctype_digit($_GET['id']));
+$isPrint = (isset($_GET['sub']) && $_GET['sub']==='print' && isset($_GET['id']) && ctype_digit($_GET['id']));
 $errors=[]; $successMsg='';
 if (!$readOnly && $isAdd && isset($_POST['simpan'])) {
     $nama = trim($_POST['nama_berkas']??'');
@@ -430,6 +431,135 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
         </div>
         <script>document.addEventListener('DOMContentLoaded',function(){ try{ if(window.jQuery && jQuery.fn.tooltip){ jQuery('.tooltipped').tooltip({delay:10}); } else if(window.M && M.Tooltip){ M.Tooltip.init(document.querySelectorAll('.tooltipped')); } }catch(e){} });</script>
         <?php } ?>
+    <?php elseif($isPrint): ?>
+        <?php
+    // Cetak agenda arsip untuk satu berkas, dengan filter tanggal diarsipkan
+        $printId = (int)$_GET['id'];
+        // Validasi kepemilikan berkas
+        $cekB = mysqli_query($config, "SELECT id, kode_klasifikasi, nama_berkas FROM tbl_arsip_berkas WHERE id=$printId AND id_user IN ($idList) LIMIT 1");
+        if(!$cekB || mysqli_num_rows($cekB)!==1){
+            echo '<div class="card-panel red lighten-5" style="border-radius:10px;margin-top:14px;padding:10px 16px;color:#c62828;font-weight:600;">Berkas tidak ditemukan atau bukan milik Anda.</div>';
+        } else {
+            $berkas = mysqli_fetch_assoc($cekB);
+            $from = isset($_POST['dari_tanggal']) ? trim($_POST['dari_tanggal']) : '';
+            $to   = isset($_POST['sampai_tanggal']) ? trim($_POST['sampai_tanggal']) : '';
+            $hasSubmit = isset($_POST['submit']);
+            // Styling cetak + kop
+            echo '<style>
+                #kop-cetak{display:flex;align-items:center;gap:16px;margin:0 0 8px;}
+                #kop-cetak .kop-logo img{width:90px;height:auto;}
+                #kop-cetak .kop-text{flex:1;text-align:center;}
+                #kop-cetak .ln1{font-size:20px;font-weight:400;letter-spacing:.5px;text-transform:uppercase;}
+                #kop-cetak .ln2{font-size:20px;font-weight:700;text-transform:uppercase;white-space:nowrap;line-height:1.2;}
+                #kop-cetak .ln3,#kop-cetak .ln4{font-size:13px;}
+                .kop-sep{border-bottom:2px solid #263238;margin:6px 0 12px;}
+                .agenda-title{font-weight:700;text-transform:uppercase;margin:0 0 10px}
+                .agenda-sub{margin:0 0 12px}
+                table.agenda-print{width:100%;border-collapse:collapse}
+                .agenda-print th,.agenda-print td{border:1px solid #000;padding:6px 8px}
+                .agenda-print th{background:#f4f6f8}
+                @media print{
+                    @page{ margin: 0.8cm 1.5cm 1.5cm 1.5cm; }
+                    .no-print{display:none!important}
+                    html,body{color:#000;font-size:12px;margin:0;padding:0}
+                }
+            </style>';
+        ?>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;" class="no-print">
+            <h5 style="margin:0;display:flex;align-items:center;gap:8px;">
+                <i class="material-icons">print</i> Cetak Agenda Arsip
+            </h5>
+            <a href="index.php?page=admin&act=arsip_op<?php echo $readOnly? '&view_as=su&bidang='.urlencode($proxyBidang) : ''; ?>" class="btn grey lighten-1 btn-pill" style="color:#263238;">Kembali</a>
+        </div>
+        <div class="grey-text no-print" style="margin-top:4px;">Berkas: <strong><?php echo htmlspecialchars($berkas['kode_klasifikasi']); ?></strong> - <?php echo htmlspecialchars($berkas['nama_berkas']); ?></div>
+
+        <div class="row jarak-form black-text no-print">
+            <form class="col s12" method="post" action="">
+                <div class="input-field col s12 m4">
+                    <i class="material-icons prefix md-prefix">date_range</i>
+                    <input id="dari_tanggal" type="text" name="dari_tanggal" value="<?php echo htmlspecialchars($from); ?>" required>
+                    <label for="dari_tanggal">Dari Tanggal</label>
+                </div>
+                <div class="input-field col s12 m4">
+                    <i class="material-icons prefix md-prefix">date_range</i>
+                    <input id="sampai_tanggal" type="text" name="sampai_tanggal" value="<?php echo htmlspecialchars($to); ?>" required>
+                    <label for="sampai_tanggal">Sampai Tanggal</label>
+                </div>
+                <div class="col s12 m4" style="display:flex;gap:10px;align-items:center;margin-top:22px;">
+                    <button type="submit" name="submit" class="btn blue btn-pill">TAMPILKAN <i class="material-icons" style="vertical-align:middle">visibility</i></button>
+                    <?php if($hasSubmit): ?><button type="button" onclick="window.print()" class="btn deep-orange btn-pill"><i class="material-icons" style="vertical-align:middle">print</i> CETAK</button><?php endif; ?>
+                </div>
+            </form>
+        </div>
+
+        <?php
+        if ($hasSubmit && $from !== '' && $to !== '') {
+            // Ambil data kop instansi (opsional)
+            $kop = [ 'institusi'=>'', 'nama'=>'', 'alamat'=>'', 'kota'=>'', 'website'=>'', 'email'=>'', 'logo'=>'' ];
+            $qi = mysqli_query($config, "SELECT institusi,nama,alamat,kota,website,email,logo FROM tbl_instansi LIMIT 1");
+            if ($qi && mysqli_num_rows($qi) === 1) { $kop = mysqli_fetch_assoc($qi); }
+            $logoUrl = !empty($kop['logo']) ? ('upload/'.ltrim($kop['logo'],'/')) : 'asset/img/logo.png';
+            $institusi = strtoupper(trim($kop['institusi'] ?? ''));
+            $namaInst  = strtoupper(trim($kop['nama'] ?? ''));
+            // Gunakan teks kop sesuai permintaan user (tiga baris berikut tetap)
+            $addrLine = 'Jalan Gayung Kebonsari No.169, Ketintang, Gayungan, Surabaya, Jawa Timur 60235';
+            $telLine  = 'Telepon (031) 8288179,8292419,8291711,8292234-8292047';
+            $webLine  = 'Laman www.dpuair.jatimprov.go.id, Pos-el pusda@jatimprov.go.id';
+            echo '<div id="kop-cetak">'
+                .'<div class="kop-logo"><img src="'.htmlspecialchars($logoUrl).'" alt="logo" /></div>'
+                .'<div class="kop-text">'
+                    .($institusi!==''? '<div class="ln1">'.htmlspecialchars($institusi).'</div>' : '')
+                    .($namaInst!==''? '<div class="ln2">'.htmlspecialchars($namaInst).'</div>' : '')
+                    .'<div class="ln3">'.htmlspecialchars($addrLine).'</div>'
+                    .'<div class="ln4">'.htmlspecialchars($telLine).'</div>'
+                    .'<div class="ln4">'.htmlspecialchars($webLine).'</div>'
+                .'</div>'
+            .'</div>';
+            echo '<div class="kop-sep"></div>';
+            $fromEsc = mysqli_real_escape_string($config, $from);
+            $toEsc   = mysqli_real_escape_string($config, $to);
+            $sql = "SELECT id_surat, jenis, no_surat, tgl_surat, isi, file, updated_at
+                    FROM tbl_surat_keluar
+                    WHERE id_arsip_berkas=$printId AND status='finished'
+                      AND DATE(COALESCE(updated_at, tgl_surat)) BETWEEN '$fromEsc' AND '$toEsc'
+                    ORDER BY COALESCE(updated_at, tgl_surat) ASC, id_surat ASC";
+            $q = mysqli_query($config, $sql);
+            $items = [];
+            if ($q) { while($r=mysqli_fetch_assoc($q)){ $items[] = $r; } }
+            $dateRangeText = function($d){ if(!$d||$d==='0000-00-00') return '-'; $bln=[1=>'Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']; $y=substr($d,0,4); $m=(int)substr($d,5,2); $day=substr($d,8,2); return $day.' '.$bln[$m].' '.$y; };
+            echo '<div class="agenda">';
+            // Judul menggunakan nama berkas dengan prefix "Arsip"
+            echo '<h5 class="agenda-title">Arsip '.htmlspecialchars($berkas['nama_berkas']).'</h5>';
+            echo '<p class="agenda-sub" style="margin-top:-6px;">Kode Klasifikasi: <strong>'.htmlspecialchars($berkas['kode_klasifikasi']).'</strong></p>';
+            echo '<p class="agenda-sub">Periode: <strong>'.$dateRangeText($from).'</strong> s.d. <strong>'.$dateRangeText($to).'</strong></p>';
+            echo '<table class="agenda-print"><thead><tr>
+                    <th style="width:40px;">No</th>
+                    <th>Jenis</th>
+                    <th>No. Surat</th>
+                    <th>Tanggal Diarsipkan</th>
+                    <th>Isi Ringkas</th>
+                </tr></thead><tbody>';
+            if (empty($items)) {
+                echo '<tr><td colspan="5" style="text-align:center;color:#777;">Tidak ada data pada rentang tanggal.</td></tr>';
+            } else {
+                $no = 1;
+                foreach ($items as $it) {
+                    $jenis = ($it['jenis']==='nota_dinas'?'Nota Dinas':($it['jenis']==='produk_hukum'?'Produk Hukum':($it['jenis']==='keuangan'?'Keuangan':'Surat Keluar')));
+                    $tgl = !empty($it['updated_at']) ? date('d M Y', strtotime($it['updated_at'])) : (!empty($it['tgl_surat']) ? date('d M Y', strtotime($it['tgl_surat'])) : '-');
+                    echo '<tr>'
+                       .'<td style="text-align:center;">'.$no++.'</td>'
+                       .'<td>'.htmlspecialchars($jenis).'</td>'
+                       .'<td>'.htmlspecialchars($it['no_surat']).'</td>'
+                       .'<td>'.htmlspecialchars($tgl).'</td>'
+                       .'<td>'.htmlspecialchars($it['isi']).'</td>'
+                       .'</tr>';
+                }
+            }
+            echo '</tbody></table></div>';
+        }
+        ?>
+        <?php }
+        ?>
     <?php else: ?>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
             <h5 style="margin:0;display:flex;align-items:center;gap:8px;">
@@ -483,6 +613,7 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                                 <a href="index.php?page=admin&act=arsip_op&sub=view&id=<?php echo (int)$r['id']; ?><?php echo $readOnly? '&view_as=su&bidang='.urlencode($proxyBidang) : ''; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Lihat Surat Arsip" style="color:#0277bd;"><i class="material-icons">visibility</i></a>
                                 <?php if(!$readOnly): ?>
                                 <a href="index.php?page=admin&act=arsip_op&sub=edit&id=<?php echo (int)$r['id']; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Edit" style="color:#ef6c00;"><i class="material-icons">edit</i></a>
+                                <a href="index.php?page=admin&act=arsip_op&sub=print&id=<?php echo (int)$r['id']; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Cetak Agenda" style="color:#1565c0;"><i class="material-icons">print</i></a>
                                 <a href="index.php?page=admin&act=arsip_op&del=<?php echo (int)$r['id']; ?>" onclick="return confirm('Hapus berkas arsip ini?');" class="btn-flat tooltipped" data-position="top" data-tooltip="Hapus" style="color:#e53935;"><i class="material-icons">delete</i></a>
                                 <?php endif; ?>
                             </td>
