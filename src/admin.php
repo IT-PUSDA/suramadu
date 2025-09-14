@@ -328,6 +328,19 @@ if (!isset($_SESSION['admin'])) {
                                 </div>
                                     </a>
                                 </div>
+                                <?php if ((int)$_SESSION['admin'] === 1) { ?>
+                                <!-- Card: Jumlah Pengguna (Super Admin) diletakkan di sebelah Arsip) -->
+                                <div class="col s12 m6 l3">
+                                    <a href="index.php?page=admin&act=sett&sub=usr" class="hs-link">
+                                        <div class="card blue accent-2 hs-card">
+                                            <div class="card-content">
+                                                <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">people</i> Jumlah Pengguna</span>
+                                                <h5 class="white-text link" style="margin:8px 0 0;"><?php echo number_format((int)$count5); ?> PENGGUNA</h5>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <?php } ?>
                                 <?php } ?>
                             </div>
                             </div>
@@ -354,20 +367,7 @@ if (!isset($_SESSION['admin'])) {
                 </div>
     			-->
 
-                        <?php if ((int)$_SESSION['admin'] === 1) { ?>
-                        <div class="col s12">
-                            <div class="row home-stats" style="margin-top:16px; margin-bottom:0;">
-                            <div class="col s12 m6 l3">
-                                <div class="card blue accent-2 hs-card">
-                                    <div class="card-content">
-                                        <span class="card-title white-text" style="display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">people</i> Jumlah Pengguna</span>
-                                        <h5 class="white-text" style="margin:8px 0 0;"><?php echo number_format((int)$count5); ?> PENGGUNA</h5>
-                                    </div>
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                        <?php } ?>
+                        <?php /* Card 'Jumlah Pengguna' dipindahkan ke baris utama (sebelah Arsip) khusus Super Admin */ ?>
 
                         <?php if ((int)$_SESSION['admin'] === 1) { ?>
                         <!-- Surat Keluar per Bidang/UPT -->
