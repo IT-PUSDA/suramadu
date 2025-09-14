@@ -82,6 +82,15 @@ if (!isset($_SESSION['admin'])) {
                         case 'ask':
                             include(BASE_PATH . '/src/SuratKeluar/agenda_surat_keluar.php');
                             break;
+                        case 'ask_nd':
+                            include(BASE_PATH . '/src/SuratKeluar/agenda_surat_keluar_nota_dinas.php');
+                            break;
+                        case 'ask_ph':
+                            include(BASE_PATH . '/src/SuratKeluar/agenda_surat_keluar_produk_hukum.php');
+                            break;
+                        case 'ask_keu':
+                            include(BASE_PATH . '/src/SuratKeluar/agenda_surat_keluar_keuangan.php');
+                            break;
                         case 'tdl':
                             include(BASE_PATH . '/src/Utils/transaksi_tindak_lanjut.php');
                             break;

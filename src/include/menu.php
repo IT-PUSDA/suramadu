@@ -70,7 +70,9 @@
                             <ul>
                                 <!--<li><a href="index.php?page=admin&act=asm">Surat Masuk</a></li>-->
                                 <li><a href="index.php?page=admin&act=ask">Surat Keluar</a></li>
-                                <!--<li><a href="#">Nota Dinas</a></li>-->
+                                <li><a href="index.php?page=admin&act=ask_nd">Nota Dinas</a></li>
+                                <li><a href="index.php?page=admin&act=ask_ph">Produk Hukum</a></li>
+                                <li><a href="index.php?page=admin&act=ask_keu">Keuangan</a></li>
                             </ul>
                         </div>
                     </li>
@@ -161,7 +163,9 @@
             <ul id='agenda' class='dropdown-content'>
                 <!--<li><a href="index.php?page=admin&act=asm">Surat Masuk</a></li>-->
                 <li><a href="index.php?page=admin&act=ask">Surat Keluar</a></li>
-                <!--<li><a href="?page=not">Nota Dinas</a></li>-->
+                <li><a href="index.php?page=admin&act=ask_nd">Nota Dinas</a></li>
+                <li><a href="index.php?page=admin&act=ask_ph">Produk Hukum</a></li>
+                <li><a href="index.php?page=admin&act=ask_keu">Keuangan</a></li>
             </ul>
             <?php if(isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1,2], true)) { ?>
             <li><a href="index.php?page=admin&act=arsip">Arsip</a></li>
