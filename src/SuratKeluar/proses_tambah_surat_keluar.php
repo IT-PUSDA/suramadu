@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 // TAMBAHKAN BARIS INI untuk memastikan koneksi database selalu ada
 require_once __DIR__ . '/../include/config.php';
 require_once __DIR__ . '/../include/bidang_mapping.php';
+require_once __DIR__ . '/../include/file_sequence.php';
 
 if (empty($_SESSION['admin'])) {
     $_SESSION['err'] = '<center>Anda harus login terlebih dahulu!</center>';
@@ -131,13 +132,7 @@ if (empty($_SESSION['admin'])) {
                                             die();
                                         } else {
                                             // Pastikan kolom file_no tersedia untuk menyimpan nomor file yang konsisten
-                                            $hasFileNo = false; $resFileNo = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'");
-                                            if ($resFileNo && mysqli_num_rows($resFileNo) === 1) { $hasFileNo = true; }
-                                            else {
-                                                mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_no INT UNSIGNED NULL DEFAULT NULL");
-                                                $resFileNo2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'");
-                                                if ($resFileNo2 && mysqli_num_rows($resFileNo2) === 1) { $hasFileNo = true; }
-                                            }
+                                            $hasFileNo = ensure_file_no_column($config);
 
                                             // Logika upload file
                                             $nfile = ''; $file_no = null; // default
@@ -155,9 +150,10 @@ if (empty($_SESSION['admin'])) {
 
                                                 if (in_array($eks, $ekstensi) === true) {
                                                     if ($ukuran < $max_size) {
-                                                        $rand = rand(1, 10000);
-                                                        $file_no = $rand;
-                                                        $nfile = $file_no . "-" . $file;
+                                                        // Ambil nomor urut file untuk tahun surat (reset awal tahun)
+                                                        $file_no = next_file_sequence_for_year($config, (int)$year);
+                                                        $label = format_file_sequence_label($file_no);
+                                                        $nfile = $label . " - " . $file;
                                                         if (!move_uploaded_file($_FILES['file']['tmp_name'], $target_dir . $nfile)) {
                                                             $_SESSION['errQ'] = 'ERROR! Gagal mengupload file.';
                                                             header("Location: index.php?page=admin&act=tsk&sub=add");

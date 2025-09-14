@@ -120,13 +120,15 @@
                                             if ($resFileNo && mysqli_num_rows($resFileNo) === 1) { $hasFileNo = true; }
                                             else { mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_no INT UNSIGNED NULL DEFAULT NULL"); $resFileNo2 = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_no'"); if ($resFileNo2 && mysqli_num_rows($resFileNo2) === 1) { $hasFileNo = true; } }
 
-                                            $query1 = mysqli_query($config, "SELECT file".($hasFileNo?", file_no":"")." FROM tbl_surat_keluar WHERE id_surat='".$id_surat."'");
+                                            $query1 = mysqli_query($config, "SELECT file".($hasFileNo?", file_no":"")." , tgl_surat FROM tbl_surat_keluar WHERE id_surat='".$id_surat."'");
                                             $data1 = mysqli_fetch_array($query1);
                                             $files = $data1['file'];
                                             $existing_file_no = $hasFileNo ? (is_null($data1['file_no'])? null : (int)$data1['file_no']) : null;
+                                            $existing_year = 0; if (!empty($data1['tgl_surat'])) { $existing_year = (int)date('Y', strtotime($data1['tgl_surat'])); }
                                             // Jika kolom file_no belum terisi, coba baca dari prefix nama file lama (misal "5432-nama.pdf")
                                             if ($existing_file_no === null && !empty($files)) {
-                                                if (preg_match('/^(\\d+)-/', $files, $m)) {
+                                                // support old pattern "1234-nama.pdf" and new pattern "0001 - nama.pdf"
+                                                if (preg_match('/^(\\d{4,})\s*-\s*/', $files, $m) || preg_match('/^(\\d+)-/', $files, $m)) {
                                                     $existing_file_no = (int)$m[1];
                                                 }
                                             }
@@ -134,8 +136,16 @@
                                             if($file != ""){
 												
                                                 // gunakan nomor file yang sudah ada jika ada; jika belum, buat baru
-                                                $num = $existing_file_no !== null ? $existing_file_no : rand(1,10000);
-                                                $nfile = $num."-".$file;
+                                                if ($existing_file_no !== null) { $num = $existing_file_no; }
+                                                else {
+                                                    // gunakan tahun dari tgl_surat lama (agar reset per tahun tetap konsisten)
+                                                    $seqYear = $existing_year > 0 ? $existing_year : (int)date('Y');
+                                                    require_once __DIR__ . '/../include/file_sequence.php';
+                                                    ensure_file_no_column($config);
+                                                    $num = next_file_sequence_for_year($config, (int)$seqYear);
+                                                }
+                                                $label = str_pad((string)$num, 4, '0', STR_PAD_LEFT);
+                                                $nfile = $label." - ".$file;
 												
                                                 //validasi file
                                                 if(in_array($eks, $ekstensi) == true){
