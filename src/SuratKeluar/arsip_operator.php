@@ -582,6 +582,7 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                 #kop-cetak .ln2{font-size:20px;font-weight:700;text-transform:uppercase;white-space:nowrap;line-height:1.2;}
                 #kop-cetak .ln3,#kop-cetak .ln4{font-size:13px;}
                 .kop-sep{border-bottom:2px solid #263238;margin:6px 0 12px;}
+                .agenda-title{font-weight:700;text-transform:uppercase;margin:0 0 10px}
                 table.agenda-print{width:100%;border-collapse:collapse}
                 .agenda-print th,.agenda-print td{border:1px solid #000;padding:6px 8px}
                 .agenda-print th{background:#f4f6f8}
@@ -602,6 +603,8 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                 .'</div>'
             .'</div>';
             echo '<div class="kop-sep"></div>';
+            // Judul di bawah kop
+            echo '<h5 class="agenda-title" style="text-align:center;margin-bottom:6px;">DAFTAR BERKAS</h5>';
 
             // Gunakan kembali filter kode/nama dari query string
             $kodeQ = isset($_GET['kode'])? trim($_GET['kode']) : '';
