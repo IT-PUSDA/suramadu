@@ -102,6 +102,8 @@ $isAdd  = (isset($_GET['sub']) && $_GET['sub']==='add');
 $isEdit = (isset($_GET['sub']) && $_GET['sub']==='edit' && isset($_GET['id']) && ctype_digit($_GET['id']));
 $isView = (isset($_GET['sub']) && $_GET['sub']==='view' && isset($_GET['id']) && ctype_digit($_GET['id']));
 $isPrint = (isset($_GET['sub']) && $_GET['sub']==='print' && isset($_GET['id']) && ctype_digit($_GET['id']));
+// Cetak semua berkas pada daftar (berdasarkan filter saat ini)
+$isPrintAll = (isset($_GET['sub']) && $_GET['sub']==='print_all');
 $errors=[]; $successMsg='';
 if (!$readOnly && $isAdd && isset($_POST['simpan'])) {
     $nama = trim($_POST['nama_berkas']??'');
@@ -562,6 +564,76 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
         ?>
         <?php }
         ?>
+    <?php elseif($isPrintAll): ?>
+        <?php
+            // Halaman cetak: semua berkas yang tampil pada daftar (mengikuti filter kode/nama dan scope user)
+            // Siapkan data instansi untuk kop
+            $kop = [ 'institusi'=>'', 'nama'=>'', 'alamat'=>'', 'kota'=>'', 'website'=>'', 'email'=>'', 'logo'=>'' ];
+            $qi = mysqli_query($config, "SELECT institusi,nama,alamat,kota,website,email,logo FROM tbl_instansi LIMIT 1");
+            if ($qi && mysqli_num_rows($qi) === 1) { $kop = mysqli_fetch_assoc($qi); }
+            $logoUrl = !empty($kop['logo']) ? ('upload/'.ltrim($kop['logo'],'/')) : 'asset/img/logo.png';
+            $institusi = strtoupper(trim($kop['institusi'] ?? ''));
+            $namaInst  = strtoupper(trim($kop['nama'] ?? ''));
+            echo '<style>
+                #kop-cetak{display:flex;align-items:center;gap:16px;margin:0 0 8px;}
+                #kop-cetak .kop-logo img{width:90px;height:auto;}
+                #kop-cetak .kop-text{flex:1;text-align:center;}
+                #kop-cetak .ln1{font-size:20px;font-weight:400;letter-spacing:.5px;text-transform:uppercase;}
+                #kop-cetak .ln2{font-size:20px;font-weight:700;text-transform:uppercase;white-space:nowrap;line-height:1.2;}
+                #kop-cetak .ln3,#kop-cetak .ln4{font-size:13px;}
+                .kop-sep{border-bottom:2px solid #263238;margin:6px 0 12px;}
+                table.agenda-print{width:100%;border-collapse:collapse}
+                .agenda-print th,.agenda-print td{border:1px solid #000;padding:6px 8px}
+                .agenda-print th{background:#f4f6f8}
+                @media print{ @page{ margin: 0.8cm 1.5cm 1.5cm 1.5cm; } .no-print{display:none!important} html,body{color:#000;font-size:12px;margin:0;padding:0} }
+            </style>';
+            echo '<div class="no-print" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">'
+                .'<h5 style="margin:0;display:flex;align-items:center;gap:8px;"><i class="material-icons">print</i> Cetak Semua Berkas</h5>'
+                .'<a href="index.php?page=admin&act=arsip_op'.($readOnly? '&view_as=su&bidang='.urlencode($proxyBidang) : '').'" class="btn grey lighten-1 btn-pill" style="color:#263238;">Kembali</a>'
+                .'</div>';
+            echo '<div id="kop-cetak">'
+                .'<div class="kop-logo"><img src="'.htmlspecialchars($logoUrl).'" alt="logo" /></div>'
+                .'<div class="kop-text">'
+                    .($institusi!==''? '<div class="ln1">'.htmlspecialchars($institusi).'</div>' : '')
+                    .($namaInst!==''? '<div class="ln2">'.htmlspecialchars($namaInst).'</div>' : '')
+                    .'<div class="ln3">Jalan Gayung Kebonsari No.169, Ketintang, Gayungan, Surabaya, Jawa Timur 60235</div>'
+                    .'<div class="ln4">Telepon (031) 8288179,8292419,8291711,8292234-8292047</div>'
+                    .'<div class="ln4">Laman www.dpuair.jatimprov.go.id, Pos-el pusda@jatimprov.go.id</div>'
+                .'</div>'
+            .'</div>';
+            echo '<div class="kop-sep"></div>';
+
+            // Gunakan kembali filter kode/nama dari query string
+            $kodeQ = isset($_GET['kode'])? trim($_GET['kode']) : '';
+            $namaQ = isset($_GET['nama'])? trim($_GET['nama']) : '';
+            $whereAll = "WHERE id_user IN ($idList)";
+            if($kodeQ!==''){ $e=mysqli_real_escape_string($config,$kodeQ); $whereAll.=" AND kode_klasifikasi LIKE '%$e%'"; }
+            if($namaQ!==''){ $e=mysqli_real_escape_string($config,$namaQ); $whereAll.=" AND nama_berkas LIKE '%$e%'"; }
+            $sqlAll = "SELECT a.kode_klasifikasi,a.nama_berkas,a.tgl_buat,(SELECT COUNT(1) FROM tbl_surat_keluar s WHERE s.id_arsip_berkas=a.id AND s.status='finished') AS jml_surat FROM tbl_arsip_berkas a $whereAll ORDER BY a.tgl_buat DESC, a.id DESC";
+            $qAll = mysqli_query($config,$sqlAll);
+            echo '<table class="agenda-print"><thead><tr>'
+                .'<th style="width:40px;">No</th>'
+                .'<th style="min-width:140px;">Kode Klasifikasi</th>'
+                .'<th style="min-width:230px;">Nama Berkas</th>'
+                .'<th style="min-width:160px;">Tanggal Buat</th>'
+                .'<th style="min-width:80px;">Total Surat</th>'
+                .'</tr></thead><tbody>';
+            if(!$qAll || mysqli_num_rows($qAll)===0){
+                echo '<tr><td colspan="5" style="text-align:center;color:#777;">Tidak ada data.</td></tr>';
+            } else {
+                $no=1; while($r=mysqli_fetch_assoc($qAll)){
+                    echo '<tr>'
+                        .'<td style="text-align:center;">'.$no++.'</td>'
+                        .'<td>'.htmlspecialchars($r['kode_klasifikasi']).'</td>'
+                        .'<td>'.htmlspecialchars($r['nama_berkas']).'</td>'
+                        .'<td>'.htmlspecialchars(indoDateShort(substr($r['tgl_buat'],0,10))).'</td>'
+                        .'<td style="text-align:center;">'.(int)$r['jml_surat'].'</td>'
+                        .'</tr>';
+                }
+            }
+            echo '</tbody></table>';
+            echo '<div class="no-print" style="margin-top:12px;"><button type="button" onclick="window.print()" class="btn deep-orange btn-pill"><i class="material-icons" style="vertical-align:middle">print</i> CETAK</button></div>';
+        ?>
     <?php else: ?>
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
             <h5 style="margin:0;display:flex;align-items:center;gap:8px;">
@@ -585,7 +657,12 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                     <input type="text" name="nama" value="<?php echo htmlspecialchars($filterNama); ?>" placeholder="Ketik nama..." />
                 </div>
                 <div class="field" style="align-self:flex-end;">
-                    <button class="btn blue btn-pill" style="height:40px;line-height:40px;">Filter</button>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button class="btn blue btn-pill" style="height:40px;line-height:40px;">Filter</button>
+                        <a class="btn deep-orange btn-pill" style="height:40px;line-height:40px;" href="index.php?page=admin&act=arsip_op&sub=print_all<?php echo ($filterKode!==''? '&kode='.urlencode($filterKode) : ''); ?><?php echo ($filterNama!==''? '&nama='.urlencode($filterNama) : ''); ?><?php echo $readOnly? '&view_as=su&bidang='.urlencode($proxyBidang) : ''; ?>">
+                            <i class="material-icons" style="vertical-align:middle">print</i> Cetak
+                        </a>
+                    </div>
                 </div>
             </div>
         </form>
