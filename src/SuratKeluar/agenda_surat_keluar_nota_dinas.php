@@ -73,6 +73,8 @@ function ask_nd_build_query($config, $dari_tanggal, $sampai_tanggal) {
 // Shared page renderer (adapted from agenda_surat_keluar.php)
 function ask_nd_render($config, $title, $slugAct) {
     echo '<style type="text/css">.hidd{display:none}@media print{body{font-size:12px!important;color:#212121}.disp{text-align:center;margin:-.5rem 0}.hidd{display:block}.logodisp{float:left;position:relative;width:80px;height:80px;margin:0 0 0 1.2rem}#nama{font-size:20px!important;text-transform:uppercase;font-weight:bold;margin:-2.5rem 0 -3.7rem 0}.up{font-size:17px!important;font-weight:normal;text-transform:uppercase}.status{font-size:17px!important;font-weight:normal;margin-bottom:-.1rem}#alamat{margin-top:-15px;font-size:13px}.separator{border-bottom:2px solid #616161;margin:1rem 0 -.7rem}}</style>';
+    // Build a clean label for headings (remove leading 'Cetak Agenda ' to avoid duplicate wording)
+    $cleanLabel = preg_replace('/^\s*cetak\s+agenda\s+/i', '', $title);
 
     if (isset($_REQUEST['submit'])) {
         $dari_tanggal = $_REQUEST['dari_tanggal'];
@@ -123,8 +125,8 @@ function ask_nd_render($config, $title, $slugAct) {
         $nm = isset($BULAN[$m])?$BULAN[$m]:$m; $nm2 = isset($BULAN[$m2])?$BULAN[$m2]:$m2;
         echo "<div class='row agenda'>
                 <div class='col s10'>
-                    <h5 class='hid'>AGENDA $title</h5>
-                    <p class='warna agenda'>Agenda $title dari tanggal <strong>$d $nm $y</strong> sampai dengan tanggal <strong>$d2 $nm2 $y2</strong></p>
+                    <h5 class='hid'>AGENDA ".strtoupper($cleanLabel)."</h5>
+                    <p class='warna agenda'>Agenda $cleanLabel dari tanggal <strong>$d $nm $y</strong> sampai dengan tanggal <strong>$d2 $nm2 $y2</strong></p>
                 </div>
                 <div class='col s2'>
                     <button type='submit' onClick='window.print()' class='btn-large deep-orange waves-effect waves-light right'>CETAK <i class='material-icons'>print</i></button>

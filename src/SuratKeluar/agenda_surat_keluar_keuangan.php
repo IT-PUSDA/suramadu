@@ -32,7 +32,7 @@ if (isset($_REQUEST['submit'])) {
 
     $y=substr($dari_tanggal,0,4);$m=substr($dari_tanggal,5,2);$d=substr($dari_tanggal,8,2);$y2=substr($sampai_tanggal,0,4);$m2=substr($sampai_tanggal,5,2);$d2=substr($sampai_tanggal,8,2);
     $B=['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April','05'=>'Mei','06'=>'Juni','07'=>'Juli','08'=>'Agustus','09'=>'September','10'=>'Oktober','11'=>'November','12'=>'Desember']; $nm=$B[$m]??$m; $nm2=$B[$m2]??$m2;
-    echo "<div class='row agenda'><div class='col s10'><h5 class='hid'>AGENDA KEUANGAN</h5><p class='warna agenda'>Agenda Keuangan dari tanggal <strong>$d $nm $y</strong> sampai dengan tanggal <strong>$d2 $nm2 $y2</strong></p></div><div class='col s2'><button type='submit' onClick='window.print()' class='btn-large deep-orange waves-effect waves-light right'>CETAK <i class='material-icons'>print</i></button></div></div>";
+    echo "<div class='row agenda'><div class='col s10'><h5 class='hid'>AGENDA KEUANGAN</h5><p class='warna agenda'>Keuangan dari tanggal <strong>$d $nm $y</strong> sampai dengan tanggal <strong>$d2 $nm2 $y2</strong></p></div><div class='col s2'><button type='submit' onClick='window.print()' class='btn-large deep-orange waves-effect waves-light right'>CETAK <i class='material-icons'>print</i></button></div></div>";
 
     echo "<div id='colres' class='warna cetak'><table class='bordered' id='tbl' width='100%'><thead class='blue lighten-4'><tr><th width='3%'>No Agenda</th><th width='5%'>Kode</th><th width='21%'>Perihal</th><th width='18%'>Tujuan Surat</th><th width='15%'>Nomor Surat</th><th width='15%'>Tanggal Surat</th><th width='12%'>Pengelola</th></tr></thead><tbody><tr>";
     if($query && mysqli_num_rows($query)>0){

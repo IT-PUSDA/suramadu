@@ -528,6 +528,8 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             if ($q) { while($r=mysqli_fetch_assoc($q)){ $items[] = $r; } }
             $dateRangeText = function($d){ if(!$d||$d==='0000-00-00') return '-'; $bln=[1=>'Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']; $y=substr($d,0,4); $m=(int)substr($d,5,2); $day=substr($d,8,2); return $day.' '.$bln[$m].' '.$y; };
             echo '<div class="agenda">';
+            // Judul utama tepat di bawah kop
+            echo '<h5 class="agenda-title" style="text-align:center;margin-bottom:6px;">DAFTAR ISI BERKAS</h5>';
             // Judul menggunakan nama berkas dengan prefix "Arsip"
             echo '<h5 class="agenda-title">Arsip '.htmlspecialchars($berkas['nama_berkas']).'</h5>';
             echo '<p class="agenda-sub" style="margin-top:-6px;">Kode Klasifikasi: <strong>'.htmlspecialchars($berkas['kode_klasifikasi']).'</strong></p>';
