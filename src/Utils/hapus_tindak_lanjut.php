@@ -94,7 +94,12 @@
             	if(isset($_REQUEST['submit'])){
             		//jika ada file akan mengekseskusi script dibawah ini
                     if(!empty($row['file'])){
-                        unlink("upload/tindak_lanjut/".$row['file']);
+                        if (strpos($row['file'], 'gdrive:fileId=') === 0) {
+                            @include_once __DIR__ . '/../include/gdrive_utils.php';
+                            if (function_exists('gdrive_delete_by_marker')) { gdrive_delete_by_marker($row['file']); }
+                        } else {
+                            @unlink("upload/tindak_lanjut/".$row['file']);
+                        }
                         $query = mysqli_query($config, "DELETE FROM tbl_tindak_lanjut WHERE id_tindak_lanjut='$id_tindak_lanjut'");
                         
 

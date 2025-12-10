@@ -13,36 +13,9 @@ if (empty($_SESSION['admin'])) {
             case 'fsk':
                 if (isset($_REQUEST['id_surat'])) {
                     $id_surat = $_REQUEST['id_surat'];
-
-                    // Ambil nama file dari database
-                    $query = mysqli_query($config, "SELECT file FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
-                    
-                    if(mysqli_num_rows($query) > 0){
-                        list($file) = mysqli_fetch_array($query);
-
-                        if (!empty($file)) {
-                            // KODE DIPERBAIKI: Menggunakan path absolut yang pasti benar
-                            $file_path = realpath(__DIR__ . '/../../upload/surat_keluar') . '/' . $file;
-
-                            if (file_exists($file_path)) {
-                                // Set header agar browser tahu ini adalah file PDF
-                                header('Content-Type: application/pdf');
-                                header('Content-Disposition: inline; filename="' . basename($file_path) . '"');
-                                header('Content-Length: ' . filesize($file_path));
-                                header('Accept-Ranges: bytes');
-                                
-                                // Baca dan kirim isi file ke browser
-                                readfile($file_path);
-                                exit(); // Hentikan eksekusi skrip setelah file dikirim
-                            } else {
-                                die('File tidak ditemukan di server.');
-                            }
-                        } else {
-                            die('Tidak ada file yang terlampir untuk surat ini.');
-                        }
-                    } else {
-                        die('Data surat tidak ditemukan.');
-                    }
+                    // Alihkan ke viewer terpusat yang sudah menangani Google Drive & akses
+                    header('Location: src/SuratKeluar/lihat_file_sk.php?id_surat=' . urlencode($id_surat));
+                    exit;
                 } else {
                     die('ID Surat tidak ditemukan.');
                 }
@@ -230,21 +203,28 @@ if (empty($_SESSION['admin'])) {
                                 echo '';
                             } else {
 
+                                $file = $row['file'];
+                                $isGDrive = (strpos($file, 'gdrive:fileId=') === 0);
                                 $ekstensi = array('jpg','png','jpeg');
                                 $ekstensi2 = array('doc','docx');
-                                $file = $row['file'];
-                                $x = explode('.', $file);
-                                $eks = strtolower(end($x));
 
-                                if(in_array($eks, $ekstensi) == true){
+                                if ($isGDrive) {
                                     echo '
                                         <div class="col m3">
-                                            <img class="file" data-caption="'.date('d M Y', strtotime($row['tgl_surat'])).'" src="./upload/surat_keluar/'.$row['file'].'"/>
-                                            <a class="btn light-green darken-1" href="?page=gsk&act=fsk&id_surat='.$row['id_surat'].'">Tampilkan Ukuran Penuh</a>
+                                            <img class="file" data-caption="'.date('d M Y', strtotime($row['tgl_surat'])).'" src="./asset/img/pdf.png"/>
+                                            <a class="btn light-green darken-1" href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank">Lihat Detail File</a>
                                         </div>';
                                 } else {
+                                    $x = explode('.', $file);
+                                    $eks = strtolower(end($x));
 
-                                    if(in_array($eks, $ekstensi2) == true){
+                                    if(in_array($eks, $ekstensi) == true){
+                                        echo '
+                                            <div class="col m3">
+                                                <img class="file" data-caption="'.date('d M Y', strtotime($row['tgl_surat'])).'" src="./upload/surat_keluar/'.$row['file'].'"/>
+                                                <a class="btn light-green darken-1" href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank">Tampilkan Ukuran Penuh</a>
+                                            </div>';
+                                    } else if(in_array($eks, $ekstensi2) == true){
                                         echo '
                                             <div class="col m3">
                                                 <img class="file" data-caption="'.date('d M Y', strtotime($row['tgl_surat'])).'" src="./asset/img/word.png"/>
@@ -336,21 +316,28 @@ if (empty($_SESSION['admin'])) {
                                 echo '';
                             } else {
 
+                                $file = $row['file'];
+                                $isGDrive = (strpos($file, 'gdrive:fileId=') === 0);
                                 $ekstensi = array('jpg','png','jpeg');
                                 $ekstensi2 = array('doc','docx');
-                                $file = $row['file'];
-                                $x = explode('.', $file);
-                                $eks = strtolower(end($x));
 
-                                if(in_array($eks, $ekstensi) == true){
-                                echo '
-                                    <div class="col m3">
-                                        <img class="file" data-caption="'.date('d M Y', strtotime($row['tgl_surat'])).'" src="./upload/surat_keluar/'.$row['file'].'"/>
-                                        <a class="btn light-green darken-1" href="?page=gsk&act=fsk&id_surat='.$row['id_surat'].'">Tampilkan Ukuran Penuh</a>
-                                    </div>';
+                                if ($isGDrive) {
+                                    echo '
+                                        <div class="col m3">
+                                            <img class="file" data-caption="'.date('d M Y', strtotime($row['tgl_surat'])).'" src="./asset/img/pdf.png"/>
+                                            <a class="btn light-green darken-1" href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank">Lihat Detail File</a>
+                                        </div>';
                                 } else {
+                                    $x = explode('.', $file);
+                                    $eks = strtolower(end($x));
 
-                                    if(in_array($eks, $ekstensi2) == true){
+                                    if(in_array($eks, $ekstensi) == true){
+                                    echo '
+                                        <div class="col m3">
+                                            <img class="file" data-caption="'.date('d M Y', strtotime($row['tgl_surat'])).'" src="./upload/surat_keluar/'.$row['file'].'"/>
+                                            <a class="btn light-green darken-1" href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank">Tampilkan Ukuran Penuh</a>
+                                        </div>';
+                                    } else if(in_array($eks, $ekstensi2) == true){
                                         echo '
                                             <div class="col m3">
                                                 <img class="file" data-caption="'.date('d M Y', strtotime($row['tgl_surat'])).'" src="./asset/img/word.png"/>

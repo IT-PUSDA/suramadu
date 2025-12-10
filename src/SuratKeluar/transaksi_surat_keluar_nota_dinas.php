@@ -171,7 +171,23 @@ if ($filterKey && isset($map[$filterKey])) {
               <?php if (mysqli_num_rows($query) > 0) { $seq = $curr + 1; while ($row = mysqli_fetch_array($query)) { ?>
                 <tr style="vertical-align: top;">
                   <td class="center-align"><strong><?php echo $seq; ?></strong></td>
-                  <td><?php echo $row['isi']; if (!empty($row['file'])) { echo '<br/><br/><strong>File : </strong>'; $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true); if ($_SESSION['admin']==1 || $_SESSION['admin']==2 || $is_operator_file) { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank" rel="noopener" style="text-decoration: underline;">'.$row['file'].'</a>'; } else { echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" class="pin-trigger" data-action-type="view" data-id-surat="'.$row['id_surat'].'" style="text-decoration: underline;">'.$row['file'].'</a>'; } if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) { echo ' <span class="new badge blue" data-badge-caption="PIN diubah"></span>'; } } ?></td>
+                  <td><?php echo $row['isi'];
+                    $driveMarker = !empty($row['file_drive']) ? $row['file_drive'] : ( (!empty($row['file']) && strpos($row['file'],'gdrive:fileId=')===0) ? $row['file'] : '');
+                    $hasAnyFile = (!empty($row['file']) || !empty($driveMarker));
+                    if ($hasAnyFile) { echo '<br/><br/><strong>File : </strong>'; $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true);
+                    $linkText = !empty($row['file']) ? $row['file'] : '';
+                    if (!empty($driveMarker)) {
+                      $label = (isset($row['file_no']) && $row['file_no'] !== null && $row['file_no'] !== '') ? str_pad((string)$row['file_no'], 4, '0', STR_PAD_LEFT) : 'Lampiran';
+                      $fullName = null;
+                      if (preg_match('/\\|name=([^|]+)/', $driveMarker, $m)) { $fullName = rawurldecode($m[1]); }
+                      $linkText = $fullName ? $fullName : ('Berkas ' . $label);
+                    }
+                    if ($_SESSION['admin']==1 || $_SESSION['admin']==2 || $is_operator_file) {
+                      echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank" rel="noopener" style="text-decoration: underline;">'.htmlspecialchars($linkText, ENT_QUOTES, 'UTF-8').'</a>';
+                    } else {
+                      echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" class="pin-trigger" data-action-type="view" data-id-surat="'.$row['id_surat'].'" style="text-decoration: underline;">'.htmlspecialchars($linkText, ENT_QUOTES, 'UTF-8').'</a>';
+                    }
+                    if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) { echo ' <span class="new badge blue" data-badge-caption="PIN diubah"></span>'; } } ?></td>
                   <td class="center-align"><?php echo $row['tujuan']; ?><br/><small class="grey-text text-darken-1"><?php echo $row['perihal']; ?></small></td>
                   <td class="center-align"><?php echo $row['no_surat']; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo indoDate($row['tgl_surat']); ?></small></td>
                   <td class="center-align"><?php echo $row['nama_pembuat'] ?? ''; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : ''; ?></small></td>

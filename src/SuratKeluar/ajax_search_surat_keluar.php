@@ -125,13 +125,21 @@ if ($q && mysqli_num_rows($q) > 0) {
         echo '<tr style="vertical-align:top;">';
         echo '<td class="center-align"><strong>'.$seq.'</strong></td>';
     echo '<td>'.esc($row['isi']);
-        if(!empty($row['file'])){
+        $driveMarker = !empty($row['file_drive']) ? $row['file_drive'] : ( (!empty($row['file']) && strpos($row['file'],'gdrive:fileId=')===0) ? $row['file'] : '');
+        if(!empty($row['file']) || !empty($driveMarker)){
             echo '<br/><br/><strong>File : </strong>';
             $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'],$operator_allowed_ids,true);
+            // Prefer full labeled name from Drive marker when available, fallback to "Berkas <label>"
+            $linkText = !empty($row['file']) ? $row['file'] : '';
+            if (!empty($driveMarker)) {
+                $label = (isset($row['file_no']) && $row['file_no'] !== null && $row['file_no'] !== '') ? str_pad((string)$row['file_no'], 4, '0', STR_PAD_LEFT) : 'Lampiran';
+                $fullName = null; if (preg_match('/\\|name=([^|]+)/', $driveMarker, $m)) { $fullName = rawurldecode($m[1]); }
+                $linkText = $fullName ? $fullName : ('Berkas ' . $label);
+            }
             if (in_array($level,[1,2]) || $is_operator_file) {
-                echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank" rel="noopener" style="text-decoration:underline;">'.esc($row['file']).'</a>';
+                echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank" rel="noopener" style="text-decoration:underline;">'.esc($linkText).'</a>';
             } else {
-                echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" class="pin-trigger" data-action-type="view" data-id-surat="'.$row['id_surat'].'" style="text-decoration:underline;">'.esc($row['file']).'</a>';
+                echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" class="pin-trigger" data-action-type="view" data-id-surat="'.$row['id_surat'].'" style="text-decoration:underline;">'.esc($linkText).'</a>';
             }
             if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) {
                 echo ' <span class="new badge blue" data-badge-caption="PIN diubah" title="PIN direset oleh admin"></span>';

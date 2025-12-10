@@ -134,6 +134,10 @@
                                             }
                                             //jika form file tidak kosong akan mengeksekusi script dibawah ini
                                             if($file != ""){
+                                                // Muat client Drive jika mode penyimpanan Drive aktif
+                                                if (defined('UPLOAD_STORAGE') && UPLOAD_STORAGE === 'gdrive') {
+                                                    @require_once __DIR__ . '/../Utils/GoogleDriveClient.php';
+                                                }
 												
                                                 // gunakan nomor file yang sudah ada jika ada; jika belum, buat baru
                                                 if ($existing_file_no !== null) { $num = $existing_file_no; }
@@ -153,15 +157,33 @@
 
                                                         $id_surat = $_REQUEST['id_surat'];
                                                      	
-                                                        //jika file kosong akan diganti baru mengeksekusi script dibawah ini
+                                                        //jika sebelumnya tidak ada file, tambahkan baru
                                                         if($files ==""){
-                                                            //unlink($target_dir.$file);
-
-                                                            move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$nfile);
+                                                            $tmpPath = $_FILES['file']['tmp_name'];
+                                                            $labeledName = $nfile;
+                                                            if (function_exists('is_gdrive_enabled') && is_gdrive_enabled()) {
+                                                                try {
+                                                                    $gdc = new GoogleDriveClientSimple(defined('GDRIVE_SERVICE_ACCOUNT_JSON') ? GDRIVE_SERVICE_ACCOUNT_JSON : null);
+                                                                    $result = $gdc->uploadFile($tmpPath, $labeledName, 'application/pdf', GDRIVE_PARENT_FOLDER_ID);
+                                                                    $marker = 'gdrive:fileId=' . $result['fileId'];
+                                                                    if (!empty($result['webViewLink'])) { $marker .= '|view=' . $result['webViewLink']; }
+                                                                    $marker .= '|name=' . rawurlencode($labeledName);
+                                                                    $nfile = $marker;
+                                                                } catch (Exception $e) {
+                                                                    // fallback ke lokal jika upload ke Drive gagal
+                                                                    if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                                                                    move_uploaded_file($tmpPath, $target_dir.$labeledName);
+                                                                    $nfile = $labeledName;
+                                                                }
+                                                            } else {
+                                                                if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                                                                move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$labeledName);
+                                                                $nfile = $labeledName;
+                                                            }
 
                                                             $fileNoClause = ($hasFileNo? ", file_no='".$num."'" : "");
                                                             $query = mysqli_query($config, "UPDATE tbl_surat_keluar SET perihal='$perihal', no_surat='$no_surat', tujuan='$tujuan', kode='$nkode', 
-                                                                tgl_surat='$tgl_surat', isi='$isi', file='$nfile'".$fileNoClause.", id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
+                                                                tgl_surat='$tgl_surat', isi='$isi', file='".$nfile."'".$fileNoClause.", id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                             if($query == true){
                                                                 // Hapus tiket akses edit setelah sukses (sekali pakai)
@@ -178,13 +200,68 @@
                                                         } else {
 
                                                             //jika file diganti baru akan mengeksekusi script dibawah ini
-                                                            // hapus file lama jika ada
-                                                            if (is_file($target_dir.$files)) { @unlink($target_dir.$files); }
-                                                            move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$nfile);
+                                                            $tmpPath = $_FILES['file']['tmp_name'];
+                                                            $labeledName = $nfile;
+
+                                                            // Jika file sebelumnya adalah Google Drive marker, update file di tempat
+                                                            if (strpos((string)$files, 'gdrive:fileId=') === 0 && defined('UPLOAD_STORAGE') && UPLOAD_STORAGE === 'gdrive') {
+                                                                // Extract fileId dari marker
+                                                                $fileId = null; if (preg_match('/gdrive:fileId=([^|]+)/', (string)$files, $m)) { $fileId = $m[1]; }
+                                                                if ($fileId) {
+                                                                    try {
+                                                                        $gdc = new GoogleDriveClientSimple(defined('GDRIVE_SERVICE_ACCOUNT_JSON') ? GDRIVE_SERVICE_ACCOUNT_JSON : null);
+                                                                        // Perbarui nama dan konten file di Drive
+                                                                        $gdc->updateFile($fileId, $tmpPath, $labeledName, 'application/pdf');
+                                                                        // Simpan kembali marker, pertahankan view link jika ada, dan set name=
+                                                                        $viewLink = null; if (preg_match('/\|view=([^|]+)/', (string)$files, $mm)) { $viewLink = $mm[1]; }
+                                                                        $marker = 'gdrive:fileId=' . $fileId;
+                                                                        if (!empty($viewLink)) { $marker .= '|view=' . $viewLink; }
+                                                                        $marker .= '|name=' . rawurlencode($labeledName);
+                                                                        $nfile = $marker;
+                                                                    } catch (Exception $e) {
+                                                                        // Jika gagal update ke Drive, fallback: upload lokal
+                                                                        if (is_file($target_dir.$files)) { @unlink($target_dir.$files); }
+                                                                        if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                                                                        move_uploaded_file($tmpPath, $target_dir.$labeledName);
+                                                                        $nfile = $labeledName;
+                                                                    }
+                                                                } else {
+                                                                    // Marker rusak, fallback upload lokal
+                                                                    if (is_file($target_dir.$files)) { @unlink($target_dir.$files); }
+                                                                    if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                                                                    move_uploaded_file($tmpPath, $target_dir.$labeledName);
+                                                                    $nfile = $labeledName;
+                                                                }
+                                                            } else {
+                                                                // Bukan Drive marker: jika Drive aktif, unggah ke Drive dan perbarui marker; selain itu ganti file lokal
+                                                                if (defined('UPLOAD_STORAGE') && UPLOAD_STORAGE === 'gdrive') {
+                                                                    try {
+                                                                        $gdc = new GoogleDriveClientSimple(defined('GDRIVE_SERVICE_ACCOUNT_JSON') ? GDRIVE_SERVICE_ACCOUNT_JSON : null);
+                                                                        $result = $gdc->uploadFile($tmpPath, $labeledName, 'application/pdf', GDRIVE_PARENT_FOLDER_ID);
+                                                                        $marker = 'gdrive:fileId=' . $result['fileId'];
+                                                                        if (!empty($result['webViewLink'])) { $marker .= '|view=' . $result['webViewLink']; }
+                                                                        $marker .= '|name=' . rawurlencode($labeledName);
+                                                                        $nfile = $marker;
+                                                                        // hapus file lokal lama jika ada
+                                                                        if (is_file($target_dir.$files)) { @unlink($target_dir.$files); }
+                                                                    } catch (Exception $e) {
+                                                                        // fallback: tetap ganti file lokal
+                                                                        if (is_file($target_dir.$files)) { @unlink($target_dir.$files); }
+                                                                        if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                                                                        move_uploaded_file($tmpPath, $target_dir.$labeledName);
+                                                                        $nfile = $labeledName;
+                                                                    }
+                                                                } else {
+                                                                    if (is_file($target_dir.$files)) { @unlink($target_dir.$files); }
+                                                                    if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                                                                    move_uploaded_file($tmpPath, $target_dir.$labeledName);
+                                                                    $nfile = $labeledName;
+                                                                }
+                                                            }
 
                                                             $fileNoClause = ($hasFileNo? ", file_no='".$num."'" : "");
                                                             $query = mysqli_query($config, "UPDATE tbl_surat_keluar SET perihal='$perihal', no_surat='$no_surat', tujuan='$tujuan', kode='$nkode', 
-                                                                tgl_surat='$tgl_surat', isi='$isi', file='$nfile'".$fileNoClause.", id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
+                                                                tgl_surat='$tgl_surat', isi='$isi', file='".$nfile."'".$fileNoClause.", id_user='$id_user',bidang='$bidang' $pin_clause WHERE id_surat='$id_surat'");
 
                                                             if($query == true){
                                                                 // Hapus tiket akses edit setelah sukses (sekali pakai)

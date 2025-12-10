@@ -128,7 +128,7 @@
                                                             <p>File lampiran surat keluar ini bertipe <strong>document</strong>, silakan klik link dibawah ini untuk melihat file lampiran tersebut.</p>
                                                         </div>
                                                         <div class="card-action">
-                                                            <strong>Lihat file :</strong> <a class="blue-text" href="./upload/surat_keluar/'.$row['file'].'" target="_blank">'.$row['file'].'</a>
+                                                            <strong>Lihat file :</strong> <a class="blue-text" href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank">Buka Lampiran</a>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -150,7 +150,7 @@
                                                             <p>File lampiran surat keluar ini bertipe <strong>PDF</strong>, silakan klik link dibawah ini untuk melihat file lampiran tersebut.</p>
                                                         </div>
                                                         <div class="card-action">
-                                                            <strong>Lihat file :</strong> <a class="blue-text" href="./upload/surat_keluar/'.$row['file'].'" target="_blank">'.$row['file'].'</a>
+                                                            <strong>Lihat file :</strong> <a class="blue-text" href="src/SuratKeluar/lihat_file_sk.php?id_surat='.$row['id_surat'].'" target="_blank">Buka Lampiran</a>
                                                         </div>
                                                     </div>
                                                 </div>

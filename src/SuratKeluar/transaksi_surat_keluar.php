@@ -326,14 +326,26 @@ if (empty($_SESSION['admin'])) {
                                                     <td class="center-align"><strong>' . $seq . '</strong></td>
                                                     <td>' . $row['isi'];
 
-                                                if (!empty($row['file'])) {
+                                                // Prefer Drive marker in file_drive if present, else fallback to file column
+                                                $driveMarker = !empty($row['file_drive']) ? $row['file_drive'] : ( (!empty($row['file']) && strpos($row['file'],'gdrive:fileId=')===0) ? $row['file'] : '');
+                                                $hasAnyFile = (!empty($row['file']) || !empty($driveMarker));
+                                                if ($hasAnyFile) {
                                                     echo '<br/><br/><strong>File : </strong>';
                                                     $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true);
+                                                    // Teks tautan: prefer Drive marker name; otherwise show local filename
+                                                    $linkText = !empty($row['file']) ? $row['file'] : '';
+                                                    if (!empty($driveMarker)) {
+                                                        $label = isset($row['file_no']) && $row['file_no'] !== null && $row['file_no'] !== ''
+                                                            ? str_pad((string)$row['file_no'], 4, '0', STR_PAD_LEFT)
+                                                            : 'Lampiran';
+                                                        $fullName = null; if (preg_match('/\|name=([^|]+)/', $driveMarker, $m)) { $fullName = rawurldecode($m[1]); }
+                                                        $linkText = $fullName ? $fullName : ('Berkas ' . $label);
+                                                    }
                                                     if ($_SESSION['admin'] == 1 || $_SESSION['admin'] == 2 || $is_operator_file) {
                                                         // Super Admin & Operator (data bidangnya) langsung buka
-                                                        echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" rel="noopener" style="text-decoration: underline;">' . $row['file'] . '</a>';
+                                                        echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" rel="noopener" style="text-decoration: underline;">' . htmlspecialchars($linkText, ENT_QUOTES, 'UTF-8') . '</a>';
                                                     } else {
-                                                        echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" class="pin-trigger" data-action-type="view" data-id-surat="' . $row['id_surat'] . '" style="text-decoration: underline;">' . $row['file'] . '</a>';
+                                                        echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" class="pin-trigger" data-action-type="view" data-id-surat="' . $row['id_surat'] . '" style="text-decoration: underline;">' . htmlspecialchars($linkText, ENT_QUOTES, 'UTF-8') . '</a>';
                                                     }
                                                     if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) {
                                                         echo ' <span class="new badge blue" data-badge-caption="PIN diubah" title="PIN direset oleh admin"></span>';

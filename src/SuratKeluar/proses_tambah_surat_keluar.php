@@ -8,6 +8,8 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../include/config.php';
 require_once __DIR__ . '/../include/bidang_mapping.php';
 require_once __DIR__ . '/../include/file_sequence.php';
+// Opsional: client Drive sederhana bila penyimpanan GDrive diaktifkan
+@include_once __DIR__ . '/../Utils/GoogleDriveClient.php';
 
 if (empty($_SESSION['admin'])) {
     $_SESSION['err'] = '<center>Anda harus login terlebih dahulu!</center>';
@@ -154,10 +156,35 @@ if (empty($_SESSION['admin'])) {
                                                         $file_no = next_file_sequence_for_year($config, (int)$year);
                                                         $label = format_file_sequence_label($file_no);
                                                         $nfile = $label . " - " . $file;
-                                                        if (!move_uploaded_file($_FILES['file']['tmp_name'], $target_dir . $nfile)) {
-                                                            $_SESSION['errQ'] = 'ERROR! Gagal mengupload file.';
-                                                            header("Location: index.php?page=admin&act=tsk&sub=add");
-                                                            die();
+                                                        $labeledName = $nfile; // keep original labeled name for display
+                                                        $tmpPath = $_FILES['file']['tmp_name'];
+                                                        // Jika penyimpanan = gdrive, unggah ke Google Drive
+                                                        if (function_exists('is_gdrive_enabled') && is_gdrive_enabled()) {
+                                                            try {
+                                                                $gdc = new GoogleDriveClientSimple(GDRIVE_SERVICE_ACCOUNT_JSON);
+                                                                $result = $gdc->uploadFile($tmpPath, $nfile, 'application/pdf', GDRIVE_PARENT_FOLDER_ID);
+                                                                // Simpan marker gdrive + sertakan nama berkas berlabel agar bisa ditampilkan di list
+                                                                $nfile = 'gdrive:fileId=' . $result['fileId'];
+                                                                if (!empty($result['webViewLink'])) {
+                                                                    $nfile .= '|view=' . $result['webViewLink'];
+                                                                }
+                                                                $nfile .= '|name=' . rawurlencode($labeledName);
+                                                            } catch (Exception $e) {
+                                                                // Fallback ke penyimpanan lokal bila gagal
+                                                                if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                                                                if (!move_uploaded_file($tmpPath, $target_dir . $nfile)) {
+                                                                    $_SESSION['errQ'] = 'ERROR! Gagal mengupload file (lokal/gdrive). Detail: ' . $e->getMessage();
+                                                                    header("Location: index.php?page=admin&act=tsk&sub=add");
+                                                                    die();
+                                                                }
+                                                            }
+                                                        } else {
+                                                            if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                                                            if (!move_uploaded_file($tmpPath, $target_dir . $nfile)) {
+                                                                $_SESSION['errQ'] = 'ERROR! Gagal mengupload file.';
+                                                                header("Location: index.php?page=admin&act=tsk&sub=add");
+                                                                die();
+                                                            }
                                                         }
                                                     } else {
                                                         $_SESSION['errSize'] = 'Ukuran file yang diupload terlalu besar! Ukuran maksimal adalah 2 MB.';

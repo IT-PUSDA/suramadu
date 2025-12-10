@@ -12,7 +12,7 @@
                     <div class="col m12">
                         <div class="card red lighten-5">
                             <div class="card-content notif">
-                                <span class="card-title red-text"><i class="material-icons md-36">clear</i> '.$errQ.'</span>
+								<span class="card-title red-text"><i class="material-icons md-36">clear</i> '.$errQ.'</span>
                             </div>
                         </div>
                     </div>
@@ -91,7 +91,7 @@
     			                    <td width="13%">File</td>
     			                    <td width="1%">:</td>
     			                    <td width="86%">';
-                                    if(!empty($row['file'])){
+									if(!empty($row['file'])){
                                         echo ' <a class="blue-text" href="?page=gsm&act=fsm&id_surat='.$row['id_surat'].'">'.$row['file'].'</a>';
                                     } else {
                                         echo ' Tidak ada file yang diupload';
@@ -113,8 +113,14 @@
             		$id_surat = $_REQUEST['id_surat'];
 
                     //jika ada file akan mengekseskusi script dibawah ini
-                    if(!empty($row['file'])){
-                        unlink("upload/surat_masuk/".$row['file']);
+					if(!empty($row['file'])){
+						// If file stored on Google Drive, delete remote too
+						if (strpos($row['file'], 'gdrive:fileId=') === 0) {
+							@include_once __DIR__ . '/../include/gdrive_utils.php';
+							if (function_exists('gdrive_delete_by_marker')) { gdrive_delete_by_marker($row['file']); }
+						} else {
+							@unlink("upload/surat_masuk/".$row['file']);
+						}
                         $query = mysqli_query($config, "DELETE FROM tbl_surat_masuk WHERE id_surat='$id_surat'");
                         $query2 = mysqli_query($config, "DELETE FROM tbl_disposisi WHERE id_surat='$id_surat'");
 						$query3 = mysqli_query($config, "DELETE FROM tbl_tindak_lanjut WHERE id_surat='$id_surat'");
@@ -132,7 +138,7 @@
                 	} else {
 
                         //jika tidak ada file akan mengekseskusi script dibawah ini
-                        $query = mysqli_query($config, "DELETE FROM tbl_surat_masuk WHERE id_surat='$id_surat'");
+						$query = mysqli_query($config, "DELETE FROM tbl_surat_masuk WHERE id_surat='$id_surat'");
                         $query2 = mysqli_query($config, "DELETE FROM tbl_disposisi WHERE id_surat='$id_surat'");
 						$query3 = mysqli_query($config, "DELETE FROM tbl_tindak_lanjut WHERE id_surat='$id_surat'");
 						

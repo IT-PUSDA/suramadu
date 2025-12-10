@@ -107,5 +107,82 @@ if (!$upd) {
     json_out(['ok'=>false,'error'=>'Gagal menyimpan data.']);
 }
 
+// After linking, attempt to upload the local file to Google Drive (archive copy) if not already uploaded
+// Ensure file_drive column exists
+$resCol = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_drive'");
+if (!$resCol || mysqli_num_rows($resCol) === 0) {
+    @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_drive VARCHAR(255) NULL");
+}
+
+$qf = mysqli_query($config, "SELECT file, file_drive FROM tbl_surat_keluar WHERE id_surat=$id_surat LIMIT 1");
+if ($qf && mysqli_num_rows($qf) === 1) {
+    $r = mysqli_fetch_assoc($qf);
+    $existingDrive = trim((string)$r['file_drive']);
+    $localFile = trim((string)$r['file']);
+    if ($existingDrive === '' && $localFile !== '' && strpos($localFile, 'gdrive:fileId=') !== 0) {
+        // try to find the local file in common folders
+                // Resolve base path safely (fallback when BASE_PATH constant isn't defined)
+                $basePath = defined('BASE_PATH') ? BASE_PATH : realpath(__DIR__ . '/../../');
+                $possibleDirs = [
+                    $basePath . '/upload/surat_keluar/',
+                    $basePath . '/upload/notdin/',
+                    $basePath . '/upload/surat_masuk/',
+                    $basePath . '/upload/arsip_berkas/'
+                ];
+        $localPath = '';
+        foreach ($possibleDirs as $d) {
+            $p = $d . $localFile;
+            if (file_exists($p)) { $localPath = $p; break; }
+        }
+        if ($localPath !== '') {
+            // perform Drive upload (keep local copy)
+            $gdcPath = __DIR__ . '/../Utils/GoogleDriveClient.php';
+            if (file_exists($gdcPath)) {
+                require_once $gdcPath;
+                try {
+                    // prepare simple logging for debug
+                    $logDir = __DIR__ . '/../logs';
+                    if (!is_dir($logDir)) { @mkdir($logDir, 0775, true); }
+                    $logFile = $logDir . '/arsip_upload.log';
+                    $log = function($m) use ($logFile) { @file_put_contents($logFile, date('[Y-m-d H:i:s] ') . $m . PHP_EOL, FILE_APPEND); };
+
+                    $log("[START] arsip upload id_surat={$id_surat} localFile={$localFile} localPath={$localPath}");
+                    $log('CONFIG: GDRIVE_AUTH_MODE=' . (defined('GDRIVE_AUTH_MODE')?GDRIVE_AUTH_MODE:'(undef)') . ' PARENT=' . (defined('GDRIVE_PARENT_FOLDER_ID')?GDRIVE_PARENT_FOLDER_ID:'(undef)'));
+
+                    $client = new GoogleDriveClientSimple(defined('GDRIVE_SERVICE_ACCOUNT_JSON') ? GDRIVE_SERVICE_ACCOUNT_JSON : null);
+                    // Use original filename as Drive name
+                    $driveName = $localFile;
+                    $res = $client->uploadFile($localPath, $driveName, 'application/pdf', defined('GDRIVE_PARENT_FOLDER_ID') ? GDRIVE_PARENT_FOLDER_ID : '');
+
+                    $log('Upload response: ' . json_encode($res));
+
+                    if (!empty($res['fileId'])) {
+                        $marker = 'gdrive:fileId=' . $res['fileId'];
+                        if (!empty($res['webViewLink'])) { $marker .= '|view=' . $res['webViewLink']; }
+                        $marker .= '|name=' . rawurlencode($driveName);
+                        $markerEsc = mysqli_real_escape_string($config, $marker);
+                        if (@mysqli_query($config, "UPDATE tbl_surat_keluar SET file_drive='$markerEsc' WHERE id_surat=$id_surat LIMIT 1")) {
+                            $log("[OK] file_drive updated for id_surat={$id_surat} marker={$marker}");
+                        } else {
+                            $log("[WARN] failed to update DB file_drive for id_surat={$id_surat}: " . mysqli_error($config));
+                        }
+                    } else {
+                        $log('[WARN] upload returned no fileId');
+                    }
+                } catch (Exception $e) {
+                    // log exception but do not block main operation
+                    if (!isset($log)) {
+                        $logDir = __DIR__ . '/../logs';
+                        if (!is_dir($logDir)) { @mkdir($logDir, 0775, true); }
+                        $logFile = $logDir . '/arsip_upload.log';
+                        $log = function($m) use ($logFile) { @file_put_contents($logFile, date('[Y-m-d H:i:s] ') . $m . PHP_EOL, FILE_APPEND); };
+                    }
+                    $log('[ERROR] Exception during Drive upload: ' . $e->getMessage());
+                }
+            }
+        }
+    }
+}
+
 json_out(['ok'=>true]);
 ?>

@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../include/config.php';
 require_once __DIR__ . '/../include/bidang_mapping.php';
 require_once __DIR__ . '/../include/file_sequence.php';
+@include_once __DIR__ . '/../Utils/GoogleDriveClient.php';
 
 if (empty($_SESSION['admin'])) {
     $_SESSION['err'] = '<center>Anda harus login terlebih dahulu!</center>';
@@ -91,10 +92,30 @@ if (isset($_REQUEST['submit1'])) {
                 $file_no = next_file_sequence_for_year($config, (int)$year);
                 $label = format_file_sequence_label($file_no);
                 $nfile = $label . " - " . $file;
-                if (!move_uploaded_file($_FILES['file']['tmp_name'], $target_dir . $nfile)) {
-                    $_SESSION['errQ'] = 'ERROR! Gagal mengupload file.';
-                    header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
-                    die();
+                $labeledName = $nfile;
+                $tmpPath = $_FILES['file']['tmp_name'];
+                if (function_exists('is_gdrive_enabled') && is_gdrive_enabled()) {
+                    try {
+                        $gdc = new GoogleDriveClientSimple(GDRIVE_SERVICE_ACCOUNT_JSON);
+                        $result = $gdc->uploadFile($tmpPath, $nfile, 'application/pdf', GDRIVE_PARENT_FOLDER_ID);
+                        $nfile = 'gdrive:fileId=' . $result['fileId'];
+                        if (!empty($result['webViewLink'])) { $nfile .= '|view=' . $result['webViewLink']; }
+                        $nfile .= '|name=' . rawurlencode($labeledName);
+                    } catch (Exception $e) {
+                        if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                        if (!move_uploaded_file($tmpPath, $target_dir . $nfile)) {
+                            $_SESSION['errQ'] = 'ERROR! Gagal mengupload file (lokal/gdrive). Detail: ' . $e->getMessage();
+                            header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
+                            die();
+                        }
+                    }
+                } else {
+                    if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
+                    if (!move_uploaded_file($tmpPath, $target_dir . $nfile)) {
+                        $_SESSION['errQ'] = 'ERROR! Gagal mengupload file.';
+                        header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
+                        die();
+                    }
                 }
             } else { $_SESSION['errSize']='Ukuran file terlalu besar! Maks 2 MB.'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
         } else { $_SESSION['errFormat']='Format file yang diperbolehkan hanya *.PDF!'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }

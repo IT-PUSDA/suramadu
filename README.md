@@ -25,6 +25,35 @@ Inspired by Nur Akhwam.
 
 ---
 
+## Penyimpanan Lampiran ke Google Drive (Opsional)
+
+Aplikasi ini bisa menyimpan lampiran ke Google Drive menggunakan Service Account tanpa Composer. Fitur ini bersifat opsional dan dapat diaktifkan via konfigurasi.
+
+Langkah singkat pengaktifan:
+
+1) Siapkan Service Account Google Cloud dengan akses Drive API v3 aktif. Unduh berkas kredensial JSON.
+
+2) Letakkan file JSON di path berikut (buat folder jika belum ada):
+- `src/Utils/credentials/service-account.json`
+
+3) Atur konfigurasi di `src/include/config.php`:
+- `UPLOAD_STORAGE` set ke `'gdrive'` untuk mengaktifkan Drive (default `'local'`).
+- `GDRIVE_PARENT_FOLDER_ID` isi dengan Folder ID tujuan di Drive/Shared Drive Anda.
+- Opsi: `GDRIVE_MAKE_FILE_PUBLIC` set `true` jika ingin link dapat diakses oleh siapa saja yang memiliki tautan.
+- Opsi: `GDRIVE_SUPPORTS_ALL_DRIVES` set `true` jika folder tujuan berada di Shared Drive.
+
+4) Persyaratan PHP:
+- Ekstensi `curl` dan `openssl` aktif.
+
+Perilaku saat aktif:
+- Proses tambah surat keluar akan mengunggah lampiran ke Drive. Kolom `file` menyimpan penanda `gdrive:fileId=<id>|view=<url>`.
+- Halaman penampil file (`src/SuratKeluar/lihat_file_sk.php`) otomatis mendeteksi file Drive dan mengarahkan ke tampilan Drive.
+- Galeri dan detail file sudah diarahkan ke penampil tersebut sehingga file di Drive tetap bisa dibuka normal.
+
+Catatan: Jika unggah ke Drive gagal, sistem otomatis kembali menyimpan secara lokal agar alur kerja tetap berjalan.
+
+---
+
 ## Menjalankan Proyek Secara Lokal
 
 Karena proyek ini sekarang mengikuti standar _front controller_ dengan _public directory_, Anda perlu menjalankan server PHP bawaan dari direktori root proyek dan menunjuk ke folder `public` sebagai _document root_.

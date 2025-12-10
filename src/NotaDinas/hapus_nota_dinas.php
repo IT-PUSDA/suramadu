@@ -105,7 +105,13 @@
 
                     //jika ada file akan mengekseskusi script dibawah ini
                     if(!empty($row['file_notdin'])){
-                        unlink("upload/notdin/".$row['file_notdin']);
+                        // If stored on Google Drive, delete remote too
+                        if (strpos($row['file_notdin'], 'gdrive:fileId=') === 0) {
+                            @include_once __DIR__ . '/../include/gdrive_utils.php';
+                            if (function_exists('gdrive_delete_by_marker')) { gdrive_delete_by_marker($row['file_notdin']); }
+                        } else {
+                            @unlink("upload/notdin/".$row['file_notdin']);
+                        }
                         $query = mysqli_query($config, "DELETE FROM tbl_notdin WHERE id_notdin='$id_notdin'");
 
                 		if($query == true){

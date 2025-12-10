@@ -18,7 +18,14 @@ if (!isset($_GET['id_surat']) || empty($_GET['id_surat'])) {
     die('ERROR: ID Surat tidak ditemukan.');
 }
 
+
 $id_surat = mysqli_real_escape_string($config, $_GET['id_surat']);
+
+// Defensive: make sure the `file_drive` column exists to avoid fatal SQL errors
+$resColCheck = @mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_drive'");
+if (!$resColCheck || mysqli_num_rows($resColCheck) === 0) {
+    @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_drive VARCHAR(255) NULL");
+}
 
 // Keamanan tambahan: izinkan akses jika:
 //  - Super admin (1)
@@ -28,14 +35,34 @@ $id_surat = mysqli_real_escape_string($config, $_GET['id_surat']);
 $is_operator = (isset($_SESSION['admin']) && (int)$_SESSION['admin'] === 3);
 $operator_group_access = false;
 
-// Mengambil data file dari database
-$query = mysqli_query($config, "SELECT file,id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
+// Mengambil data file dan (opsional) marker Drive dari database
+$query = mysqli_query($config, "SELECT file, file_drive, id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
 
 if (mysqli_num_rows($query) == 0) {
     die('ERROR: Data surat tidak ditemukan.');
 }
 
-list($file, $owner_id) = mysqli_fetch_array($query);
+$row = mysqli_fetch_array($query);
+$file = isset($row['file']) ? $row['file'] : '';
+$file_drive = isset($row['file_drive']) ? $row['file_drive'] : '';
+$owner_id = isset($row['id_user']) ? $row['id_user'] : 0;
+
+// If there is a Drive marker stored in file_drive (preferred), redirect to Drive view
+if (!empty($file_drive) && strpos($file_drive, 'gdrive:fileId=') !== false) {
+    $fileId = '';
+    $view = '';
+    $parts = explode('|', $file_drive);
+    foreach ($parts as $p) {
+        if (strpos($p, 'gdrive:fileId=') === 0) { $fileId = substr($p, strlen('gdrive:fileId=')); }
+        if (strpos($p, 'view=') === 0) { $view = substr($p, strlen('view=')); }
+    }
+    if (empty($view) && !empty($fileId)) {
+        $view = 'https://drive.google.com/file/d/' . rawurlencode($fileId) . '/view';
+    }
+    if (!headers_sent()) { header('Location: ' . $view); }
+    echo '<script>location.href=' . json_encode($view) . ';</script>';
+    exit;
+}
 
 // Tentukan akses operator menggunakan helper setelah tahu owner
 if ($is_operator && function_exists('operator_access_info')) {
@@ -97,6 +124,12 @@ function serve_file($file, $id_surat)
 
         exit(); // Hentikan eksekusi setelah file dikirim
     } else {
+        // Coba parse sebagai URL Drive (fallback jika data lama tercampur)
+        if (strpos($file, 'http://') === 0 || strpos($file, 'https://') === 0) {
+            if (!headers_sent()) { header('Location: ' . $file); }
+            echo '<script>location.href=' . json_encode($file) . ';</script>';
+            exit;
+        }
         die('ERROR: File fisik tidak ditemukan di server.');
     }
 }
