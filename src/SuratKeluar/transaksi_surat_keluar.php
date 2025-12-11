@@ -342,10 +342,15 @@ if (empty($_SESSION['admin'])) {
                                                         $linkText = $fullName ? $fullName : ('Berkas ' . $label);
                                                     }
                                                     if ($_SESSION['admin'] == 1 || $_SESSION['admin'] == 2 || $is_operator_file) {
-                                                        // Super Admin & Operator (data bidangnya) langsung buka
+                                                        // Super Admin & Operator (data bidangnya) langsung buka (default: local)
                                                         echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" target="_blank" rel="noopener" style="text-decoration: underline;">' . htmlspecialchars($linkText, ENT_QUOTES, 'UTF-8') . '</a>';
                                                     } else {
                                                         echo '<a href="src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '" class="pin-trigger" data-action-type="view" data-id-surat="' . $row['id_surat'] . '" style="text-decoration: underline;">' . htmlspecialchars($linkText, ENT_QUOTES, 'UTF-8') . '</a>';
+                                                    }
+                                                    // Jika ada arsip di Drive, tampilkan tautan terpisah untuk membuka arsip di Drive
+                                                    if (!empty($driveMarker)) {
+                                                        $driveLink = 'src/SuratKeluar/lihat_file_sk.php?id_surat=' . $row['id_surat'] . '&source=drive';
+                                                        echo ' <a href="' . $driveLink . '" target="_blank" rel="noopener" style="font-size:0.9em; margin-left:8px; color:#6a1b9a;">[Lihat Arsip]</a>';
                                                     }
                                                     if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) {
                                                         echo ' <span class="new badge blue" data-badge-caption="PIN diubah" title="PIN direset oleh admin"></span>';

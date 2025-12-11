@@ -47,22 +47,9 @@ $file = isset($row['file']) ? $row['file'] : '';
 $file_drive = isset($row['file_drive']) ? $row['file_drive'] : '';
 $owner_id = isset($row['id_user']) ? $row['id_user'] : 0;
 
-// If there is a Drive marker stored in file_drive (preferred), redirect to Drive view
-if (!empty($file_drive) && strpos($file_drive, 'gdrive:fileId=') !== false) {
-    $fileId = '';
-    $view = '';
-    $parts = explode('|', $file_drive);
-    foreach ($parts as $p) {
-        if (strpos($p, 'gdrive:fileId=') === 0) { $fileId = substr($p, strlen('gdrive:fileId=')); }
-        if (strpos($p, 'view=') === 0) { $view = substr($p, strlen('view=')); }
-    }
-    if (empty($view) && !empty($fileId)) {
-        $view = 'https://drive.google.com/file/d/' . rawurlencode($fileId) . '/view';
-    }
-    if (!headers_sent()) { header('Location: ' . $view); }
-    echo '<script>location.href=' . json_encode($view) . ';</script>';
-    exit;
-}
+// Jangan langsung redirect ke Drive di sini — lakukan pemeriksaan akses terlebih dahulu.
+// Simpan marker Drive ke variabel lokal untuk diproses setelah validasi akses.
+$fileDriveMarker = $file_drive;
 
 // Tentukan akses operator menggunakan helper setelah tahu owner
 if ($is_operator && function_exists('operator_access_info')) {
@@ -85,6 +72,28 @@ if ((int)$_SESSION['admin'] === 4 && (int)$owner_id !== (int)$_SESSION['id_user'
 // Jika file tidak ada di database, hentikan proses
 if (empty($file)) {
     die('ERROR: File untuk surat ini tidak ditemukan di database.');
+}
+
+// Jika pengguna meminta sumber dari Drive secara eksplisit (mis. ?source=drive),
+// maka lakukan redirect ke Drive bila marker arsip tersedia. Jika tidak, atau tidak
+// ada parameter source=drive, sajikan file dari salinan lokal.
+if (isset($_GET['source']) && $_GET['source'] === 'drive' && !empty($fileDriveMarker) && strpos($fileDriveMarker, 'gdrive:fileId=') !== false) {
+    // Parse marker
+    $fileId = '';
+    $view = '';
+    $parts = explode('|', $fileDriveMarker);
+    foreach ($parts as $p) {
+        if (strpos($p, 'gdrive:fileId=') === 0) { $fileId = substr($p, strlen('gdrive:fileId=')); }
+        if (strpos($p, 'view=') === 0) { $view = substr($p, strlen('view=')); }
+    }
+    if (empty($view) && !empty($fileId)) {
+        $view = 'https://drive.google.com/file/d/' . rawurlencode($fileId) . '/view';
+    }
+    if (!empty($view)) {
+        if (!headers_sent()) { header('Location: ' . $view); }
+        echo '<script>location.href=' . json_encode($view) . ';</script>';
+        exit;
+    }
 }
 
 // Fungsi untuk melayani file

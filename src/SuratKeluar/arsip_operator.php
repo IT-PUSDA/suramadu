@@ -366,7 +366,16 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             if(!in_array('updated_at',$cols)){ @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN updated_at DATETIME NULL"); }
 
             // Query daftar isi berkas (hanya finished)
-            $qList = mysqli_query($config, "SELECT id_surat, jenis, no_surat, tgl_surat, isi, file, updated_at FROM tbl_surat_keluar WHERE id_arsip_berkas=$viewId AND status='finished' ORDER BY id_surat DESC");
+            // Periksa apakah kolom file_drive ada (marker Google Drive). Jika ada ambil kolom tersebut,
+            // jika tidak ada, sediakan kolom kosong agar rendering tetap konsisten.
+            $hasFileDrive = false;
+            $rcf = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_drive'");
+            if ($rcf && mysqli_num_rows($rcf) > 0) { $hasFileDrive = true; }
+            if ($hasFileDrive) {
+                $qList = mysqli_query($config, "SELECT id_surat, jenis, no_surat, tgl_surat, isi, file, file_drive, updated_at FROM tbl_surat_keluar WHERE id_arsip_berkas=$viewId AND status='finished' ORDER BY id_surat DESC");
+            } else {
+                $qList = mysqli_query($config, "SELECT id_surat, jenis, no_surat, tgl_surat, isi, file, '' AS file_drive, updated_at FROM tbl_surat_keluar WHERE id_arsip_berkas=$viewId AND status='finished' ORDER BY id_surat DESC");
+            }
             $items=[]; if($qList){ while($r=mysqli_fetch_assoc($qList)){ $items[]=$r; } }
 
             function mapJenis($j){
@@ -417,8 +426,18 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                             <td><?php echo htmlspecialchars(!empty($it['updated_at']) ? date('d M Y', strtotime($it['updated_at'])) : (!empty($it['tgl_surat']) ? date('d M Y', strtotime($it['tgl_surat'])) : '-')); ?></td>
                             <td><?php echo htmlspecialchars($it['isi']); ?></td>
                             <td class="center-align">
-                                <?php if(!empty($it['file'])): $icon=fileIcon($it['file']); ?>
-                                    <a href="src/SuratKeluar/lihat_file_sk.php?id_surat=<?php echo (int)$it['id_surat']; ?>" target="_blank" title="Buka File"><img src="<?php echo $icon; ?>" alt="file" style="height:28px;width:auto;"/></a>
+                                <?php if(!empty($it['file']) || !empty($it['file_drive'])): 
+                                    // Tentukan ikon berdasarkan ekstensi file lokal (fallback ke pdf)
+                                    $icon = fileIcon($it['file'] ?: $it['file_drive']);
+                                    // Preferensi: jika ada kolom file_drive gunakan itu; jika tidak, fall back ke kolom file.
+                                    $driveCandidate = '';
+                                    if (!empty($it['file_drive'])) { $driveCandidate = $it['file_drive']; }
+                                    elseif (!empty($it['file']) && strpos($it['file'], 'gdrive:fileId=') !== false) { $driveCandidate = $it['file']; }
+                                    // Jika ada marker Drive, buka viewer dengan sumber=drive sehingga redirect ke Drive
+                                    $href = 'src/SuratKeluar/lihat_file_sk.php?id_surat=' . (int)$it['id_surat'];
+                                    if (!empty($driveCandidate)) { $href .= '&source=drive'; }
+                                ?>
+                                    <a href="<?php echo $href; ?>" target="_blank" title="Buka File"><img src="<?php echo $icon; ?>" alt="file" style="height:28px;width:auto;"/></a>
                                 <?php else: ?>
                                     <span class="btn grey lighten-3" style="padding:2px 8px;border-radius:14px;color:#455a64;font-weight:600;">TIDAK ADA</span>
                                 <?php endif; ?>
