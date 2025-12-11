@@ -43,17 +43,49 @@ $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_sura
                         <form method="post" action="index.php?page=admin&act=tsk_keu">
                             <div class="input-field round-in-box">
                         <script>
-                        // Delegated copy-to-clipboard handler for nomor surat
+                        // Delegated copy-to-clipboard handler for nomor surat with inline bubble
                         document.addEventListener('click', function (e) {
                           var btn = e.target.closest && e.target.closest('.copy-no-surat');
                           if (!btn) return;
                           e.preventDefault();
                           var nomor = btn.getAttribute('data-nomor') || '';
                           if (!nomor) return;
-                          function notify(msg){ if (window.M && M.toast) { M.toast({html: msg, displayLength: 2000}); } else { alert(msg); } }
-                          function fallbackCopy(text){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); notify('Nomor surat disalin: '+text); }catch(e){ alert('Gagal menyalin nomor surat. Silakan salin manual: '+text); } document.body.removeChild(ta); }
+
+                          function showCopyBubble(el, text) {
+                              try {
+                                  document.querySelectorAll('.copy-bubble').forEach(function(x){ x.parentNode && x.parentNode.removeChild(x); });
+                                  var rect = el.getBoundingClientRect();
+                                  var bubble = document.createElement('div');
+                                  bubble.className = 'copy-bubble';
+                                  bubble.textContent = text || 'Nomor telah disalin';
+                                  Object.assign(bubble.style, {
+                                      position: 'absolute',
+                                      left: (rect.left + window.scrollX + rect.width/2) + 'px',
+                                      top: (rect.top + window.scrollY - 8) + 'px',
+                                      transform: 'translate(-50%, 0)',
+                                      background: '#323232',
+                                      color: '#fff',
+                                      padding: '6px 10px',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                      opacity: '1',
+                                      zIndex: 99999,
+                                      transition: 'transform 350ms ease, opacity 350ms ease'
+                                  });
+                                  document.body.appendChild(bubble);
+                                  requestAnimationFrame(function(){
+                                      setTimeout(function(){
+                                          bubble.style.transform = 'translate(-50%, -10px)';
+                                          bubble.style.opacity = '0';
+                                      }, 700);
+                                  });
+                                  setTimeout(function(){ if (bubble.parentNode) bubble.parentNode.removeChild(bubble); }, 1200);
+                              } catch (e) { }
+                          }
+
+                          function fallbackCopy(text){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); showCopyBubble(btn,'Nomor telah disalin'); }catch(e){ showCopyBubble(btn,'Nomor telah disalin'); } document.body.removeChild(ta); }
                           if (navigator.clipboard && navigator.clipboard.writeText) {
-                            navigator.clipboard.writeText(nomor).then(function(){ notify('Nomor surat disalin: ' + nomor); }).catch(function(){ fallbackCopy(nomor); });
+                            navigator.clipboard.writeText(nomor).then(function(){ showCopyBubble(btn,'Nomor telah disalin'); }).catch(function(){ fallbackCopy(nomor); });
                           } else { fallbackCopy(nomor); }
                         });
                         </script>
