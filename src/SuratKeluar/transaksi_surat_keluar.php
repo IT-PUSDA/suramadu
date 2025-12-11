@@ -359,7 +359,13 @@ if (empty($_SESSION['admin'])) {
 
                                                 echo '</td>
                                                     <td class="center-align">' . $row['tujuan'] . '<br/><small class="grey-text text-darken-1">' . $row['perihal'] . '</small></td>
-                                                    <td class="center-align">' . $row['no_surat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . indoDate($row['tgl_surat']) . '</small></td>
+                                                    <td class="center-align">
+                                                        ' . htmlspecialchars($row['no_surat'], ENT_QUOTES, 'UTF-8') . '
+                                                        <a href="#" class="copy-no-surat tooltipped" data-id="' . $row['id_surat'] . '" data-nomor="' . htmlspecialchars($row['no_surat'], ENT_QUOTES, 'UTF-8') . '" data-position="top" data-tooltip="Salin Nomor" style="margin-left:8px;display:inline-block;vertical-align:middle;text-decoration:none;color:#1976d2;">
+                                                            <i class="material-icons" style="font-size:18px;vertical-align:middle">content_copy</i>
+                                                        </a>
+                                                        <br/><small class="grey-text text-darken-1 nowrap">' . indoDate($row['tgl_surat']) . '</small>
+                                                    </td>
                                                     <td class="center-align">' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>';
 
                                                 // Kolom Status (contoh logika: jika ada file -> Selesai, else Draft)
@@ -957,6 +963,47 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.location.href = targetUrl;
             }
         }, 200);
+    }
+});
+</script>
+</script>
+
+<script>
+// Handler untuk tombol salin nomor surat
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.copy-no-surat');
+    if (!btn) return;
+    e.preventDefault();
+    var nomor = btn.getAttribute('data-nomor') || '';
+    if (!nomor) return;
+    function notify(msg) {
+        if (window.M && M.toast) {
+            M.toast({html: msg, displayLength: 2000});
+        } else {
+            try { console.log(msg); } catch (ex) {}
+            alert(msg);
+        }
+    }
+    function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+            document.execCommand('copy');
+            notify('Nomor surat disalin: ' + text);
+        } catch (err) {
+            alert('Gagal menyalin nomor surat. Silakan salin manual: ' + text);
+        }
+        document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(nomor).then(function () {
+            notify('Nomor surat disalin: ' + nomor);
+        }).catch(function () { fallbackCopy(nomor); });
+    } else {
+        fallbackCopy(nomor);
     }
 });
 </script>

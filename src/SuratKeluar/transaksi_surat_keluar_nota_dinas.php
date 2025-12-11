@@ -47,6 +47,22 @@ body.page-surat-keluar .container {max-width:100%!important;width:100%!important
 @media (max-width:600px){body.page-surat-keluar .container{padding-left:10px;padding-right:10px}}
 </style>
 
+<script>
+// Delegated copy-to-clipboard handler for nomor surat
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest && e.target.closest('.copy-no-surat');
+  if (!btn) return;
+  e.preventDefault();
+  var nomor = btn.getAttribute('data-nomor') || '';
+  if (!nomor) return;
+  function notify(msg){ if (window.M && M.toast) { M.toast({html: msg, displayLength: 2000}); } else { alert(msg); } }
+  function fallbackCopy(text){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); notify('Nomor surat disalin: '+text); }catch(e){ alert('Gagal menyalin nomor surat. Silakan salin manual: '+text); } document.body.removeChild(ta); }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(nomor).then(function(){ notify('Nomor surat disalin: ' + nomor); }).catch(function(){ fallbackCopy(nomor); });
+  } else { fallbackCopy(nomor); }
+});
+</script>
+
 <div class="row full-bleed">
     <div class="col s12">
         <div class="z-depth-1">
@@ -189,7 +205,13 @@ if ($filterKey && isset($map[$filterKey])) {
                     }
                     if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) { echo ' <span class="new badge blue" data-badge-caption="PIN diubah"></span>'; } } ?></td>
                   <td class="center-align"><?php echo $row['tujuan']; ?><br/><small class="grey-text text-darken-1"><?php echo $row['perihal']; ?></small></td>
-                  <td class="center-align"><?php echo $row['no_surat']; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo indoDate($row['tgl_surat']); ?></small></td>
+                  <td class="center-align">
+                    <?php echo htmlspecialchars($row['no_surat'], ENT_QUOTES, 'UTF-8'); ?>
+                    <a href="#" class="copy-no-surat tooltipped" data-id="<?php echo (int)$row['id_surat']; ?>" data-nomor="<?php echo htmlspecialchars($row['no_surat'], ENT_QUOTES, 'UTF-8'); ?>" data-position="top" data-tooltip="Salin Nomor" style="margin-left:8px;display:inline-block;vertical-align:middle;text-decoration:none;color:#1976d2;">
+                      <i class="material-icons" style="font-size:18px;vertical-align:middle">content_copy</i>
+                    </a>
+                    <br/><small class="grey-text text-darken-1 nowrap"><?php echo indoDate($row['tgl_surat']); ?></small>
+                  </td>
                   <td class="center-align"><?php echo $row['nama_pembuat'] ?? ''; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : ''; ?></small></td>
                   <?php // Status icon
                     $status_raw = isset($row['status']) ? $row['status'] : (!empty($row['file']) ? 'finished':'draft');

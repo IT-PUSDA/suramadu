@@ -148,7 +148,7 @@ if ($q && mysqli_num_rows($q) > 0) {
         echo '</td>';
     echo '<td class="center-align">'.esc($row['tujuan']).'<br/><small class="grey-text text-darken-1">'.esc($row['perihal']).'</small></td>';
     $tglSuratOut = !empty($row['tgl_surat']) ? indoDate($row['tgl_surat']) : '-';
-    echo '<td class="center-align">'.esc($row['no_surat']).'<br/><small class="grey-text text-darken-1 nowrap">'.$tglSuratOut.'</small></td>';
+    echo '<td class="center-align">'.esc($row['no_surat']).' <a href="#" class="copy-no-surat" data-nomor="'.esc($row['no_surat']).'" style="margin-left:8px;color:#1976d2;display:inline-block;vertical-align:middle;"><i class="material-icons" style="font-size:16px;vertical-align:middle">content_copy</i></a><br/><small class="grey-text text-darken-1 nowrap">'.$tglSuratOut.'</small></td>';
     echo '<td class="center-align">'.esc($row['nama_pembuat']).'<br/><small class="grey-text text-darken-1 nowrap">'.(!empty($row['tgl_dibuat'])?date('d M Y, H:i',strtotime($row['tgl_dibuat'])):'').'</small></td>';
         echo '<td class="center-align status-cell"><div class="status-wrap"><img class="status-icon status-icon-'.$row['id_surat'].'" src="asset/img/'.$icon_file.'" alt="status"/></div></td>';
 
@@ -219,6 +219,25 @@ echo <<<'HTML'
 <script>(function(){
     // Re-init tooltips for newly injected elements
     try { if (window.M) { M.Tooltip.init(document.querySelectorAll('.tooltipped')); } } catch(e){}
+    // Attach delegated handler for copy buttons inside AJAX results
+    try {
+        var tblCopy = document.getElementById('tbl');
+        if (tblCopy && !tblCopy.__copyDelegated) {
+            tblCopy.__copyDelegated = true;
+            tblCopy.addEventListener('click', function(ev){
+                var t = ev.target;
+                if (!t) return;
+                var btn = t.closest ? t.closest('.copy-no-surat') : null;
+                if (!btn) return;
+                ev.preventDefault();
+                var nomor = btn.getAttribute('data-nomor') || '';
+                if (!nomor) return alert('Nomor tidak tersedia');
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(nomor).then(function(){ if (window.M && M.toast) { M.toast({html: 'Nomor surat disalin: ' + nomor, displayLength: 2000}); } else { alert('Nomor surat disalin: ' + nomor); } }).catch(function(){ fallbackCopy(nomor); });
+                } else { fallbackCopy(nomor); }
+            });
+        }
+    } catch(e){}
     // Delegated fallback: click handler for archive buttons if inline onclick is blocked
     try {
         var tbl = document.getElementById('tbl');
@@ -339,6 +358,37 @@ echo <<<'HTML'
             return false;
         };
     }
+
+    // Delegated handler for copy buttons inside injected AJAX rows
+    try {
+        function fallbackCopy(text){
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed'; ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); if(window.M && M.toast){ M.toast({html: 'Nomor surat disalin: ' + text, displayLength: 2000}); } else { /* silent */ } } catch(e){ alert('Gagal menyalin nomor: ' + text); }
+            document.body.removeChild(ta);
+        }
+        var tblCopy = document.getElementById('tbl');
+        if (tblCopy && !tblCopy.__copyDelegated) {
+            tblCopy.__copyDelegated = true;
+            tblCopy.addEventListener('click', function(ev){
+                var t = ev.target;
+                if (!t) return;
+                var btn = t.closest ? t.closest('.copy-no-surat') : null;
+                if (!btn) return;
+                ev.preventDefault();
+                var nomor = btn.getAttribute('data-nomor') || btn.getAttribute('data-nomor') || btn.getAttribute('data-nomor') || btn.getAttribute('data-nomor') || btn.getAttribute('data-nomor') || btn.getAttribute('data-nomor') || '';
+                // try data-nomor attribute with various keys
+                if (!nomor) nomor = btn.getAttribute('data-nomor') || btn.getAttribute('data-nomor');
+                if (!nomor) return alert('Nomor tidak tersedia');
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(nomor).then(function(){ if (window.M && M.toast) { M.toast({html: 'Nomor surat disalin: ' + nomor, displayLength: 2000}); } }).catch(function(){ fallbackCopy(nomor); });
+                } else { fallbackCopy(nomor); }
+            });
+        }
+    } catch(e){}
 })();</script>
 HTML;
 exit;

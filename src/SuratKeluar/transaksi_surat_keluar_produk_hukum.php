@@ -28,6 +28,22 @@ $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_sura
 <script>document.body.classList.add('page-surat-keluar');</script>
 <style>body.page-surat-keluar .container{max-width:100%!important;width:100%!important;padding-left:18px;padding-right:18px}.full-bleed{width:100%;max-width:100%;margin:0 auto}.full-bleed.row{margin-left:0;margin-right:0}@media(max-width:600px){body.page-surat-keluar .container{padding-left:10px;padding-right:10px}}</style>
 
+<script>
+// Delegated copy-to-clipboard handler for nomor surat
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest && e.target.closest('.copy-no-surat');
+  if (!btn) return;
+  e.preventDefault();
+  var nomor = btn.getAttribute('data-nomor') || '';
+  if (!nomor) return;
+  function notify(msg){ if (window.M && M.toast) { M.toast({html: msg, displayLength: 2000}); } else { alert(msg); } }
+  function fallbackCopy(text){ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); notify('Nomor surat disalin: '+text); }catch(e){ alert('Gagal menyalin nomor surat. Silakan salin manual: '+text); } document.body.removeChild(ta); }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(nomor).then(function(){ notify('Nomor surat disalin: ' + nomor); }).catch(function(){ fallbackCopy(nomor); });
+  } else { fallbackCopy(nomor); }
+});
+</script>
+
 <div class="row full-bleed">
     <div class="col s12">
         <div class="z-depth-1">
@@ -150,7 +166,13 @@ if ($filterKey && isset($map[$filterKey])) {
                   }
                   if (!empty($_SESSION['pinResetIds'][$row['id_surat']])) { echo ' <span class="new badge blue" data-badge-caption="PIN diubah"></span>'; } } ?></td>
                 <td class="center-align"><?php echo $row['tujuan']; ?><br/><small class="grey-text text-darken-1"><?php echo $row['perihal']; ?></small></td>
-                <td class="center-align"><?php echo $row['no_surat']; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo indoDate($row['tgl_surat']); ?></small></td>
+                <td class="center-align">
+                  <?php echo htmlspecialchars($row['no_surat'], ENT_QUOTES, 'UTF-8'); ?>
+                  <a href="#" class="copy-no-surat tooltipped" data-id="<?php echo (int)$row['id_surat']; ?>" data-nomor="<?php echo htmlspecialchars($row['no_surat'], ENT_QUOTES, 'UTF-8'); ?>" data-position="top" data-tooltip="Salin Nomor" style="margin-left:8px;display:inline-block;vertical-align:middle;text-decoration:none;color:#1976d2;">
+                    <i class="material-icons" style="font-size:18px;vertical-align:middle">content_copy</i>
+                  </a>
+                  <br/><small class="grey-text text-darken-1 nowrap"><?php echo indoDate($row['tgl_surat']); ?></small>
+                </td>
                 <td class="center-align"><?php echo $row['nama_pembuat'] ?? ''; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : ''; ?></small></td>
                 <?php $status_raw = isset($row['status'])?$row['status']:( !empty($row['file']) ? 'finished':'draft'); $icon_file = ($status_raw=='finished')?'finished.png':'draft.png'; if(empty($__printedStatusStylePH)){ echo '<style>.status-cell{padding:2px 0!important;} .status-cell .status-wrap{display:flex;align-items:center;justify-content:center;height:50px;} .status-cell img.status-icon{height:48px;position:relative;top:8px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.15));} .actions-compact{align-items:center;min-height:46px;} .action-round{background:#1976d2!important;border-radius:50%;width:46px;height:46px;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.15);transition:.25s} .action-round i{line-height:46px;font-size:22px;color:#fff} .action-round.delete{background:#e64a19!important;} .action-round.toggle{background:#2e7d32!important;} .action-round.arch{background:#fbc02d!important} .action-round.arch.done{background:#9e9e9e!important} .action-round:hover{filter:brightness(1.08);} .action-round:active{transform:scale(.92);} @media(max-width:600px){.status-cell .status-wrap{height:46px;} .status-cell img.status-icon{height:44px;top:6px;} .action-round{width:40px;height:40px;} .action-round i{font-size:20px;line-height:40px;}}</style>'; $__printedStatusStylePH=true; } ?>
                 <td class="center-align status-cell"><div class="status-wrap"><img class="status-icon status-icon-<?php echo $row['id_surat']; ?>" src="asset/img/<?php echo $icon_file; ?>" alt="status" /></div></td>
