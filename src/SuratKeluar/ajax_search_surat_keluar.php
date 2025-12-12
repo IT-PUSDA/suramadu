@@ -220,50 +220,7 @@ echo <<<'HTML'
     // Re-init tooltips for newly injected elements
     try { if (window.M) { M.Tooltip.init(document.querySelectorAll('.tooltipped')); } } catch(e){}
 
-    function showCopyBubble(el, text) {
-        try {
-            document.querySelectorAll('.copy-bubble').forEach(function(x){ x.parentNode && x.parentNode.removeChild(x); });
-            var rect = el.getBoundingClientRect();
-            var bubble = document.createElement('div');
-            bubble.className = 'copy-bubble';
-            bubble.textContent = text || 'Nomor telah disalin';
-            Object.assign(bubble.style, {
-                position: 'absolute',
-                left: (rect.left + window.scrollX + rect.width/2) + 'px',
-                top: (rect.top + window.scrollY - 8) + 'px',
-                transform: 'translate(-50%, 0)',
-                background: '#323232',
-                color: '#fff',
-                padding: '6px 10px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                opacity: '1',
-                zIndex: 99999,
-                transition: 'transform 350ms ease, opacity 350ms ease'
-            });
-            document.body.appendChild(bubble);
-            requestAnimationFrame(function(){ setTimeout(function(){ bubble.style.transform = 'translate(-50%, -10px)'; bubble.style.opacity = '0'; }, 700); });
-            setTimeout(function(){ if (bubble.parentNode) bubble.parentNode.removeChild(bubble); }, 1200);
-        } catch(e){ }
-    }
-
-    // Attach delegated handler for copy buttons inside AJAX results
-    try {
-        var tblCopy = document.getElementById('tbl');
-        if (tblCopy && !tblCopy.__copyDelegated) {
-            tblCopy.__copyDelegated = true;
-            tblCopy.addEventListener('click', function(ev){
-                var t = ev.target; if (!t) return;
-                var btn = t.closest ? t.closest('.copy-no-surat') : null; if (!btn) return;
-                ev.preventDefault();
-                var nomor = btn.getAttribute('data-nomor') || '';
-                if (!nomor) return;
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(nomor).then(function(){ showCopyBubble(btn,'Nomor telah disalin'); }).catch(function(){ fallbackCopy(nomor, btn); });
-                } else { fallbackCopy(nomor, btn); }
-            });
-        }
-    } catch(e){}
+    // Copy behavior is handled centrally by `asset/js/copy-no-surat.js`
 
     // Delegated fallback: click handler for archive buttons if inline onclick is blocked
     try {
@@ -387,28 +344,7 @@ echo <<<'HTML'
         };
     }
 
-    // Delegated handler for copy buttons inside injected AJAX rows
-    try {
-        function fallbackCopy(text, el){
-            var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select();
-            try { document.execCommand('copy'); if(el) showCopyBubble(el,'Nomor telah disalin'); } catch(e){ /* ignore */ }
-            document.body.removeChild(ta);
-        }
-        var tblCopy = document.getElementById('tbl');
-        if (tblCopy && !tblCopy.__copyDelegated) {
-            tblCopy.__copyDelegated = true;
-            tblCopy.addEventListener('click', function(ev){
-                var t = ev.target; if (!t) return;
-                var btn = t.closest ? t.closest('.copy-no-surat') : null; if (!btn) return;
-                ev.preventDefault();
-                var nomor = btn.getAttribute('data-nomor') || '';
-                if (!nomor) return;
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(nomor).then(function(){ showCopyBubble(btn,'Nomor telah disalin'); }).catch(function(){ fallbackCopy(nomor, btn); });
-                } else { fallbackCopy(nomor, btn); }
-            });
-        }
-    } catch(e){}
+    // Copy behavior is handled centrally by asset/js/copy-no-surat.js (delegated listener)
 })();</script>
 HTML;
 exit;

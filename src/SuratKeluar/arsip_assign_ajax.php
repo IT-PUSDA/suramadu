@@ -35,6 +35,8 @@ if (!in_array('status',$existingCols)) $alters[] = "ADD COLUMN status ENUM('draf
 if (!in_array('id_arsip_berkas',$existingCols)) $alters[] = "ADD COLUMN id_arsip_berkas INT NULL";
 if (!in_array('updated_by',$existingCols)) $alters[] = "ADD COLUMN updated_by VARCHAR(50) NULL";
 if (!in_array('updated_at',$existingCols)) $alters[] = "ADD COLUMN updated_at DATETIME NULL";
+if (!in_array('archived_by',$existingCols)) $alters[] = "ADD COLUMN archived_by INT NULL";
+if (!in_array('archived_at',$existingCols)) $alters[] = "ADD COLUMN archived_at DATETIME NULL";
 if (!empty($alters)) { @mysqli_query($config, 'ALTER TABLE tbl_surat_keluar '.implode(', ',$alters)); }
 // Ensure index on id_arsip_berkas (avoid duplicate key error under strict mode)
 $hasIdx = false;
@@ -101,7 +103,9 @@ if (!$qb || mysqli_num_rows($qb) !== 1) {
 // Update linkage
 $username = isset($_SESSION['username']) ? mysqli_real_escape_string($config, $_SESSION['username']) : 'system';
 $now = date('Y-m-d H:i:s');
-$upd = mysqli_query($config, "UPDATE tbl_surat_keluar SET id_arsip_berkas=$id_arsip_berkas, updated_by='$username', updated_at='$now' WHERE id_surat=$id_surat $cond_scope LIMIT 1");
+$archiverId = isset($_SESSION['id_user']) ? (int)$_SESSION['id_user'] : 0;
+$updSql = "UPDATE tbl_surat_keluar SET id_arsip_berkas=$id_arsip_berkas, updated_by='$username', updated_at='$now', archived_by=" . ($archiverId>0 ? $archiverId : 'NULL') . ", archived_at='".$now."' WHERE id_surat=$id_surat $cond_scope LIMIT 1";
+$upd = mysqli_query($config, $updSql);
 if (!$upd) {
     http_response_code(500);
     json_out(['ok'=>false,'error'=>'Gagal menyimpan data.']);

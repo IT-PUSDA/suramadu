@@ -48,6 +48,25 @@
 </footer>
 <!-- Footer END -->
 
+<!-- Global styles for copy bubble notifications -->
+<style>
+    .copy-bubble {
+        position: absolute;
+        transform: translate(-50%, 0);
+        background: #323232;
+        color: #fff;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        opacity: 1;
+        z-index: 99999;
+        pointer-events: none;
+        transition: transform 350ms ease, opacity 350ms ease;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.24);
+        white-space: nowrap;
+    }
+</style>
+
 <!-- Javascript START -->
 <script type="text/javascript" src="asset/js/jquery-2.1.1.min.js"></script>
 <script type="text/javascript" src="asset/js/materialize.min.js"></script>
@@ -55,6 +74,7 @@
 <script type="text/javascript" src="asset/js/bootstrap.min.js"></script>
 <script data-pace-options='{ "ajax": false }' src='asset/js/pace.min.js'></script>
 <script type="text/javascript" src="src/SuratKeluar/arsip_modal.js"></script>
+<script type="text/javascript" src="asset/js/copy-no-surat.js?v=20251211"></script>
 <script type="text/javascript">
     //jquery dropdown
     $(".dropdown-button").dropdown({

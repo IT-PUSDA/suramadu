@@ -4,6 +4,16 @@ $username = "root";
 $password = "";
 $database = "ams_native";
 
+// TEMP DEBUG: enable error display and logging for local development (remove in production)
+@ini_set('display_errors', 1);
+@ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// ensure logs directory exists and set php error log there
+if (!defined('BASE_PATH')) { define('BASE_PATH', dirname(__DIR__, 1)); }
+if (!is_dir(BASE_PATH . '/logs')) { @mkdir(BASE_PATH . '/logs', 0775, true); }
+@ini_set('log_errors', 1);
+@ini_set('error_log', BASE_PATH . '/logs/php_error.log');
+
 // Google API configuration 
 define('GOOGLE_CLIENT_ID', '105436136720-d3ju2cmh6erit721munbiftu0l5ah1jf.apps.googleusercontent.com');
 define('GOOGLE_CLIENT_SECRET', 'REMOVED_BY_GIT_HISTORY_REWRITE');

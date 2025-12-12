@@ -206,10 +206,10 @@ $klas = []; $rk = mysqli_query($config,"SELECT kode, nama FROM tbl_klasifikasi O
 // List (if not add)
 $filterKode = isset($_GET['kode'])?trim($_GET['kode']):'';
 $filterNama = isset($_GET['nama'])?trim($_GET['nama']):'';
-$where = "WHERE id_user IN ($idList)";
+$where = "WHERE a.id_user IN ($idList)";
 if($filterKode!==''){ $e=mysqli_real_escape_string($config,$filterKode); $where.=" AND kode_klasifikasi LIKE '%$e%'"; }
 if($filterNama!==''){ $e=mysqli_real_escape_string($config,$filterNama); $where.=" AND nama_berkas LIKE '%$e%'"; }
-$sqlList = "SELECT a.id,a.kode_klasifikasi,a.nama_berkas,a.uraian,a.tgl_buat,a.file_path,(SELECT COUNT(1) FROM tbl_surat_keluar s WHERE s.id_arsip_berkas=a.id AND s.status='finished') AS jml_surat FROM tbl_arsip_berkas a $where ORDER BY a.tgl_buat DESC, a.id DESC";
+$sqlList = "SELECT a.id,a.id_user, u.username AS arsiparis, a.kode_klasifikasi,a.nama_berkas,a.uraian,a.tgl_buat,a.file_path,(SELECT COUNT(1) FROM tbl_surat_keluar s WHERE s.id_arsip_berkas=a.id AND s.status='finished') AS jml_surat FROM tbl_arsip_berkas a LEFT JOIN tbl_user u ON u.id_user=a.id_user $where ORDER BY a.tgl_buat DESC, a.id DESC";
 $resList = mysqli_query($config,$sqlList);
 $rows=[]; if($resList){ while($r=mysqli_fetch_assoc($resList)){ $rows[]=$r; } }
 
@@ -220,8 +220,8 @@ body .container { max-width:100% !important; width:100% !important; }
 body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
 .table-arsip-op-wrapper{background:#fff;border-radius:14px;padding:24px;margin-top:8px;box-shadow:0 2px 6px rgba(0,0,0,.08);} 
 .table-arsip-op{width:100%;border-collapse:collapse;}
-.table-arsip-op thead th{background:#263238;color:#fff;padding:11px 10px;font-size:13px;letter-spacing:.5px;}
-.table-arsip-op tbody td{padding:9px 10px;font-size:13px;border-bottom:1px solid #eee;vertical-align:top;}
+.table-arsip-op thead th{background:#263238;color:#fff;padding:11px 10px;font-size:13px;letter-spacing:.5px;text-align:center;}
+.table-arsip-op tbody td{padding:9px 10px;font-size:13px;border-bottom:1px solid #eee;vertical-align:top;text-align:center;}
 .table-arsip-op tbody tr:hover{background:#f7f9fa;}
 #kode-arsip-suggest{border:1px solid #cfd8dc;border-top:none;border-radius:0 0 4px 4px; margin-top:-1px;}
 #kode-arsip-suggest .collection-item{background:#fff !important; color:#1e3a52 !important; line-height:1.25rem;}
@@ -356,7 +356,8 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                 $rid = (int)$_GET['rem'];
                 $username = isset($_SESSION['username']) ? mysqli_real_escape_string($config, $_SESSION['username']) : 'system';
                 $now = date('Y-m-d H:i:s');
-                mysqli_query($config, "UPDATE tbl_surat_keluar SET id_arsip_berkas=NULL, updated_by='$username', updated_at='$now' WHERE id_surat=$rid AND id_arsip_berkas=$viewId");
+                // Clear archive linkage and archived metadata as well
+                mysqli_query($config, "UPDATE tbl_surat_keluar SET id_arsip_berkas=NULL, updated_by='$username', updated_at='$now', archived_by=NULL, archived_at=NULL WHERE id_surat=$rid AND id_arsip_berkas=$viewId");
                 echo '<script>location.href="index.php?page=admin&act=arsip_op&sub=view&id='.$viewId.($readOnly?'&view_as=su&bidang='.urlencode($proxyBidang):'').'";</script>';
                 exit;
             }
@@ -371,10 +372,22 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
             $hasFileDrive = false;
             $rcf = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'file_drive'");
             if ($rcf && mysqli_num_rows($rcf) > 0) { $hasFileDrive = true; }
+            // Include archived_by (user id) and associated username for display to super admin
+            $hasArchivedCol = false;
+            $rch = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'archived_by'");
+            if ($rch && mysqli_num_rows($rch) > 0) { $hasArchivedCol = true; }
             if ($hasFileDrive) {
-                $qList = mysqli_query($config, "SELECT id_surat, jenis, no_surat, tgl_surat, isi, file, file_drive, updated_at FROM tbl_surat_keluar WHERE id_arsip_berkas=$viewId AND status='finished' ORDER BY id_surat DESC");
+                if ($hasArchivedCol) {
+                    $qList = mysqli_query($config, "SELECT s.id_surat, s.jenis, s.no_surat, s.tgl_surat, s.isi, s.file, s.file_drive, s.updated_at, s.archived_by, u.username AS arsiparis_name FROM tbl_surat_keluar s LEFT JOIN tbl_user u ON u.id_user=s.archived_by WHERE s.id_arsip_berkas=$viewId AND s.status='finished' ORDER BY s.id_surat DESC");
+                } else {
+                    $qList = mysqli_query($config, "SELECT s.id_surat, s.jenis, s.no_surat, s.tgl_surat, s.isi, s.file, s.file_drive, s.updated_at, NULL AS archived_by, '' AS arsiparis_name FROM tbl_surat_keluar s WHERE s.id_arsip_berkas=$viewId AND s.status='finished' ORDER BY s.id_surat DESC");
+                }
             } else {
-                $qList = mysqli_query($config, "SELECT id_surat, jenis, no_surat, tgl_surat, isi, file, '' AS file_drive, updated_at FROM tbl_surat_keluar WHERE id_arsip_berkas=$viewId AND status='finished' ORDER BY id_surat DESC");
+                if ($hasArchivedCol) {
+                    $qList = mysqli_query($config, "SELECT s.id_surat, s.jenis, s.no_surat, s.tgl_surat, s.isi, s.file, '' AS file_drive, s.updated_at, s.archived_by, u.username AS arsiparis_name FROM tbl_surat_keluar s LEFT JOIN tbl_user u ON u.id_user=s.archived_by WHERE s.id_arsip_berkas=$viewId AND s.status='finished' ORDER BY s.id_surat DESC");
+                } else {
+                    $qList = mysqli_query($config, "SELECT s.id_surat, s.jenis, s.no_surat, s.tgl_surat, s.isi, s.file, '' AS file_drive, s.updated_at, NULL AS archived_by, '' AS arsiparis_name FROM tbl_surat_keluar s WHERE s.id_arsip_berkas=$viewId AND s.status='finished' ORDER BY s.id_surat DESC");
+                }
             }
             $items=[]; if($qList){ while($r=mysqli_fetch_assoc($qList)){ $items[]=$r; } }
 
@@ -412,12 +425,16 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                         <th>Tanggal Diarsipkan</th>
                         <th>Isi Ringkas</th>
                         <th style="width:80px;" class="center-align">File</th>
+                        <?php if ((int)$_SESSION['admin'] === 1): ?>
+                        <th style="min-width:140px;">Arsiparis</th>
+                        <?php endif; ?>
                         <th style="width:80px;" class="center-align">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if(empty($items)): ?>
-                        <tr><td colspan="7" class="center-align" style="padding:18px;color:#777;">Belum ada surat pada berkas ini.</td></tr>
+                        <?php $colspanItems = ((int)$_SESSION['admin']===1) ? 8 : 7; ?>
+                        <tr><td colspan="<?php echo $colspanItems; ?>" class="center-align" style="padding:18px;color:#777;">Belum ada surat pada berkas ini.</td></tr>
                     <?php else: $no=1; foreach($items as $it): ?>
                         <tr>
                             <td class="center-align"><?php echo $no++; ?></td>
@@ -442,6 +459,9 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                                     <span class="btn grey lighten-3" style="padding:2px 8px;border-radius:14px;color:#455a64;font-weight:600;">TIDAK ADA</span>
                                 <?php endif; ?>
                             </td>
+                            <?php if ((int)$_SESSION['admin'] === 1): ?>
+                            <td class="center-align"><?php echo htmlspecialchars($it['arsiparis_name'] ?? ''); ?></td>
+                            <?php endif; ?>
                             <td class="center-align">
                                 <a href="index.php?page=admin&act=arsip_op&sub=view&id=<?php echo $viewId; ?>&rem=<?php echo (int)$it['id_surat']; ?>" onclick="return confirm('Keluarkan surat ini dari berkas?');" class="btn-flat tooltipped" data-position="top" data-tooltip="Keluarkan" style="color:#e53935;"><i class="material-icons">delete</i></a>
                             </td>
@@ -697,12 +717,16 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                         <th style="min-width:230px;">Nama Berkas</th>
                         <th style="min-width:160px;">Tanggal Buat Berkas</th>
                         <th style="min-width:80px;">Total</th>
+                        <?php if ((int)$_SESSION['admin'] === 1): ?>
+                        <th style="min-width:140px;">Arsiparis</th>
+                        <?php endif; ?>
                         <th style="min-width:140px;" class="center-align">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if(empty($rows)): ?>
-                        <tr><td colspan="6" class="center-align" style="padding:18px;color:#777;">Belum ada berkas arsip.</td></tr>
+                        <?php $colspan = ((int)$_SESSION['admin']===1) ? 7 : 6; ?>
+                        <tr><td colspan="<?php echo $colspan; ?>" class="center-align" style="padding:18px;color:#777;">Belum ada berkas arsip.</td></tr>
                     <?php else: $no=1; foreach($rows as $r): ?>
                         <tr>
                             <td class="center-align"><?php echo $no++; ?></td>
@@ -710,6 +734,9 @@ body .container .table-arsip-op-wrapper{margin-left:0;margin-right:0;}
                             <td><?php echo htmlspecialchars($r['nama_berkas']); ?></td>
                             <td><?php echo indoDateShort(substr($r['tgl_buat'],0,10)); ?></td>
                             <td class="center-align"><?php echo (int)$r['jml_surat']; ?></td>
+                            <?php if ((int)$_SESSION['admin'] === 1): ?>
+                                <td class="center-align"><?php echo htmlspecialchars($r['arsiparis'] ?? ''); ?></td>
+                            <?php endif; ?>
                             <td class="center-align" style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
                                 <a href="index.php?page=admin&act=arsip_op&sub=view&id=<?php echo (int)$r['id']; ?><?php echo $readOnly? '&view_as=su&bidang='.urlencode($proxyBidang) : ''; ?>" class="btn-flat tooltipped" data-position="top" data-tooltip="Lihat Surat Arsip" style="color:#0277bd;"><i class="material-icons">visibility</i></a>
                                 <?php if(!$readOnly): ?>
