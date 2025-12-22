@@ -80,3 +80,9 @@ if ($config) {
         @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_drive VARCHAR(255) NULL");
     }
 }
+
+// API key for programmatic requests that need to act as authenticated users
+// Set this to a long random value and keep it secret. If empty, API-key auth is disabled.
+if (!defined('API_REQUEST_NOMOR_KEY')) {
+    define('API_REQUEST_NOMOR_KEY', 'REMOVED_BY_GIT_HISTORY_REWRITE');
+}
