@@ -201,8 +201,15 @@ if (!isset($_SESSION['admin'])) {
                                     }
                                 }
                             }
+                            // Prefer operator_access_info() for consistent scoping with other pages
                             $idsOperator = [];
-                            if ($foundGroup !== null) {
+                            @include_once __DIR__ . '/include/operator_access.php';
+                            if (function_exists('operator_access_info')) {
+                                $info = operator_access_info($config, $_SESSION);
+                                $idsOperator = !empty($info['allowed_ids']) ? $info['allowed_ids'] : [];
+                            }
+                            // Fallback: try the previous exact-match method if no result
+                            if (empty($idsOperator) && $foundGroup !== null) {
                                 $names = array_map('strtoupper', $BIDANG_USERNAMES_DASH[$foundGroup]);
                                 $esc = [];
                                 foreach ($names as $n) { $esc[] = "'" . mysqli_real_escape_string($config, $n) . "'"; }
@@ -210,7 +217,7 @@ if (!isset($_SESSION['admin'])) {
                                 $ru = mysqli_query($config, $sqlUsers);
                                 if ($ru) { while ($r = mysqli_fetch_assoc($ru)) { $idsOperator[] = (int)$r['id_user']; } }
                             }
-                            if (empty($idsOperator)) { // fallback minimal: dirinya sendiri
+                            if (empty($idsOperator)) { // final fallback: dirinya sendiri
                                 $idsOperator[] = (int)$_SESSION['id_user'];
                             }
                             $operator_id_list_sql = implode(',', array_map('intval', $idsOperator));
