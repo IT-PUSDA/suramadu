@@ -1,8 +1,30 @@
 <?php
-$host = "localhost";
-$username = "root";
-$password = "";
-$database = "ams_native";
+// Load .env into environment (simple parser)
+$projectRoot = dirname(__DIR__, 1);
+$envFile = $projectRoot . '/.env';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || strpos($line, '#') === 0) { continue; }
+        if (strpos($line, '=') === false) { continue; }
+        list($name, $value) = explode('=', $line, 2);
+        $name = trim($name);
+        $value = trim($value);
+        if ((substr($value,0,1) === '"' && substr($value,-1) === '"') || (substr($value,0,1) === "'" && substr($value,-1) === "'")) {
+            $value = substr($value, 1, -1);
+        }
+        putenv("$name=$value");
+        $_ENV[$name] = $value;
+        $_SERVER[$name] = $value;
+    }
+}
+
+// Database defaults (can be overridden via .env)
+$host = getenv('DB_HOST') ?: 'localhost';
+$username = getenv('DB_USERNAME') ?: 'root';
+$password = getenv('DB_PASSWORD') ?: '';
+$database = getenv('DB_DATABASE') ?: 'ams_native';
 
 // TEMP DEBUG: enable error display and logging for local development (remove in production)
 @ini_set('display_errors', 1);
@@ -14,9 +36,9 @@ if (!is_dir(BASE_PATH . '/logs')) { @mkdir(BASE_PATH . '/logs', 0775, true); }
 @ini_set('log_errors', 1);
 @ini_set('error_log', BASE_PATH . '/logs/php_error.log');
 
-// Google API configuration 
-define('GOOGLE_CLIENT_ID', '105436136720-d3ju2cmh6erit721munbiftu0l5ah1jf.apps.googleusercontent.com');
-define('GOOGLE_CLIENT_SECRET', 'REMOVED_BY_GIT_HISTORY_REWRITE');
+// Google API configuration (read-only from environment; no hardcoded secrets)
+define('GOOGLE_CLIENT_ID', getenv('GOOGLE_CLIENT_ID') ?: '');
+define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
 define('GOOGLE_OAUTH_SCOPE', 'https://www.googleapis.com/auth/calendar');
 define('REDIRECT_URI', 'http://localhost/ams/gcal/google_calendar_event_sync.php');
 
@@ -39,16 +61,16 @@ if (!defined('GDRIVE_SERVICE_ACCOUNT_JSON')) {
 }
 // OAuth (non-Workspace) configuration for uploading to personal My Drive
 // Create OAuth Client (type: Web application) in Google Cloud Console with redirect URI below
-if (!defined('GDRIVE_OAUTH_CLIENT_ID')) { define('GDRIVE_OAUTH_CLIENT_ID', '87555883140-9jtgh4vi9870i5d6g3u3qcalm63l4ji7.apps.googleusercontent.com'); }
-if (!defined('GDRIVE_OAUTH_CLIENT_SECRET')) { define('GDRIVE_OAUTH_CLIENT_SECRET', 'REMOVED_BY_GIT_HISTORY_REWRITE'); }
+if (!defined('GDRIVE_OAUTH_CLIENT_ID')) { define('GDRIVE_OAUTH_CLIENT_ID', getenv('GDRIVE_OAUTH_CLIENT_ID') ?: ''); }
+if (!defined('GDRIVE_OAUTH_CLIENT_SECRET')) { define('GDRIVE_OAUTH_CLIENT_SECRET', getenv('GDRIVE_OAUTH_CLIENT_SECRET') ?: ''); }
 // Adjust base URL if app not served from /ams or host differs
 if (!defined('GDRIVE_OAUTH_REDIRECT_URI')) { define('GDRIVE_OAUTH_REDIRECT_URI', 'http://localhost/ams/src/Utils/gdrive_oauth_connect.php'); }
 // Where to store refresh token JSON {"refresh_token":"..."}
 if (!defined('GDRIVE_OAUTH_TOKEN_JSON')) { define('GDRIVE_OAUTH_TOKEN_JSON', dirname(__DIR__) . '/Utils/credentials/gdrive_oauth_token.json'); }
 // Target Drive Folder ID to store files (use a specific folder for all Surat Keluar files)
 if (!defined('GDRIVE_PARENT_FOLDER_ID')) {
-    // Updated to the folder you requested for archival uploads
-    define('GDRIVE_PARENT_FOLDER_ID', 'REMOVED_BY_GIT_HISTORY_REWRITE'); // target folder ID
+    // Read from environment; keep empty when not configured
+    define('GDRIVE_PARENT_FOLDER_ID', getenv('GDRIVE_PARENT_FOLDER_ID') ?: '');
 }
 // Automatically create a public link (anyone with the link can view) for uploaded files
 if (!defined('GDRIVE_MAKE_FILE_PUBLIC')) {
@@ -81,8 +103,8 @@ if ($config) {
     }
 }
 
-// API key for programmatic requests that need to act as authenticated users
-// Set this to a long random value and keep it secret. If empty, API-key auth is disabled.
+// API key for programmatic requests (read from env when available)
 if (!defined('API_REQUEST_NOMOR_KEY')) {
-    define('API_REQUEST_NOMOR_KEY', 'REMOVED_BY_GIT_HISTORY_REWRITE');
+    $envKey = getenv('API_REQUEST_NOMOR_KEY');
+    define('API_REQUEST_NOMOR_KEY', $envKey !== false ? $envKey : '');
 }
