@@ -233,7 +233,10 @@ if (empty($_SESSION['admin'])) {
         function pick(i){ if(!items[i]) return; input.value = items[i].getAttribute('data-kode'); hide(); input.focus(); }
         let t;
         function query(q){
-            fetch('/src/Utils/klasifikasi_search.php?term='+encodeURIComponent(q||''), {credentials:'same-origin'})
+            // build URL relative to application root so it works on both local and production servers
+            const root = window.location.pathname.replace(/\/index\.php.*$/,'').replace(/\/$/,'');
+            const url = (root || '') + '/src/Utils/klasifikasi_search.php?term='+encodeURIComponent(q||'');
+            fetch(url, {credentials:'same-origin'})
                 .then(r=>r.ok?r.json():[])
                 .then(render)
                 .catch(()=>hide());
