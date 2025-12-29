@@ -420,7 +420,7 @@ foreach ($groups as $key => $_unused) {
             <div class="card-content">
                 <h5 style="margin:0 0 16px; display:flex; align-items:center; gap:8px;">
                     <i class="material-icons" style="color:#546e7a;">archive</i>
-                    Arsip per Bidang/UPT
+                    Arsip Per Bidang/UPT
                 </h5>
                 <?php if (!$hasRel): ?>
                     <div class="card-panel yellow lighten-4" style="border-radius:8px;">Kolom relasi <code>id_arsip_berkas</code> belum tersedia. Sistem akan menambahkannya otomatis untuk menghitung surat yang benar-benar terarsip.</div>
