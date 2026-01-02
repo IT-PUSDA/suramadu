@@ -98,4 +98,54 @@ if (!function_exists('print_bidang_options')) {
         }
     }
 }
+
+if (!function_exists('get_allowed_bidang_codes')) {
+    function get_allowed_bidang_codes(): array {
+        // Keep in sync with options in print_bidang_options(). Return unique values.
+        return [
+            '104.1','104.2','104.3','104.4','104.5',
+            '104.6.02','104.6.05','104.6.06','104.6.07','104.6.08','104.6.09'
+        ];
+    }
+}
+
+if (!function_exists('print_bidang_selector')) {
+        function print_bidang_selector(?string $locked = null, string $name = 'bidang') {
+            // If not locked, render a normal select (name required by forms)
+            if ($locked === null) {
+                echo '<select name="'.htmlspecialchars($name).'" id="'.htmlspecialchars($name).'" required>';
+                print_bidang_options(null);
+                echo '</select>';
+                return;
+            }
+
+            // Locked: show a label + "Ubah" button that reveals a select. The
+            // actual value submitted is stored in a hidden input named $name.
+            $default = htmlspecialchars($locked, ENT_QUOTES);
+            $json_default = json_encode($locked);
+            $id = htmlspecialchars($name);
+
+            echo '<input type="hidden" name="'.htmlspecialchars($name).'" id="'.$id.'-hidden" value="'.$default.'" />';
+            echo '<div id="'.$id.'-display" style="display:flex;align-items:center;gap:8px;">';
+            echo '<span class="grey-text" id="'.$id.'-label">Bidang otomatis: '.$default.'</span>';
+            echo '<button type="button" id="'.$id.'-ubah" class="btn-small blue">Ubah</button>';
+            echo '</div>';
+            echo '<div id="'.$id.'-select-wrapper" style="display:none;margin-top:8px;">';
+            echo '<select id="'.$id.'-select">';
+            print_bidang_options($locked);
+            echo '</select> ';
+            echo '<button type="button" id="'.$id.'-batal" class="btn-small red">Batal</button>';
+            echo '</div>';
+
+            // Inline JS: toggle the select & keep hidden input in sync with choice. Also ensure value is set on form submit.
+            echo '<script>(function(){var def=' . $json_default . '; var ub=document.getElementById("'.$id.'-ubah"); var wrap=document.getElementById("'.$id.'-select-wrapper"); var select=document.getElementById("'.$id.'-select"); var hidden=document.getElementById("'.$id.'-hidden"); var label=document.getElementById("'.$id.'-label"); var bat=document.getElementById("'.$id.'-batal"); if(!ub) return; ub.addEventListener("click",function(){wrap.style.display="block"; ub.style.display="none"; select.value=hidden.value; select.focus();}); select.addEventListener("change",function(){hidden.value=this.value; label.textContent="Bidang: "+this.value;}); bat.addEventListener("click",function(){wrap.style.display="none"; ub.style.display="inline-block"; hidden.value=def; label.textContent="Bidang otomatis: "+def;});
+                // If the selector sits inside a form, make sure the hidden input is synchronized immediately before submit
+                var el = hidden; while(el && el.tagName && el.tagName.toLowerCase() !== "form") { el = el.parentElement; }
+                if (el && el.tagName && el.tagName.toLowerCase()==="form") {
+                    el.addEventListener("submit", function(){ if(select && select.value) hidden.value = select.value; });
+                }
+            })();</script>';
+        }
+    }
+
 ?>

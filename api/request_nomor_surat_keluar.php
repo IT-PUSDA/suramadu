@@ -83,12 +83,12 @@ if (!preg_match('/^[a-zA-Z0-9.\/ -]*$/', $input['kode'] . '/' . 'X')) {
     // no-op to keep parity with original checks; the main number format built below will be validated
 }
 
-// Resolve bidang: if session role is operator (3) or bidang (4) lock bidang from session logic if available
-if (in_array((int)($_SESSION['admin'] ?? 0), [3,4], true) && function_exists('resolve_bidang_code_from_session')) {
+// Resolve bidang: prefer explicitly submitted value; if empty and user is locked (role 3 or 4) fall back to resolved code from session
+$bidang = $input['bidang'] ?? '';
+if ($bidang === '' && in_array((int)($_SESSION['admin'] ?? 0), [3,4], true) && function_exists('resolve_bidang_code_from_session')) {
     $bidang = resolve_bidang_code_from_session();
-} else {
-    $bidang = $input['bidang'] ?: '0';
 }
+$bidang = $bidang ?: '0';
 
 $tgl_surat_raw = $input['tgl_surat'];
 $ts = DateTime::createFromFormat('Y-m-d', $tgl_surat_raw) ?: DateTime::createFromFormat('Y-m-d H:i:s', $tgl_surat_raw) ?: new DateTime($tgl_surat_raw);

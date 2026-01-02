@@ -21,8 +21,10 @@ if (isset($_REQUEST['submit1'])) {
     $tgl_surat = $_REQUEST['tgl_surat'];
     $isi = $_REQUEST['isi'];
     $id_user = $_SESSION['id_user'];
-    $bidang_input = $_REQUEST['bidang'];
-    $bidang = (in_array((int)$_SESSION['admin'], [3,4], true) && ($auto = resolve_bidang_code_from_session())) ? $auto : $bidang_input;
+    $bidang_input = $_REQUEST['bidang'] ?? '';
+    $bidang_resolved = (in_array((int)$_SESSION['admin'], [3,4], true)) ? resolve_bidang_code_from_session() : null;
+    // Prefer submitted value (user clicked "Ubah"). If blank, fallback to resolved value.
+    $bidang = ($bidang_input !== '' && $bidang_input !== null) ? $bidang_input : ($bidang_resolved ?? $bidang_input);
     $nama_pembuat = $_REQUEST['nama_pembuat'];
 
     $raw_pin = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
@@ -57,6 +59,8 @@ if (isset($_REQUEST['submit1'])) {
     if (!preg_match('/^[0-9.-]*$/', $tgl_surat)) { $_SESSION['tgl_suratk']='Tanggal tidak valid'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
     if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $isi)) { $_SESSION['isik']='Isi ringkas tidak valid'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
     if (!preg_match('/^[0-9.]*$/', $bidang)) { $_SESSION['bidangk']='Bidang tidak valid'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
+    $allowed = get_allowed_bidang_codes();
+    if (!in_array($bidang, $allowed, true)) { $_SESSION['bidangk'] = 'Form Bidang tidak valid'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
 
     $dup = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
     if (mysqli_num_rows($dup) > 0) { $_SESSION['errDup']='Nomor Surat sudah terpakai, gunakan yang lain!'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
