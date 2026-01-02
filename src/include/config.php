@@ -1,6 +1,8 @@
 <?php
 // Load .env into environment (simple parser)
 $projectRoot = dirname(__DIR__, 1);
+// Ensure application uses local timezone (GMT+7)
+date_default_timezone_set('Asia/Jakarta');
 $envFile = $projectRoot . '/.env';
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
