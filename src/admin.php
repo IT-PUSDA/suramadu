@@ -447,28 +447,43 @@ if (!isset($_SESSION['admin'])) {
                                         'upt-madura' => 'pink darken-1',
                                     ];
 
-                                    // Kumpulkan semua username unik dan ambil id_user-nya
-                                    $allUsernames = [];
-                                    foreach ($BIDANG_USERNAMES as $list) { foreach ($list as $u) { $allUsernames[] = strtoupper($u); } }
-                                    $allUsernames = array_values(array_unique($allUsernames));
-                                    $in = "'" . implode("','", array_map(function($s) use ($config){ return mysqli_real_escape_string($config, $s); }, $allUsernames)) . "'";
-                                    $resUsers = mysqli_query($config, "SELECT id_user, UPPER(username) AS uname FROM tbl_user WHERE UPPER(username) IN ($in)");
-                                    $unameToId = [];
-                                    if ($resUsers) {
-                                        while ($r = mysqli_fetch_assoc($resUsers)) { $unameToId[$r['uname']] = (int)$r['id_user']; }
-                                    }
+                                    // Build counts per bidang using the same scope as arsip_per_bidang:
+                                    // match tokens against UPPER(username) or UPPER(nama) via LIKE,
+                                    // and fallback to detecting kode bidang inside no_surat.
+                                    $bidangCodes = [
+                                        'sekretariat'   => '104.1',
+                                        'psda'          => '104.2',
+                                        'swp'           => '104.3',
+                                        'irigasi'       => '104.4',
+                                        'binfat'        => '104.5',
+                                        'upt-kediri'    => '104.6.02',
+                                        'korwil-malang' => '104.6.02',
+                                        'korwil-surabaya'=> '104.6.02',
+                                        'upt-bojonegoro'=> '104.6.05',
+                                        'korwil-madiun' => '104.6.05',
+                                        'upt-bondowoso' => '104.6.06',
+                                        'upt-lumajang'  => '104.6.07',
+                                        'upt-pasuruan'  => '104.6.08',
+                                        'upt-madura'    => '104.6.09',
+                                    ];
 
-                                    // Ambil jumlah per bidang
                                     $counts = [];
                                     foreach ($BIDANG_USERNAMES as $key => $usernames) {
-                                        $ids = [];
-                                        foreach ($usernames as $u) {
-                                            $uUp = strtoupper($u);
-                                            if (isset($unameToId[$uUp])) { $ids[] = $unameToId[$uUp]; }
+                                        $conds = [];
+                                        foreach ((array)$usernames as $tok) {
+                                            $t = strtoupper($tok);
+                                            $esc = mysqli_real_escape_string($config, $t);
+                                            $conds[] = "UPPER(u.username) LIKE '%$esc%'";
+                                            $conds[] = "UPPER(u.nama) LIKE '%$esc%'";
                                         }
-                                        if (count($ids) === 0) { $counts[$key] = 0; continue; }
-                                        $idList = implode(',', array_map('intval', $ids));
-                                        $sql = "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_user IN ($idList)";
+                                        // fallback: also match kode di no_surat
+                                        if (isset($bidangCodes[$key]) && $bidangCodes[$key] !== '') {
+                                            $codeEsc = mysqli_real_escape_string($config, $bidangCodes[$key]);
+                                            $conds[] = "s.no_surat LIKE '%$codeEsc%'";
+                                        }
+                                        if (empty($conds)) { $counts[$key] = 0; continue; }
+                                        $where = '(' . implode(' OR ', $conds) . ')';
+                                        $sql = "SELECT COUNT(*) AS c FROM tbl_surat_keluar s LEFT JOIN tbl_user u ON s.id_user=u.id_user WHERE $where";
                                         $res = mysqli_query($config, $sql);
                                         $row = $res ? mysqli_fetch_assoc($res) : ['c' => 0];
                                         $counts[$key] = (int)$row['c'];
