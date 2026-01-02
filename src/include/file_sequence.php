@@ -19,17 +19,41 @@ if (!function_exists('ensure_file_no_column')) {
 if (!function_exists('next_file_sequence_for_year')) {
     // Get next sequence number for given year across all surat_keluar records (regardless of jenis/user)
     function next_file_sequence_for_year(mysqli $config, int $year): int {
-        // Prefer MAX(file_no) filtered by year of tgl_surat
         $year = (int)$year;
-        $max = 0;
-        $q = mysqli_query($config, "SELECT MAX(file_no) AS m FROM tbl_surat_keluar WHERE YEAR(tgl_surat) = '$year'");
-        if ($q) {
-            $r = mysqli_fetch_assoc($q);
-            $max = (int)($r['m'] ?? 0);
+        // Ensure supporting sequence table exists
+        mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_file_sequence (
+            `year` INT NOT NULL PRIMARY KEY,
+            `seq` INT NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        // Obtain the next sequence atomically using a transaction + SELECT ... FOR UPDATE
+        $next = 1;
+        // Turn off autocommit for transaction
+        $autocommit = mysqli_get_server_info($config); // dummy read to keep code style; autocommit handled below
+        mysqli_begin_transaction($config);
+        try {
+            $y = mysqli_real_escape_string($config, (string)$year);
+            $qr = mysqli_query($config, "SELECT seq FROM tbl_file_sequence WHERE `year` = '$y' FOR UPDATE");
+            if ($qr && mysqli_num_rows($qr) > 0) {
+                $ro = mysqli_fetch_assoc($qr);
+                $current = (int)($ro['seq'] ?? 0);
+                $next = $current + 1;
+                mysqli_query($config, "UPDATE tbl_file_sequence SET seq = " . intval($next) . " WHERE `year` = '$y'");
+            } else {
+                // initialize for this year
+                $next = 1;
+                mysqli_query($config, "INSERT INTO tbl_file_sequence(`year`, seq) VALUES ('$y', 1)");
+            }
+            mysqli_commit($config);
+        } catch (Exception $e) {
+            mysqli_rollback($config);
+            // fallback: compute from MAX(file_no) to avoid blocking functionality
+            $q = mysqli_query($config, "SELECT MAX(file_no) AS m FROM tbl_surat_keluar WHERE YEAR(tgl_surat) = '" . intval($year) . "'");
+            $max = 0;
+            if ($q) { $r = mysqli_fetch_assoc($q); $max = (int)($r['m'] ?? 0); }
+            $next = $max + 1;
+            if ($next < 1) { $next = 1; }
         }
-        $next = $max + 1;
-        // Avoid zero or negative
-        if ($next < 1) { $next = 1; }
         return $next;
     }
 }
