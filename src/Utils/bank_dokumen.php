@@ -7,8 +7,8 @@ if(empty($_SESSION['admin'])){
     die();
 }
 
-// Cek akses: hanya Super Admin (1), User Sekretariat (3), Admin Sekretariat (4) yang bisa akses
-$allowed_roles = [1, 3, 4];
+// Cek akses: hanya Super Admin (1) dan Admin Sekretariat (3) yang bisa akses
+$allowed_roles = [1, 3];
 if (!in_array((int)$_SESSION['admin'], $allowed_roles)) {
     $_SESSION['err'] = '<center>Anda tidak memiliki akses ke fitur ini!</center>';
     header("Location: index.php");
@@ -104,26 +104,10 @@ foreach ($kategori as $kat) {
 
 /* Container untuk kategori cards */
 .bank-dokumen-categories {
-    display: none;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 20px;
     margin-top: 30px;
-    animation: slideIn 0.4s ease forwards;
-}
-
-.bank-dokumen-categories.active {
-    display: grid;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 /* Khaki category cards */
@@ -136,6 +120,9 @@ foreach ($kategori as $kat) {
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    text-decoration: none;
+    color: inherit;
+    display: block;
 }
 
 .card-bank-dokumen-kat:hover {
@@ -155,20 +142,9 @@ foreach ($kategori as $kat) {
     color: #666;
 }
 
-.bank-dokumen-back-btn {
-    background: #7f8c8d;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: background 0.3s;
-}
-
-.bank-dokumen-back-btn:hover {
-    background: #2980b9;
-}
+.bank-dokumen-back-btn { background: #7f8c8d; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; transition: background 0.3s; }
+.bank-dokumen-back-btn:hover { background: #2980b9; }
+.bank-dokumen-empty { text-align:center; color:#90a4ae; padding:32px 0; font-size:15px; }
 </style>
 
 <!-- Row Start -->
@@ -193,51 +169,29 @@ foreach ($kategori as $kat) {
 <div class="row">
     <div class="col s12 m8 offset-m2">
         <!-- Main Card -->
-        <div class="card-bank-dokumen-main" id="mainCardBankDokumen">
+        <div class="card-bank-dokumen-main">
             <h2>📦 Bank Dokumen</h2>
-            <p>Klik untuk membuka kategori dokumen</p>
+            <p>Pilih kategori di bawah untuk mulai mengelola dokumen.</p>
         </div>
 
-        <!-- Categories Container (hidden by default) -->
-        <div class="bank-dokumen-categories" id="kategoriesContainer">
+        <?php if (!empty($kategori)): ?>
+        <div class="bank-dokumen-categories">
             <?php foreach ($kategori as $kat): ?>
-            <div class="card-bank-dokumen-kat" onclick="openKategori(<?php echo (int)$kat['id_kategori']; ?>, '<?php echo htmlspecialchars($kat['nama_kategori'], ENT_QUOTES); ?>')">
-                <h3><?php echo htmlspecialchars($kat['nama_kategori']); ?></h3>
+            <a class="card-bank-dokumen-kat" href="index.php?page=admin&act=bank_dok&sub=list_jenis&id_kat=<?php echo (int)$kat['id_kategori']; ?>">
+                <h3><?php echo htmlspecialchars($kat['nama_kategori'], ENT_QUOTES); ?></h3>
                 <div class="stat">Jenis Berkas: <?php echo $stats[$kat['id_kategori']] ?? 0; ?></div>
-            </div>
+            </a>
             <?php endforeach; ?>
         </div>
-        
+        <?php else: ?>
+        <div class="bank-dokumen-empty">Belum ada kategori dokumen. Tambahkan kategori terlebih dahulu untuk mulai menggunakan Bank Dokumen.</div>
+        <?php endif; ?>
+
         <!-- Back Button (di bawah) -->
         <div style="text-align: center; margin-top: 20px;">
-            <button class="bank-dokumen-back-btn" onclick="backToMain()">← Kembali</button>
+            <button class="bank-dokumen-back-btn" onclick="window.location.href='index.php?page=admin';">← Kembali</button>
         </div>
     </div>
 </div>
-
-<script>
-function openMainCard() {
-    const container = document.getElementById('kategoriesContainer');
-    const mainCard = document.getElementById('mainCardBankDokumen');
-    
-    container.classList.add('active');
-    mainCard.style.opacity = '0.5';
-    mainCard.style.pointerEvents = 'none';
-}
-
-function backToMain() {
-    // Arahkan ke beranda/halaman utama admin
-    window.location.href = 'index.php?page=admin';
-}
-
-function openKategori(idKat, namaKat) {
-    // Arahkan ke halaman detail kategori
-    window.location.href = 'index.php?page=admin&act=bank_dok&sub=list_jenis&id_kat=' + idKat;
-}
-
-// Attach click listener to main card
-document.getElementById('mainCardBankDokumen').addEventListener('click', openMainCard);
-</script>
-
 <?php
 ?>

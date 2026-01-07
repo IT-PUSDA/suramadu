@@ -125,8 +125,8 @@ if (!isset($_SESSION['admin'])) {
                             }
                             break;
                         case 'bank_dok':
-                            // Bank Dokumen - hanya untuk Super Admin (1), User Sekretariat (3), Admin Sekretariat (4)
-                            if (!in_array((int)$_SESSION['admin'], [1, 3, 4])) {
+                            // Bank Dokumen - hanya untuk Super Admin (1) dan Admin Sekretariat (3)
+                            if (!in_array((int)$_SESSION['admin'], [1, 3])) {
                                 $_SESSION['err'] = 'Anda tidak memiliki akses ke fitur ini!';
                                 echo '<div class="card red lighten-5"><div class="card-content"><span class="red-text">' . $_SESSION['err'] . '</span></div></div>';
                                 unset($_SESSION['err']);
@@ -373,7 +373,7 @@ if (!isset($_SESSION['admin'])) {
                                     </a>
                                 </div>
                                 <!-- Card: Bank Dokumen (Super Admin, User Sekretariat, Admin Sekretariat) -->
-                                <?php if (in_array((int)$_SESSION['admin'], [1, 3, 4], true)) { ?>
+                                <?php if (in_array((int)$_SESSION['admin'], [1, 3], true)) { ?>
                                 <div class="col s12 m6 l3">
                                     <a href="index.php?page=admin&act=bank_dok" class="hs-link">
                                         <div class="card amber darken-2 hs-card" style="background: linear-gradient(135deg, #FFD700 0%, #FFC700 100%); border: 2px solid #DAA520;">

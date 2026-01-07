@@ -7,7 +7,7 @@ if(empty($_SESSION['admin'])){
     die();
 }
 
-$allowed_roles = [1, 3, 4];
+$allowed_roles = [1, 3];
 if (!in_array((int)$_SESSION['admin'], $allowed_roles)) {
     $_SESSION['err'] = 'Anda tidak memiliki akses!';
     header("Location: index.php");
