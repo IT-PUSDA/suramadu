@@ -20,16 +20,29 @@ $uid = (int)$_SESSION['id_user'];
 // Ambil data kategori
 $query_kat = mysqli_query($config, "SELECT id_kategori, nama_kategori FROM tbl_bank_dokumen_kategori ORDER BY id_kategori");
 $kategori = [];
-while ($row = mysqli_fetch_assoc($query_kat)) {
-    $kategori[] = $row;
+if ($query_kat && mysqli_num_rows($query_kat) > 0) {
+    while ($row = mysqli_fetch_assoc($query_kat)) {
+        $kategori[] = $row;
+    }
+} else {
+    // Query failed or returned no rows; leave $kategori as empty array
+    if ($query_kat === false) {
+        error_log('bank_dokumen: failed to fetch categories - ' . mysqli_error($config));
+    }
 }
 
 // Hitung total jenis per kategori
 $stats = [];
 foreach ($kategori as $kat) {
     $q = mysqli_query($config, "SELECT COUNT(*) as total FROM tbl_bank_dokumen_jenis WHERE id_kategori=" . (int)$kat['id_kategori']);
-    $r = mysqli_fetch_assoc($q);
-    $stats[$kat['id_kategori']] = $r['total'];
+    if ($q && ($r = mysqli_fetch_assoc($q))) {
+        $stats[$kat['id_kategori']] = $r['total'];
+    } else {
+        $stats[$kat['id_kategori']] = 0;
+        if ($q === false) {
+            error_log('bank_dokumen: failed to count jenis for kategori ' . (int)$kat['id_kategori'] . ' - ' . mysqli_error($config));
+        }
+    }
 }
 ?>
 
