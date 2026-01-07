@@ -22,35 +22,20 @@
                 $tgl_notdin = $_REQUEST['tgl_notdin'];
 				$isi_notdin = $_REQUEST['isi_notdin'];
                 $id_user = $_SESSION['id_user'];
-				$q = mysqli_query($config, "SELECT id_notdin,no_notdin,tgl_notdin FROM tbl_notdin  where id_notdin in (select max(id_notdin) from tbl_notdin)");
-				$data = mysqli_fetch_array($q);
-				if(isset($data['no_notdin']))
-				{
-					$no_notdin_k = $data['no_notdin'];
-					$no = substr($no_notdin_k,0,1);
-					if($no == 0)
-					{
-						$urut = substr($no_notdin_k,-1,1) +1;
-						if($urut>9)
-						{
-							$no_notdin = $urut;
-						}
-						else
-						{
-							$no_notdin = '0'.$urut;
-						}
-						
-					}
-					else
-					{
-						$urut = $no_notdin_k + 1;
-						$no_notdin = $urut;
-					}	
-				} 
-				else
-				{
-					$no_notdin='01';
-				}
+
+                // Ensure helpers are loaded for bidang mapping and positioning
+                require_once __DIR__ . '/../include/bidang_mapping.php';
+                require_once __DIR__ . '/../include/file_sequence.php';
+
+                // Resolve bidang code from asal label (e.g., SEKRETARIAT -> 104.1)
+                $bidang_code = resolve_bidang_code_from_label($asal_notdin) ?? '104.1';
+                // Year of nota dinas
+                $year_notdin = date('Y', strtotime($tgl_notdin));
+                // Use per-jenis counter so nota dinas has separate sequence from other types
+                $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year_notdin, $bidang_code, 'nota_dinas');
+                $pos_code = page_line_label_from_seq($pos_seq, 40); // ex: '0101'
+                // Build nomor nota dinas to include page/line + bidang + year
+                $no_notdin = $pos_code . '/' . $bidang_code . '/' . $year_notdin;
                 //validasi input data
                         if(!preg_match("/^[a-zA-Z0-9.,() \/ -]*$/", $asal_notdin)){
                             $_SESSION['asal_notdink'] = 'Form Asal hanya boleh mengandung karakter huruf, angka, spasi, titik(.), koma(,), minus(-),kurung() dan garis miring(/)';

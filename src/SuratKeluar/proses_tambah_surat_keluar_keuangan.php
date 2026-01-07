@@ -48,8 +48,10 @@ if (isset($_REQUEST['submit1'])) {
 
     $q1 = mysqli_query($config, "SELECT max(id_surat) as urut FROM tbl_surat_keluar"); $d1 = mysqli_fetch_array($q1); $id_surat = ($d1['urut'] ?? 0) + 1;
 
-    // Format umum seperti default: kode/no_agenda/bidang/tahun
-    $no_surat = $nkode . '/' . $no_agendak . '/' . $bidang . '/' . $year;
+    // Format dengan page+line per (tahun,bidang,jenis): kode/<pageLine>/bidang/tahun
+    $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'keuangan');
+    $pos_code = page_line_label_from_seq($pos_seq, 40);
+    $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
     // Validasi standar
     if (!preg_match('/^[0-9.]*$/', $nkode)) { $_SESSION['kodek']='Form Kode Klasifikasi hanya angka & titik'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }

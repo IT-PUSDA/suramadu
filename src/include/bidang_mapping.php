@@ -30,15 +30,9 @@ if (!function_exists('resolve_bidang_code_from_session')) {
 
             'KEDIRI'           => '104.6.02',
             'ADMIN_KEDIRI'     => '104.6.02',
-            'MALANG'           => '104.6.02',
-            'ADMIN_MALANG'     => '104.6.02',
-            'SURABAYA'         => '104.6.02',
-            'ADMIN_SURABAYA'   => '104.6.02',
 
             'BOJONEGORO'       => '104.6.05',
             'ADMIN_BOJONEGORO' => '104.6.05',
-            'MADIUN'           => '104.6.05',
-            'ADMIN_MADIUN'     => '104.6.05',
 
             'BONDOWOSO'        => '104.6.06',
             'ADMIN_BONDOWOSO'  => '104.6.06',
@@ -80,11 +74,8 @@ if (!function_exists('print_bidang_options')) {
             ['value' => '104.5',    'label' => 'Binfat'],
 
             ['value' => '104.6.02', 'label' => 'UPT Kediri'],
-            ['value' => '104.6.02', 'label' => 'Korwil Malang'],
-            ['value' => '104.6.02', 'label' => 'Korwil Surabaya'],
 
             ['value' => '104.6.05', 'label' => 'UPT Bojonegoro'],
-            ['value' => '104.6.05', 'label' => 'Korwil Madiun'],
             ['value' => '104.6.06', 'label' => 'UPT Bondowoso'],
             ['value' => '104.6.07', 'label' => 'UPT Lumajang'],
             ['value' => '104.6.08', 'label' => 'UPT Pasuruan'],
@@ -106,6 +97,21 @@ if (!function_exists('get_allowed_bidang_codes')) {
             '104.1','104.2','104.3','104.4','104.5',
             '104.6.02','104.6.05','104.6.06','104.6.07','104.6.08','104.6.09'
         ];
+    }
+}
+
+if (!function_exists('resolve_bidang_code_from_label')) {
+    // Map label tokens (as used in Nota Dinas form) to bidang codes.
+    function resolve_bidang_code_from_label(string $label): ?string {
+        $map = [
+            'SEKRETARIAT' => '104.1',
+            'PSDA'        => '104.2',
+            'SWP'         => '104.3',
+            'IRIGASI'     => '104.4',
+            'BINFAT'      => '104.5',
+        ];
+        $key = strtoupper(trim($label));
+        return $map[$key] ?? null;
     }
 }
 

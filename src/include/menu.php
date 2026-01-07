@@ -131,6 +131,9 @@
                 <?php
                 }
                 ?>
+            <?php if (isset($_SESSION['admin']) && (int)$_SESSION['admin'] === 1) { ?>
+            <li><a href="index.php?page=admin&act=activity_log"><i class="material-icons middle">timeline</i> Log Aktivitas</a></li>
+            <?php } ?>
             <?php if (isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1,2], true)) { ?>
             <li><a href="index.php?page=admin&act=arsip"><i class="material-icons middle">archive</i> Arsip</a></li>
             <?php } elseif (isset($_SESSION['admin']) && (int)$_SESSION['admin']===3) { ?>
@@ -194,6 +197,9 @@
             <?php
             }
             ?>
+            <?php if (isset($_SESSION['admin']) && (int)$_SESSION['admin'] === 1) { ?>
+                <li><a href="index.php?page=admin&act=activity_log">Log Aktivitas</a></li>
+            <?php } ?>
             <?php if ($_SESSION['admin'] == 2) { ?>
                 <li><a class="dropdown-button" href="#!" data-activates="pengaturan2">Pengaturan <i class="material-icons md-18">arrow_drop_down</i></a></li>
                 <ul id='pengaturan2' class='dropdown-content'>

@@ -60,8 +60,10 @@ if (isset($_REQUEST['submit1'])) {
     $data1 = mysqli_fetch_array($q1);
     $id_surat = ($data1['urut'] ?? 0) + 1;
 
-    // Format umum (sama seperti default) : kode/no_agenda/bidang/tahun
-    $no_surat = $nkode . '/' . $no_agendak . '/' . $bidang . '/' . $year;
+    // Use per-jenis counter for nota_dinas to keep it separate from other types
+    $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'nota_dinas');
+    $pos_code = page_line_label_from_seq($pos_seq, 40);
+    $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
     // Validasi input
     if (!preg_match('/^[0-9.]*$/', $nkode)) { $_SESSION['kodek']='Form Kode Klasifikasi hanya boleh mengandung karakter angka'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }

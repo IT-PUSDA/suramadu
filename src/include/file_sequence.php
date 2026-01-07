@@ -65,4 +65,98 @@ if (!function_exists('format_file_sequence_label')) {
     }
 }
 
+if (!function_exists('next_position_sequence_for_year_and_bidang')) {
+    // Maintain a sequential counter per (year, bidang, jenis) to derive page/line positions.
+    function next_position_sequence_for_year_and_bidang(mysqli $config, int $year, string $bidang, string $jenis): int {
+        $year = (int)$year;
+        $bidang = mysqli_real_escape_string($config, (string)$bidang);
+        $jenis = mysqli_real_escape_string($config, (string)$jenis);
+
+        // Ensure table exists
+        mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_file_position (
+            `year` INT NOT NULL,
+            `bidang` VARCHAR(50) NOT NULL,
+            `jenis` VARCHAR(50) NOT NULL,
+            `seq` INT NOT NULL,
+            PRIMARY KEY (`year`, `bidang`, `jenis`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $next = 1;
+        mysqli_begin_transaction($config);
+        try {
+            $qr = mysqli_query($config, "SELECT seq FROM tbl_file_position WHERE `year` = '" . intval($year) . "' AND bidang = '" . $bidang . "' AND jenis = '" . $jenis . "' FOR UPDATE");
+            if ($qr && mysqli_num_rows($qr) > 0) {
+                $ro = mysqli_fetch_assoc($qr);
+                $current = (int)($ro['seq'] ?? 0);
+                $next = $current + 1;
+                mysqli_query($config, "UPDATE tbl_file_position SET seq = " . intval($next) . " WHERE `year` = '" . intval($year) . "' AND bidang = '" . $bidang . "' AND jenis = '" . $jenis . "'");
+            } else {
+                $next = 1;
+                mysqli_query($config, "INSERT INTO tbl_file_position(`year`, bidang, jenis, seq) VALUES ('" . intval($year) . "', '" . $bidang . "', '" . $jenis . "', 1)");
+            }
+            mysqli_commit($config);
+        } catch (Exception $e) {
+            mysqli_rollback($config);
+            // Fallback: estimate sequence by counting existing entries
+            $q = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE YEAR(tgl_surat) = '" . intval($year) . "' AND bidang = '" . $bidang . "' AND jenis = '" . $jenis . "'");
+            $c = 0; if ($q) { $r = mysqli_fetch_assoc($q); $c = (int)($r['c'] ?? 0); }
+            $next = $c + 1;
+        }
+        return $next;
+    }
+}
+
+if (!function_exists('page_line_label_from_seq')) {
+    // Given a linear sequence and lines-per-page (default 40), return page+line label like "0101" (page=01 line=01)
+    function page_line_label_from_seq(int $seq, int $perPage = 40): string {
+        $seq = max(1, (int)$seq);
+        $perPage = max(1, (int)$perPage);
+        $page = intdiv($seq - 1, $perPage) + 1;
+        $line = (($seq - 1) % $perPage) + 1;
+        $page_str = str_pad((string)$page, 2, '0', STR_PAD_LEFT);
+        $line_str = str_pad((string)$line, 2, '0', STR_PAD_LEFT);
+        return $page_str . $line_str;
+    }
+}
+
+if (!function_exists('next_position_sequence_for_year_and_bidang_global')) {
+    // Maintain a sequential counter per (year, bidang) to derive page/line positions across all kinds.
+    // This is used when the counter must be shared between all 'jenis' values (global per bidang).
+    function next_position_sequence_for_year_and_bidang_global(mysqli $config, int $year, string $bidang): int {
+        $year = (int)$year;
+        $bidang = mysqli_real_escape_string($config, (string)$bidang);
+
+        // Ensure table exists
+        mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_file_position_bidang (
+            `year` INT NOT NULL,
+            `bidang` VARCHAR(50) NOT NULL,
+            `seq` INT NOT NULL,
+            PRIMARY KEY (`year`, `bidang`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+        $next = 1;
+        mysqli_begin_transaction($config);
+        try {
+            $qr = mysqli_query($config, "SELECT seq FROM tbl_file_position_bidang WHERE `year` = '" . intval($year) . "' AND bidang = '" . $bidang . "' FOR UPDATE");
+            if ($qr && mysqli_num_rows($qr) > 0) {
+                $ro = mysqli_fetch_assoc($qr);
+                $current = (int)($ro['seq'] ?? 0);
+                $next = $current + 1;
+                mysqli_query($config, "UPDATE tbl_file_position_bidang SET seq = " . intval($next) . " WHERE `year` = '" . intval($year) . "' AND bidang = '" . $bidang . "'");
+            } else {
+                $next = 1;
+                mysqli_query($config, "INSERT INTO tbl_file_position_bidang(`year`, bidang, seq) VALUES ('" . intval($year) . "', '" . $bidang . "', 1)");
+            }
+            mysqli_commit($config);
+        } catch (Exception $e) {
+            mysqli_rollback($config);
+            // Fallback: estimate sequence by counting existing entries across ALL jenis
+            $q = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE YEAR(tgl_surat) = '" . intval($year) . "' AND bidang = '" . $bidang . "'");
+            $c = 0; if ($q) { $r = mysqli_fetch_assoc($q); $c = (int)($r['c'] ?? 0); }
+            $next = $c + 1;
+        }
+        return $next;
+    }
+}
+
 ?>

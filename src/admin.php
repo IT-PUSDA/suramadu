@@ -115,6 +115,34 @@ if (!isset($_SESSION['admin'])) {
                         case 'arsip_op':
                             include(BASE_PATH . '/src/SuratKeluar/arsip_operator.php');
                             break;
+                        case 'activity_log':
+                            if ((int)$_SESSION['admin'] !== 1) {
+                                $_SESSION['err'] = 'Anda tidak memiliki akses ke log aktivitas!';
+                                echo '<div class="card red lighten-5"><div class="card-content"><span class="red-text">' . htmlspecialchars($_SESSION['err']) . '</span></div></div>';
+                                unset($_SESSION['err']);
+                            } else {
+                                include(BASE_PATH . '/src/Utils/activity_log.php');
+                            }
+                            break;
+                        case 'bank_dok':
+                            // Bank Dokumen - hanya untuk Super Admin (1), User Sekretariat (3), Admin Sekretariat (4)
+                            if (!in_array((int)$_SESSION['admin'], [1, 3, 4])) {
+                                $_SESSION['err'] = 'Anda tidak memiliki akses ke fitur ini!';
+                                echo '<div class="card red lighten-5"><div class="card-content"><span class="red-text">' . $_SESSION['err'] . '</span></div></div>';
+                                unset($_SESSION['err']);
+                            } else {
+                                $sub = isset($_GET['sub']) ? $_GET['sub'] : '';
+                                if ($sub === '') {
+                                    include(BASE_PATH . '/src/Utils/bank_dokumen.php');
+                                } elseif ($sub === 'list_jenis') {
+                                    include(BASE_PATH . '/src/Utils/bank_dokumen_list_jenis.php');
+                                } elseif ($sub === 'list_dokumen') {
+                                    include(BASE_PATH . '/src/Utils/bank_dokumen_list_dokumen.php');
+                                } else {
+                                    include(BASE_PATH . '/src/Utils/bank_dokumen_process.php');
+                                }
+                            }
+                            break;
                     }
                 } else {
                 ?>
@@ -344,8 +372,21 @@ if (!isset($_SESSION['admin'])) {
                                 </div>
                                     </a>
                                 </div>
+                                <!-- Card: Bank Dokumen (Super Admin, User Sekretariat, Admin Sekretariat) -->
+                                <?php if (in_array((int)$_SESSION['admin'], [1, 3, 4], true)) { ?>
+                                <div class="col s12 m6 l3">
+                                    <a href="index.php?page=admin&act=bank_dok" class="hs-link">
+                                        <div class="card amber darken-2 hs-card" style="background: linear-gradient(135deg, #FFD700 0%, #FFC700 100%); border: 2px solid #DAA520;">
+                                            <div class="card-content">
+                                                <span class="card-title" style="color: #333; display:flex;align-items:center;gap:8px;"><i class="material-icons md-36">folder_special</i> Bank Dokumen</span>
+                                                <h5 style="color: #333; margin:8px 0 0;">📦 KELOLA DOKUMEN</h5>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <?php } ?>
                                 <?php if ((int)$_SESSION['admin'] === 1) { ?>
-                                <!-- Card: Jumlah Pengguna (Super Admin) diletakkan di sebelah Arsip) -->
+                                <!-- Card: Jumlah Pengguna (Super Admin) diletakkan di sebelah Bank Dokumen) -->
                                 <div class="col s12 m6 l3">
                                     <a href="index.php?page=admin&act=sett&sub=usr" class="hs-link">
                                         <div class="card blue accent-2 hs-card">

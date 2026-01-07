@@ -106,3 +106,12 @@ Berikut adalah daftar file yang tidak digunakan dan dapat dihapus dengan aman:
 ./tambah_nota_dinas.php.bak
 ./cetak_terusan - Copy.php
 ```
+---
+
+## Penomoran: Kode halaman & baris (page/line)
+
+- Middle code pada format nomor surat kini menunjukkan halaman dan baris (mis. `0101` = halaman 01, baris 01).
+- Setiap halaman berisi maksimal 40 baris; baris ke-41 akan menjadi `0201` (halaman 02, baris 01).
+- Penomoran dipertahankan per tahun, per bidang, dan per jenis dokumen untuk mencegah duplikasi antar bidang/jenis.
+- Implementasi ada di `src/include/file_sequence.php`. Tabel `tbl_file_position` dibuat otomatis saat dipakai.
+

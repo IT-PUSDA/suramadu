@@ -110,3 +110,6 @@ if (!defined('API_REQUEST_NOMOR_KEY')) {
     $envKey = getenv('API_REQUEST_NOMOR_KEY');
     define('API_REQUEST_NOMOR_KEY', $envKey !== false ? $envKey : '');
 }
+
+require_once __DIR__ . '/activity_logger.php';
+activity_log_request($config);
