@@ -94,7 +94,7 @@
             </li>
 			-->
             <li><a href="index.php?page=admin&act=ref"><i class="material-icons middle">class</i> Klasifikasi</a></li>
-            <?php if (isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1,3], true)) { ?>
+            <?php if (isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1,4], true)) { ?>
             <li><a href="index.php?page=admin&act=bank_dok"><i class="material-icons middle">folder_special</i> Bank Dokumen</a></li>
             <?php } ?>
             <li class="no-padding">
@@ -173,7 +173,7 @@
                 <li><a href="index.php?page=admin&act=ask_ph">Produk Hukum</a></li>
                 <li><a href="index.php?page=admin&act=ask_keu">Keuangan</a></li>
             </ul>
-            <?php if(isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1,3], true)) { ?>
+            <?php if(isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1,4], true)) { ?>
             <li><a href="index.php?page=admin&act=bank_dok">Bank Dokumen</a></li>
             <?php } ?>
             <?php if(isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1,2], true)) { ?>
