@@ -66,13 +66,33 @@
                 header("Location: ./admin.php?page=ask");
                 die();
             } else {
-				if($_SESSION['admin'] == 4){
-					$id_user=$_SESSION['id_user'];
-					$query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar 
-					WHERE id_user='$id_user' and tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal'");
-				} else {
-					$query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal'");
-				}
+                $tipe = isset($_REQUEST['tipe']) ? $_REQUEST['tipe'] : 'all';
+                $extraSql = "";
+                if ($tipe == 'umum') {
+                   $extraSql = " AND (jenis NOT IN ('nota_dinas','produk_hukum','keuangan') OR jenis IS NULL)";
+                }
+
+                if($_SESSION['admin'] == 4){ // Level Bidang
+                    $id_user=$_SESSION['id_user'];
+                    $sqlUser = "id_user='$id_user'";
+                    if (isset($_SESSION['kode_bidang']) && !empty($_SESSION['kode_bidang'])) {
+                        $kb = mysqli_real_escape_string($config, $_SESSION['kode_bidang']);
+                        $sqlUser = "(bidang='$kb' OR id_user='$id_user')";
+                    }
+                    $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar 
+                    WHERE $sqlUser and tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal' $extraSql");
+                } else if ($_SESSION['admin'] == 3) { // Level Operator
+                    $BIDANG_USERNAMES = ['sekretariat'=>['SEKRETARIAT','TU'],'psda'=>['PSDA'],'irigasi'=>['IRIGASI'],'swp'=>['SWP'],'binfat'=>['BINFAT'],'upt-kediri'=>['KEDIRI'],'korwil-malang'=>['MALANG'],'korwil-surabaya'=>['SURABAYA'],'upt-bojonegoro'=>['BOJONEGORO'],'korwil-madiun'=>['MADIUN'],'upt-bondowoso'=>['BONDOWOSO'],'upt-lumajang'=>['LUMAJANG'],'upt-pasuruan'=>['PASURUAN'],'upt-madura'=>['MADURA']];
+                    $uname=strtoupper($_SESSION['username']); $namaUpper=isset($_SESSION['nama'])?strtoupper($_SESSION['nama']):''; $foundGroup=null;
+                    foreach($BIDANG_USERNAMES as $gKey=>$arrU){ foreach($arrU as $uChk){ $token=strtoupper($uChk); if($uname===$token||strpos($uname,$token)!==false||($namaUpper&&strpos($namaUpper,$token)!==false)){ $foundGroup=$gKey; break 2; } } }
+                    if($foundGroup===null){ $unameFlat=str_replace(['_',' '], '', $uname); foreach($BIDANG_USERNAMES as $gKey=>$arrU){ foreach($arrU as $uChk){ $tokenFlat=str_replace(['_',' '], '', strtoupper($uChk)); if(strpos($unameFlat,$tokenFlat)!==false){ $foundGroup=$gKey; break 2; } } } }
+                    $idsOperator=[]; if($foundGroup!==null){ $names=array_map('strtoupper',$BIDANG_USERNAMES[$foundGroup]); $esc=[]; foreach($names as $n){ $esc[]="'".mysqli_real_escape_string($config,$n)."'"; } $ru=mysqli_query($config, "SELECT id_user FROM tbl_user WHERE UPPER(username) IN (".implode(',', $esc).")"); if($ru){ while($r=mysqli_fetch_assoc($ru)){ $idsOperator[]=(int)$r['id_user']; } } }
+                    if(empty($idsOperator)){ $idsOperator[]=(int)$_SESSION['id_user']; }
+                    $idList=implode(',', array_map('intval',$idsOperator));
+                    $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE id_user IN ($idList) AND tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal' $extraSql");
+                } else {
+                    $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal' $extraSql");
+                }
                 //$query2 = mysqli_query($config, "SELECT nama FROM tbl_instansi");
                 //list($nama) = mysqli_fetch_array($query2);
 
@@ -99,22 +119,39 @@
                     <!-- Row END -->
 
                     <!-- Row form Start -->
-                    <div class="row jarak-form black-text">
-                        <form class="col s12" method="post" action="">
-                            <div class="input-field col s3">
-                                <i class="material-icons prefix md-prefix">date_range</i>
-                                <input id="dari_tanggal" type="text" name="dari_tanggal" id="dari_tanggal" required>
-                                <label for="dari_tanggal">Dari Tanggal</label>
+                    <div class="row">
+                        <div class="col s12">
+                            <div class="card">
+                                <div class="card-content">
+                                    <form class="row" method="post" action="">
+                                        <div class="input-field col s12 m3">
+                                            <i class="material-icons prefix md-prefix">date_range</i>
+                                            <input id="dari_tanggal" type="text" name="dari_tanggal" value="'.$dari_tanggal.'" required>
+                                            <label for="dari_tanggal">Dari Tanggal</label>
+                                        </div>
+                                        <div class="input-field col s12 m3">
+                                            <i class="material-icons prefix md-prefix">date_range</i>
+                                            <input id="sampai_tanggal" type="text" name="sampai_tanggal" value="'.$sampai_tanggal.'" required>
+                                            <label for="sampai_tanggal">Sampai Tanggal</label>
+                                        </div>
+                                        <div class="input-field col s12 m3">
+                                            <i class="material-icons prefix md-prefix">filter_list</i>
+                                            <select class="browser-default" name="jenis_surat" onchange="if(this.value) window.location.href=this.value;" style="margin-top:10px;">
+                                                <option value="" disabled>Pilih Jenis Surat</option>
+                                                <option value="?page=admin&act=ask&tipe=all" '.($tipe == 'all' ? 'selected' : '').'>Semua Jenis</option>
+                                                <option value="?page=admin&act=ask&tipe=umum" '.($tipe == 'umum' ? 'selected' : '').'>Surat Keluar</option>
+                                                <option value="?page=admin&act=ask_nd">Nota Dinas</option>
+                                                <option value="?page=admin&act=ask_ph">Produk Hukum</option>
+                                                <option value="?page=admin&act=ask_keu">Keuangan</option>
+                                            </select>
+                                        </div>
+                                        <div class="col s12 m3">
+                                            <button type="submit" name="submit" class="btn-large blue waves-effect waves-light" style="width:100%;"><i class="material-icons left">visibility</i> TAMPILKAN</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
-                            <div class="input-field col s3">
-                                <i class="material-icons prefix md-prefix">date_range</i>
-                                <input id="sampai_tanggal" type="text" name="sampai_tanggal" id="sampai_tanggal" required>
-                                <label for="sampai_tanggal">Sampai Tanggal</label>
-                            </div>
-                            <div class="col s6">
-                                <button type="submit" name="submit" class="btn-large blue waves-effect waves-light"> TAMPILKAN <i class="material-icons">visibility</i></button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
                     <!-- Row form END -->
 
@@ -194,13 +231,14 @@
                         <table class="bordered" id="tbl" width="100%">
                             <thead class="blue lighten-4">
                                 <tr>
-                                    <th width="3%">No Agenda</th>
+                                    <th width="5%">No Agenda</th>
                                     <th width="5%">Kode</th>
-                                    <th width="21%">Perihal</th>
-                                    <th width="18%">Tujuan Surat</th>
-                                    <th width="15%">Nomor Surat</th>
-                                    <th width="15%">Tanggal Surat</th>
-                                    <th width="12%">Pengelola</th>
+                                    <th width="10%">Jenis Surat</th>
+                                    <th width="18%">Perihal</th>
+                                    <th width="15%">Tujuan Surat</th>
+                                    <th width="12%">Nomor Surat</th>
+                                    <th width="12%">Tanggal Surat</th>
+                                    <th width="10%">Pengelola</th>
                                     
                                 </tr>
                             </thead>
@@ -211,8 +249,15 @@
                             if(mysqli_num_rows($query) > 0){
                                 $no = 0;
                                 while($row = mysqli_fetch_array($query)){
+                                    $jenis = isset($row['jenis']) ? $row['jenis'] : '';
+                                    $jenis_text = "Surat Keluar";
+                                    if ($jenis == 'nota_dinas') $jenis_text = "Nota Dinas";
+                                    elseif ($jenis == 'produk_hukum') $jenis_text = "Produk Hukum";
+                                    elseif ($jenis == 'keuangan') $jenis_text = "Keuangan";
+
                                  echo ' <td>'.$row['no_agenda'].'</td>
                                         <td>'.$row['kode'].'</td>
+                                        <td>'.$jenis_text.'</td>
                                         <td>'.$row['perihal'].'</td>
                                         <td>'.$row['tujuan'].'</td>
                                         <td>'.$row['no_surat'].'</td>';
@@ -293,22 +338,39 @@
                 <!-- Row END -->
 
                 <!-- Row form Start -->
-                <div class="row jarak-form black-text">
-                    <form class="col s12" method="post" action="">
-                        <div class="input-field col s3">
-                            <i class="material-icons prefix md-prefix">date_range</i>
-                            <input id="dari_tanggal" type="text" name="dari_tanggal" id="dari_tanggal" required>
-                            <label for="dari_tanggal">Dari Tanggal</label>
+                <div class="row">
+                    <div class="col s12">
+                        <div class="card">
+                            <div class="card-content">
+                                <form class="row" method="post" action="">
+                                    <div class="input-field col s12 m3">
+                                        <i class="material-icons prefix md-prefix">date_range</i>
+                                        <input id="dari_tanggal" type="text" name="dari_tanggal" required>
+                                        <label for="dari_tanggal">Dari Tanggal</label>
+                                    </div>
+                                    <div class="input-field col s12 m3">
+                                        <i class="material-icons prefix md-prefix">date_range</i>
+                                        <input id="sampai_tanggal" type="text" name="sampai_tanggal" required>
+                                        <label for="sampai_tanggal">Sampai Tanggal</label>
+                                    </div>
+                                    <div class="input-field col s12 m3">
+                                        <i class="material-icons prefix md-prefix">filter_list</i>
+                                        <select class="browser-default" name="jenis_surat" onchange="if(this.value) window.location.href=this.value;" style="margin-top:10px;">
+                                            <option value="" disabled>Pilih Jenis Surat</option>
+                                            <option value="?page=admin&act=ask&tipe=all" '.((!isset($_REQUEST['tipe']) || $_REQUEST['tipe'] == 'all') ? 'selected' : '').'>Semua Jenis</option>
+                                            <option value="?page=admin&act=ask&tipe=umum" '.((isset($_REQUEST['tipe']) && $_REQUEST['tipe'] == 'umum') ? 'selected' : '').'>Surat Keluar</option>
+                                            <option value="?page=admin&act=ask_nd">Nota Dinas</option>
+                                            <option value="?page=admin&act=ask_ph">Produk Hukum</option>
+                                            <option value="?page=admin&act=ask_keu">Keuangan</option>
+                                        </select>
+                                    </div>
+                                    <div class="col s12 m3">
+                                        <button type="submit" name="submit" class="btn-large blue waves-effect waves-light" style="width:100%"><i class="material-icons left">visibility</i> TAMPILKAN</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                        <div class="input-field col s3">
-                            <i class="material-icons prefix md-prefix">date_range</i>
-                            <input id="sampai_tanggal" type="text" name="sampai_tanggal" id="sampai_tanggal" required>
-                            <label for="sampai_tanggal">Sampai Tanggal</label>
-                        </div>
-                        <div class="col s6">
-                            <button type="submit" name="submit" class="btn-large blue waves-effect waves-light"> TAMPILKAN <i class="material-icons">visibility</i></button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
                 <div class="jarak"></div>';
         }

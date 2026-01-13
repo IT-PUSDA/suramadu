@@ -60,7 +60,12 @@ if ($is_operator) {
     $in = implode(',', array_map('intval', $operator_allowed_ids));
     $where .= ($where? ' AND ':' WHERE ') . " id_user IN ($in)";
 } elseif ($is_bidang) {
-    $where .= ($where? ' AND ':' WHERE ') . " id_user=".$id_user;
+    if (isset($_SESSION['kode_bidang']) && !empty($_SESSION['kode_bidang'])) {
+        $kb = mysqli_real_escape_string($config, $_SESSION['kode_bidang']);
+        $where .= ($where? ' AND ':' WHERE ') . " (bidang='$kb' OR id_user=".$id_user.")";
+    } else {
+        $where .= ($where? ' AND ':' WHERE ') . " id_user=".$id_user;
+    }
 }
 
 // Filter bidang (untuk super admin)

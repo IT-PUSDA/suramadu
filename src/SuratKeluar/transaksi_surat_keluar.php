@@ -54,7 +54,8 @@ if (empty($_SESSION['admin'])) {
             // Pengaturan untuk paginasi (jumlah data per halaman)
             $query_sett = mysqli_query($config, "SELECT surat_keluar FROM tbl_sett");
             list($surat_keluar) = mysqli_fetch_array($query_sett);
-            $limit = $surat_keluar;
+            $limit = (int)$surat_keluar;
+            if ($limit < 1) { $limit = 50; }
             $pg = @$_GET['pg'];
             if (empty($pg)) {
                 $curr = 0;
@@ -231,7 +232,13 @@ if (empty($_SESSION['admin'])) {
                                             $idListAllowed = implode(',', array_map('intval', $operator_allowed_ids));
                                             $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user IN ($idListAllowed)";
                                         } elseif ($is_admin_user) {
-                                            $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='" . intval($id_user) . "'"; // Level Bidang hanya dirinya
+                                            // Level Bidang (4): Tampilkan berdasarkan kode bidang (prioritas) atau id_user
+                                            if (isset($_SESSION['kode_bidang']) && !empty($_SESSION['kode_bidang'])) {
+                                                $kb = mysqli_real_escape_string($config, $_SESSION['kode_bidang']);
+                                                $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " (bidang='$kb' OR id_user='" . intval($id_user) . "')";
+                                            } else {
+                                                $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='" . intval($id_user) . "'";
+                                            }
                                         }
 
                                         // Jika Super Admin mengklik kartu bidang di beranda, terapkan filter bidang
@@ -272,8 +279,9 @@ if (empty($_SESSION['admin'])) {
                                         }
 
                                         // Halaman umum hanya menampilkan jenis 'umum' saja (bukan nota_dinas, produk_hukum, keuangan)
+                                        // Update: Tampilkan juga yang jenisnya NULL/kosong untuk cover data lama, namun exclude jenis lain
                                         if ($hasJenisCol) {
-                                            $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " jenis='umum'";
+                                            $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " (jenis NOT IN ('nota_dinas','produk_hukum','keuangan') OR jenis IS NULL)";
                                         }
 
                                         // Query untuk mengambil data sesuai hak akses + filter jenis umum

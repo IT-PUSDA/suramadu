@@ -13,7 +13,12 @@ function ask_nd_build_query($config, $dari_tanggal, $sampai_tanggal) {
 
     if ((int)$_SESSION['admin'] === 4) { // Bidang: hanya miliknya
         $id_user = (int)$_SESSION['id_user'];
-        return mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE $whereJenis AND id_user='$id_user' AND $whereTanggal");
+        $sqlUser = "id_user='$id_user'";
+        if (isset($_SESSION['kode_bidang']) && !empty($_SESSION['kode_bidang'])) {
+            $kb = mysqli_real_escape_string($config, $_SESSION['kode_bidang']);
+            $sqlUser = "(bidang='$kb' OR id_user='$id_user')";
+        }
+        return mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE $whereJenis AND $sqlUser AND $whereTanggal");
     }
 
     if ((int)$_SESSION['admin'] === 3) { // Operator: batasi per kelompok user (mengikuti dashboard)
@@ -112,7 +117,17 @@ function ask_nd_render($config, $title, $slugAct) {
                     <input id='sampai_tanggal' type='text' name='sampai_tanggal' required>
                     <label for='sampai_tanggal'>Sampai Tanggal</label>
                 </div>
-                <div class='col s6'>
+                <div class='input-field col s3'>
+                    <i class='material-icons prefix md-prefix'>filter_list</i>
+                    <select class='browser-default' name='jenis_surat' onchange='if(this.value) window.location.href=this.value;' style='margin-top: 10px;'>
+                        <option value='?page=admin&act=ask&tipe=all'>Semua Jenis</option>
+                        <option value='?page=admin&act=ask&tipe=umum'>Surat Keluar</option>
+                        <option value='?page=admin&act=ask_nd' selected>Nota Dinas</option>
+                        <option value='?page=admin&act=ask_ph'>Produk Hukum</option>
+                        <option value='?page=admin&act=ask_keu'>Keuangan</option>
+                    </select>
+                </div>
+                <div class='col s3'>
                     <button type='submit' name='submit' class='btn-large blue waves-effect waves-light'> TAMPILKAN <i class='material-icons'>visibility</i></button>
                 </div>
             </form>
@@ -197,7 +212,17 @@ function ask_nd_render($config, $title, $slugAct) {
                     <input id='sampai_tanggal' type='text' name='sampai_tanggal' required>
                     <label for='sampai_tanggal'>Sampai Tanggal</label>
                 </div>
-                <div class='col s6'>
+                <div class='input-field col s3'>
+                    <i class='material-icons prefix md-prefix'>filter_list</i>
+                    <select class='browser-default' name='jenis_surat' onchange='if(this.value) window.location.href=this.value;' style='margin-top: 10px;'>
+                        <option value='?page=admin&act=ask&tipe=all'>Semua Jenis</option>
+                        <option value='?page=admin&act=ask&tipe=umum'>Surat Keluar</option>
+                        <option value='?page=admin&act=ask_nd' selected>Nota Dinas</option>
+                        <option value='?page=admin&act=ask_ph'>Produk Hukum</option>
+                        <option value='?page=admin&act=ask_keu'>Keuangan</option>
+                    </select>
+                </div>
+                <div class='col s3'>
                     <button type='submit' name='submit' class='btn-large blue waves-effect waves-light'> TAMPILKAN <i class='material-icons'>visibility</i></button>
                 </div>
             </form>

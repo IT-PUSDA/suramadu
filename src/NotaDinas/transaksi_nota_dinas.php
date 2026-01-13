@@ -35,7 +35,8 @@
                 list($surat_masuk) = mysqli_fetch_array($query);
 
                 //pagging
-                $limit = $surat_masuk;
+                $limit = (int)$surat_masuk;
+                if ($limit < 1) { $limit = 50; }
                 $pg = @$_GET['pg'];
                 if(empty($pg)){
                     $curr = 0;

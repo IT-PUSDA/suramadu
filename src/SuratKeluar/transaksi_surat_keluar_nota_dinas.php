@@ -98,7 +98,12 @@ if ($is_operator) {
     $where_clause .= ($where_clause? ' AND ':' WHERE ') . ' id_user=' . intval($id_user);
   }
 } elseif ($is_admin_user) {
-  $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='".intval($id_user)."'";
+    if (isset($_SESSION['kode_bidang']) && !empty($_SESSION['kode_bidang'])) {
+        $kb = mysqli_real_escape_string($config, $_SESSION['kode_bidang']);
+        $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " (bidang='$kb' OR id_user='".intval($id_user)."')";
+    } else {
+        $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='".intval($id_user)."'";
+    }
 }
 
 // Bidang filter (sama seperti halaman umum)

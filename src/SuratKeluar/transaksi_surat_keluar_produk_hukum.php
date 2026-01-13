@@ -71,7 +71,14 @@ if ($is_operator) {
   $operator_allowed_ids = $opInfo['allowed_ids'];
   if(empty($operator_allowed_ids)) $operator_allowed_ids[]=(int)$id_user;
   $where_clause .= ($where_clause? ' AND ':' WHERE ') . ' id_user IN (' . implode(',', array_map('intval',$operator_allowed_ids)) . ')';
-} elseif ($is_admin_user) { $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='".intval($id_user)."'"; }
+} elseif ($is_admin_user) {
+    if (isset($_SESSION['kode_bidang']) && !empty($_SESSION['kode_bidang'])) {
+        $kb = mysqli_real_escape_string($config, $_SESSION['kode_bidang']);
+        $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " (bidang='$kb' OR id_user='".intval($id_user)."')";
+    } else {
+        $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user='".intval($id_user)."'";
+    }
+}
 
 $map = [ 'sekretariat'=>['SEKRETARIAT','TU'], 'psda'=>['PSDA'], 'irigasi'=>['IRIGASI'], 'swp'=>['SWP'], 'binfat'=>['BINFAT'], 'upt-kediri'=>['KEDIRI'], 'korwil-malang'=>['MALANG'], 'korwil-surabaya'=>['SURABAYA'], 'upt-bojonegoro'=>['BOJONEGORO'], 'korwil-madiun'=>['MADIUN'], 'upt-bondowoso'=>['BONDOWOSO'], 'upt-lumajang'=>['LUMAJANG'], 'upt-pasuruan'=>['PASURUAN'], 'upt-madura'=>['MADURA'] ];
 if (isset($_GET['filter_bidang']) && $_GET['filter_bidang'] !== '' && isset($map[$_GET['filter_bidang']])) {

@@ -12,8 +12,13 @@ if (isset($_REQUEST['submit'])) {
     $whereTanggal = "tgl_surat BETWEEN '" . mysqli_real_escape_string($config, $dari_tanggal) . "' AND '" . mysqli_real_escape_string($config, $sampai_tanggal) . "'";
     $whereJenis = "jenis='produk_hukum'";
     if ((int)$_SESSION['admin'] === 4) {
-        $id_user=(int)$_SESSION['id_user'];
-        $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE $whereJenis AND id_user='$id_user' AND $whereTanggal");
+        $id_user = (int)$_SESSION['id_user'];
+        $sqlUser = "id_user='$id_user'";
+        if (isset($_SESSION['kode_bidang']) && !empty($_SESSION['kode_bidang'])) {
+            $kb = mysqli_real_escape_string($config, $_SESSION['kode_bidang']);
+            $sqlUser = "(bidang='$kb' OR id_user='$id_user')";
+        }
+        $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE $whereJenis AND $sqlUser AND $whereTanggal");
     } else if ((int)$_SESSION['admin'] === 3) {
         // Batasi ke grup operator seperti pada dashboard
         $BIDANG_USERNAMES = ['sekretariat'=>['SEKRETARIAT','TU'],'psda'=>['PSDA'],'irigasi'=>['IRIGASI'],'swp'=>['SWP'],'binfat'=>['BINFAT'],'upt-kediri'=>['KEDIRI'],'korwil-malang'=>['MALANG'],'korwil-surabaya'=>['SURABAYA'],'upt-bojonegoro'=>['BOJONEGORO'],'korwil-madiun'=>['MADIUN'],'upt-bondowoso'=>['BONDOWOSO'],'upt-lumajang'=>['LUMAJANG'],'upt-pasuruan'=>['PASURUAN'],'upt-madura'=>['MADURA']];
@@ -29,7 +34,20 @@ if (isset($_REQUEST['submit'])) {
     }
 
     echo "<div class='row'><div class='col s12'><div class='z-depth-1'><nav class='secondary-nav'><div class='nav-wrapper blue-grey darken-1'><div class='col 12'><ul class='left'><li class='waves-effect waves-light'><a href='?page=admin&act=ask_ph' class='judul'><i class='material-icons'>print</i> Cetak Agenda Produk Hukum<a></li></ul></div></div></nav></div></div></div>";
-    echo "<div class='row jarak-form black-text'><form class='col s12' method='post' action=''><div class='input-field col s3'><i class='material-icons prefix md-prefix'>date_range</i><input id='dari_tanggal' type='text' name='dari_tanggal' required><label for='dari_tanggal'>Dari Tanggal</label></div><div class='input-field col s3'><i class='material-icons prefix md-prefix'>date_range</i><input id='sampai_tanggal' type='text' name='sampai_tanggal' required><label for='sampai_tanggal'>Sampai Tanggal</label></div><div class='col s6'><button type='submit' name='submit' class='btn-large blue waves-effect waves-light'> TAMPILKAN <i class='material-icons'>visibility</i></button></div></form></div>";
+    echo "<div class='row jarak-form black-text'><form class='col s12' method='post' action=''>
+            <div class='input-field col s3'><i class='material-icons prefix md-prefix'>date_range</i><input id='dari_tanggal' type='text' name='dari_tanggal' required><label for='dari_tanggal'>Dari Tanggal</label></div>
+            <div class='input-field col s3'><i class='material-icons prefix md-prefix'>date_range</i><input id='sampai_tanggal' type='text' name='sampai_tanggal' required><label for='sampai_tanggal'>Sampai Tanggal</label></div>
+            <div class='input-field col s3'><i class='material-icons prefix md-prefix'>filter_list</i>
+                <select class='browser-default' name='jenis_surat' onchange='if(this.value) window.location.href=this.value;' style='margin-top:10px;'>
+                    <option value='?page=admin&act=ask&tipe=all'>Semua Jenis</option>
+                    <option value='?page=admin&act=ask&tipe=umum'>Surat Keluar</option>
+                    <option value='?page=admin&act=ask_nd'>Nota Dinas</option>
+                    <option value='?page=admin&act=ask_ph' selected>Produk Hukum</option>
+                    <option value='?page=admin&act=ask_keu'>Keuangan</option>
+                </select>
+            </div>
+            <div class='col s3'><button type='submit' name='submit' class='btn-large blue waves-effect waves-light'> TAMPILKAN <i class='material-icons'>visibility</i></button></div>
+          </form></div>";
 
     $y=substr($dari_tanggal,0,4);$m=substr($dari_tanggal,5,2);$d=substr($dari_tanggal,8,2);$y2=substr($sampai_tanggal,0,4);$m2=substr($sampai_tanggal,5,2);$d2=substr($sampai_tanggal,8,2);
     $B=['01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April','05'=>'Mei','06'=>'Juni','07'=>'Juli','08'=>'Agustus','09'=>'September','10'=>'Oktober','11'=>'November','12'=>'Desember']; $nm=$B[$m]??$m; $nm2=$B[$m2]??$m2;
@@ -46,5 +64,18 @@ if (isset($_REQUEST['submit'])) {
     echo "</table></div><div class='jarak2'></div>";
 } else {
     echo "<div class='row'><div class='col s12'><div class='z-depth-1'><nav class='secondary-nav'><div class='nav-wrapper blue-grey darken-1'><div class='col 12'><ul class='left'><li class='waves-effect waves-light'><a href='?page=admin&act=ask_ph' class='judul'><i class='material-icons'>print</i> Cetak Agenda Produk Hukum<a></li></ul></div></div></nav></div></div></div>";
-    echo "<div class='row jarak-form black-text'><form class='col s12' method='post' action=''><div class='input-field col s3'><i class='material-icons prefix md-prefix'>date_range</i><input id='dari_tanggal' type='text' name='dari_tanggal' required><label for='dari_tanggal'>Dari Tanggal</label></div><div class='input-field col s3'><i class='material-icons prefix md-prefix'>date_range</i><input id='sampai_tanggal' type='text' name='sampai_tanggal' required><label for='sampai_tanggal'>Sampai Tanggal</label></div><div class='col s6'><button type='submit' name='submit' class='btn-large blue waves-effect waves-light'> TAMPILKAN <i class='material-icons'>visibility</i></button></div></form></div><div class='jarak'></div>";
+    echo "<div class='row jarak-form black-text'><form class='col s12' method='post' action=''>
+            <div class='input-field col s3'><i class='material-icons prefix md-prefix'>date_range</i><input id='dari_tanggal' type='text' name='dari_tanggal' required><label for='dari_tanggal'>Dari Tanggal</label></div>
+            <div class='input-field col s3'><i class='material-icons prefix md-prefix'>date_range</i><input id='sampai_tanggal' type='text' name='sampai_tanggal' required><label for='sampai_tanggal'>Sampai Tanggal</label></div>
+            <div class='input-field col s3'><i class='material-icons prefix md-prefix'>filter_list</i>
+                <select class='browser-default' name='jenis_surat' onchange='if(this.value) window.location.href=this.value;' style='margin-top:10px;'>
+                    <option value='?page=admin&act=ask&tipe=all'>Semua Jenis</option>
+                    <option value='?page=admin&act=ask&tipe=umum'>Surat Keluar</option>
+                    <option value='?page=admin&act=ask_nd'>Nota Dinas</option>
+                    <option value='?page=admin&act=ask_ph' selected>Produk Hukum</option>
+                    <option value='?page=admin&act=ask_keu'>Keuangan</option>
+                </select>
+            </div>
+            <div class='col s3'><button type='submit' name='submit' class='btn-large blue waves-effect waves-light'> TAMPILKAN <i class='material-icons'>visibility</i></button></div>
+          </form></div><div class='jarak'></div>";
 }

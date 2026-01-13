@@ -62,22 +62,7 @@
                 </ul>
 
             </li>
-            <li class="no-padding">
-                <ul class="collapsible collapsible-accordion">
-                    <li>
-                        <a class="collapsible-header"><i class="material-icons">assignment</i> Buku Agenda</a>
-                        <div class="collapsible-body">
-                            <ul>
-                                <!--<li><a href="index.php?page=admin&act=asm">Surat Masuk</a></li>-->
-                                <li><a href="index.php?page=admin&act=ask">Surat Keluar</a></li>
-                                <li><a href="index.php?page=admin&act=ask_nd">Nota Dinas</a></li>
-                                <li><a href="index.php?page=admin&act=ask_ph">Produk Hukum</a></li>
-                                <li><a href="index.php?page=admin&act=ask_keu">Keuangan</a></li>
-                            </ul>
-                        </div>
-                    </li>
-                </ul>
-            </li>
+            <li><a href="index.php?page=admin&act=ask"><i class="material-icons middle">assignment</i> Buku Agenda</a></li>
             <!--
 			<li class="no-padding">
                 <ul class="collapsible collapsible-accordion">
@@ -165,14 +150,7 @@
             </ul>
 
 
-            <li><a class="dropdown-button" href="#!" data-activates="agenda">Buku Agenda <i class="material-icons md-18">arrow_drop_down</i></a></li>
-            <ul id='agenda' class='dropdown-content'>
-                <!--<li><a href="index.php?page=admin&act=asm">Surat Masuk</a></li>-->
-                <li><a href="index.php?page=admin&act=ask">Surat Keluar</a></li>
-                <li><a href="index.php?page=admin&act=ask_nd">Nota Dinas</a></li>
-                <li><a href="index.php?page=admin&act=ask_ph">Produk Hukum</a></li>
-                <li><a href="index.php?page=admin&act=ask_keu">Keuangan</a></li>
-            </ul>
+            <li><a href="index.php?page=admin&act=ask">Buku Agenda</a></li>
             <?php if(isset($_SESSION['admin']) && in_array((int)$_SESSION['admin'], [1, 3, 4], true)) { ?>
             <li><a href="index.php?page=admin&act=bank_dok">Bank Dokumen</a></li>
             <?php } ?>
