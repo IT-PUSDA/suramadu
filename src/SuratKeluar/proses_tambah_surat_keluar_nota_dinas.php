@@ -61,8 +61,10 @@ if (isset($_REQUEST['submit1'])) {
     $id_surat = ($data1['urut'] ?? 0) + 1;
 
     // Use per-jenis counter for nota_dinas to keep it separate from other types
-    $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'nota_dinas');
-    $pos_code = page_line_label_from_seq($pos_seq, 40);
+    // KODE BARU: Support penomoran sisipan jika tanggal surat mundur.
+    $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'nota_dinas', $tgl_surat);
+    // $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'nota_dinas');
+    // $pos_code = page_line_label_from_seq($pos_seq, 40);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
     // Validasi input

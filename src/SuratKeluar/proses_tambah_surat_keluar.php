@@ -82,8 +82,10 @@ if (empty($_SESSION['admin'])) {
 
             // 4. Buat format nomor surat: gunakan posisi page+line per bidang dan per jenis
             //    Posisi dihitung per tahun, per bidang, dan per jenis agar setiap kombinasi terpisah.
-            $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'umum');
-            $pos_code = page_line_label_from_seq($pos_seq, 40); // mis. '0101' -> halaman 01 baris 01
+            //    KODE BARU: Support penomoran sisipan jika tanggal surat mundur.
+            $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'umum', $tgl_surat);
+            // $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'umum');
+            // $pos_code = page_line_label_from_seq($pos_seq, 40); // mis. '0101' -> halaman 01 baris 01
             $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
             // ===========================================================================
             // AKHIR BLOK KODE YANG DIPERBAIKI
