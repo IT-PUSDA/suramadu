@@ -7,7 +7,7 @@ if(empty($_SESSION['admin'])){
     die();
 }
 
-$allowed_roles = [1, 4];
+$allowed_roles = [1, 3];
 if (!in_array((int)$_SESSION['admin'], $allowed_roles)) {
     $_SESSION['err'] = 'Anda tidak memiliki akses!';
     header("Location: index.php");
@@ -18,6 +18,13 @@ $sub = isset($_GET['sub']) ? $_GET['sub'] : '';
 
 // ========== HAPUS DOKUMEN ==========
 if ($sub === 'hapus_dokumen') {
+    // Check permission for delete (only admin 1 & 3)
+    if (!in_array((int)$_SESSION['admin'], [1, 3])) {
+        $_SESSION['err'] = 'Anda tidak memiliki hak akses untuk menghapus!';
+        header("Location: index.php?page=admin&act=bank_dok");
+        die();
+    }
+
     $id_file = isset($_GET['id_file']) ? (int)$_GET['id_file'] : 0;
     $id_jenis = isset($_GET['id_jenis']) ? (int)$_GET['id_jenis'] : 0;
     $id_kat = isset($_GET['id_kat']) ? (int)$_GET['id_kat'] : 0;
@@ -75,6 +82,13 @@ elseif ($sub === 'download') {
 
 // ========== HAPUS JENIS BERKAS ==========
 elseif ($sub === 'hapus_jenis') {
+    // Check permission for delete (only admin 1 & 3)
+    if (!in_array((int)$_SESSION['admin'], [1, 3])) {
+        $_SESSION['err'] = 'Anda tidak memiliki hak akses untuk menghapus!';
+        header("Location: index.php?page=admin&act=bank_dok");
+        die();
+    }
+
     $id_jenis = isset($_GET['id_jenis']) ? (int)$_GET['id_jenis'] : 0;
     $id_kat = isset($_GET['id_kat']) ? (int)$_GET['id_kat'] : 0;
     

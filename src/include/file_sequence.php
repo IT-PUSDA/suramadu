@@ -191,11 +191,13 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
         }
 
         // 3. Format Output: [DayOfYear][Sequence]
-        //    DayOfYear: Tidak di-pad (1, 13, 365)
+        //    DayOfYear: Di-pad minimal 2 digit (01, 05, 13, 100, 365)
         //    Sequence: Pad 2 digit (01, 05, 10, 99, 100...)
+        //    Hasil: 0101 (min 4 digit), 1001 (4 digit), 10001 (5 digit)
+        $dayStr = sprintf('%02d', $dayOfYear);
         $seqStr = sprintf('%02d', $nextSeq);
         
-        return $dayOfYear . $seqStr;
+        return $dayStr . $seqStr;
     }
 }
 

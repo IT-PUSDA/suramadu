@@ -125,8 +125,8 @@ if (!isset($_SESSION['admin'])) {
                             }
                             break;
                         case 'bank_dok':
-                            // Bank Dokumen - hanya untuk Super Admin (1), Admin Sekretariat (4), dan Operator Sekretariat (3)
-                            if (!in_array((int)$_SESSION['admin'], [1, 3, 4])) {
+                            // Bank Dokumen - hanya untuk Super Admin (1) dan Operator Sekretariat (3)
+                            if (!in_array((int)$_SESSION['admin'], [1, 3])) {
                                 $_SESSION['err'] = 'Anda tidak memiliki akses ke fitur ini!';
                                 echo '<div class="card red lighten-5"><div class="card-content"><span class="red-text">' . $_SESSION['err'] . '</span></div></div>';
                                 unset($_SESSION['err']);

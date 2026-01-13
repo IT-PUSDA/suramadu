@@ -7,7 +7,7 @@ if(empty($_SESSION['admin'])){
     die();
 }
 
-$allowed_roles = [1, 4];
+$allowed_roles = [1, 3];
 if (!in_array((int)$_SESSION['admin'], $allowed_roles)) {
     $_SESSION['err'] = '<center>Anda tidak memiliki akses!</center>';
     header("Location: index.php");
@@ -361,7 +361,9 @@ if (isset($_SESSION['succ'])) {
                         <input type="search" id="searchJenis" placeholder="Ketik nama jenis berkas..." class="browser-default">
                     </div>
                     <div style="display:flex; align-items:flex-end;">
+                        <?php if (in_array((int)$_SESSION['admin'], [1, 3])): ?>
                         <button id="openTambah" class="btn blue btn-pill" style="height:40px; line-height:40px; padding:0 14px;"><i class="material-icons" style="vertical-align:middle;">add</i>&nbsp;Tambah Berkas</button>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -388,9 +390,13 @@ if (isset($_SESSION['succ'])) {
                         <td><span class="total-doc"><?php echo $total_doc; ?></span></td>
                         <td class="aksi">
                             <div class="aksi-group">
+                                <?php if (in_array((int)$_SESSION['admin'], [1, 3])): ?>
                                 <a href="#" class="action-btn action-edit" title="Edit" data-id="<?php echo (int)$row['id_jenis']; ?>"><i class="material-icons">edit</i></a>
+                                <?php endif; ?>
                                 <a href="index.php?page=admin&act=bank_dok&sub=list_dokumen&id_jenis=<?php echo (int)$row['id_jenis']; ?>&id_kat=<?php echo $id_kat; ?>" class="action-btn action-view" title="Lihat"><i class="material-icons">visibility</i></a>
+                                <?php if (in_array((int)$_SESSION['admin'], [1, 3])): ?>
                                 <a href="index.php?page=admin&act=bank_dok&sub=hapus_jenis&id_jenis=<?php echo (int)$row['id_jenis']; ?>&id_kat=<?php echo $id_kat; ?>" class="action-btn action-del" title="Hapus" onclick="return confirm('Yakin hapus?')"><i class="material-icons">delete</i></a>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>

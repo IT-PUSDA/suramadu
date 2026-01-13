@@ -7,7 +7,7 @@ if (empty($_SESSION['admin'])) {
     die();
 }
 
-$allowed_roles = [1, 4];
+$allowed_roles = [1, 3];
 if (!in_array((int)$_SESSION['admin'], $allowed_roles)) {
     $_SESSION['err'] = '<center>Anda tidak memiliki akses!</center>';
     header('Location: index.php');
@@ -68,8 +68,8 @@ if (isset($_POST['submit_dokumen'])) {
 
         if ($ext !== 'pdf' || !$mime_valid) {
             $_SESSION['err'] = 'Hanya file PDF yang diperbolehkan!';
-        } elseif ($ukuran > 2097152) { // 2MB
-            $_SESSION['err'] = 'Ukuran file terlalu besar! Maksimal 2MB.';
+        } elseif ($ukuran > 5242880) { // 5MB
+            $_SESSION['err'] = 'Ukuran file terlalu besar! Maksimal 5MB.';
         } else {
             $upload_dir = BASE_PATH . '/upload/bank_dokumen/' . $id_kat . '/';
             if (!is_dir($upload_dir)) {
@@ -255,9 +255,9 @@ if (isset($_SESSION['succ'])) {
                 <input type="text" id="pembuat_file_modal" name="pembuat_file" required placeholder="Masukkan nama pembuat dokumen" value="<?php echo htmlspecialchars($default_pembuat, ENT_QUOTES); ?>">
             </div>
             <div class="form-group">
-                <label for="file_dokumen_modal">Pilih Dokumen (PDF maks 2MB) *</label>
+                <label for="file_dokumen_modal">Pilih Dokumen (PDF maks 5MB) *</label>
                 <input type="file" id="file_dokumen_modal" name="file_dokumen" accept="application/pdf" required>
-                <div class="panduan">Hanya file PDF dengan ukuran maksimal 2MB yang dapat diunggah.</div>
+                <div class="panduan">Hanya file PDF dengan ukuran maksimal 5MB yang dapat diunggah.</div>
             </div>
             <button type="submit" name="submit_dokumen" class="btn-submit">💾 Simpan Dokumen</button>
         </form>
@@ -322,9 +322,11 @@ if (isset($_SESSION['succ'])) {
                                             <i class="material-icons">visibility_off</i>
                                         </span>
                                         <?php endif; ?>
+                                        <?php if (in_array((int)$_SESSION['admin'], [1, 3])): ?>
                                         <a href="index.php?page=admin&act=bank_dok&sub=hapus_dokumen&id_file=<?php echo (int)$row['id_file']; ?>&id_jenis=<?php echo $id_jenis; ?>&id_kat=<?php echo $id_kat; ?>" class="action-btn action-del" title="Hapus" onclick="return confirm('Yakin hapus dokumen ini?')">
                                             <i class="material-icons">delete</i>
                                         </a>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
