@@ -159,20 +159,24 @@ if (!isset($_SESSION['admin'])) {
                                 <div class="card-content">
                                     <h4>Selamat Datang <?php echo $_SESSION['nama']; ?></h4>
                                     <p class="description">Anda login sebagai
+                                
                                         <?php
                                         if ($_SESSION['admin'] == 1) {
                                             echo "<strong>Super Admin</strong>. Anda memiliki akses penuh terhadap sistem.";
                                         } elseif ($_SESSION['admin'] == 2) {
                                             echo "<strong>Pimpinan</strong>. Berikut adalah statistik data yang tersimpan dalam sistem.";
-                                        } else {
-                                            echo "<strong>Operator</strong>. Berikut adalah statistik data yang tersimpan dalam sistem.";
-                                        } ?></p>
+                                        } elseif ($_SESSION['admin'] == 3) {
+                                            echo "<strong>Admin</strong>. Berikut adalah statistik data yang tersimpan dalam sistem.";
+                                        } elseif ($_SESSION['admin'] == 4) {
+                                            echo "<strong>User</strong>. Berikut adalah statistik data yang tersimpan dalam sistem.";
+                                        }?></p>
                                 </div>
                             </div>
                         </div>
                         <!-- Welcome Message END -->
 
                         <?php
+                        $kode_bidang = $_SESSION['kode_bidang'];
                         //menghitung jumlah surat masuk
                         if ($_SESSION['admin'] == 4) {
                             $id_user = $_SESSION['id_user'];
@@ -185,7 +189,7 @@ if (!isset($_SESSION['admin'])) {
                         $operator_id_list_sql = '';
                         if ($_SESSION['admin'] == 4) { // level Bidang: hanya dirinya sendiri
                             $id_user = (int)$_SESSION['id_user'];
-                            $count2 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE id_user='$id_user'"));
+                            $count2 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE bidang='$kode_bidang'"));
                         } elseif ($_SESSION['admin'] == 3) { // level Operator: semua user dalam 1 kelompok bidang
                             // Peta grup -> username (samakan dengan file transaksi_surat_keluar*)
                             $BIDANG_USERNAMES_DASH = [
@@ -251,7 +255,7 @@ if (!isset($_SESSION['admin'])) {
                             $operator_id_list_sql = implode(',', array_map('intval', $idsOperator));
                             $sqlCountOp = "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE id_user IN ($operator_id_list_sql)";
                             $rOp = mysqli_query($config, $sqlCountOp);
-                            $count2 = ($rOp ? (int)mysqli_fetch_assoc($rOp)['c'] : 0);
+                            $count2 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE bidang='$kode_bidang'"));
                         } else { // selain operator & bidang: total
                             $count2 = mysqli_num_rows(mysqli_query($config, "SELECT * FROM tbl_surat_keluar"));
                         }

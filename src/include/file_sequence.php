@@ -161,9 +161,10 @@ if (!function_exists('next_position_sequence_for_year_and_bidang_global')) {
 
 if (!function_exists('get_sequence_code_with_sisipan')) {
     /**
-     * Menghasilkan kode urut (misal 0101 atau 0101.A) berdasarkan tanggal surat.
-     * Jika tanggal surat mundur (sebelum surat terakhir), gunakan logika sisipan.
-     * Jika tanggal surat maju/terkini, gunakan logika counter normal.
+     * REVISI: Menggunakan format HariKe+SequenceHarian (misal 1301 untuk Hari ke-13, urutan 01).
+     * Format: [DayOfYear][Sequence2digit]
+     * Logika ini menggantikan sistem halaman/baris dan sistem sisipan sebelumnya.
+     * Jika backdated, otomatis urut karena hanya menghitung jumlah hari itu.
      */
     function get_sequence_code_with_sisipan(mysqli $config, int $year, string $bidang, string $jenis, string $tgl_surat): string {
         $year = (int)$year;
@@ -171,86 +172,30 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
         $jenis = mysqli_real_escape_string($config, $jenis);
         $tgl_surat = mysqli_real_escape_string($config, $tgl_surat);
 
-        // 1. Cek apakah ini backdated (ada surat dengan tanggal > tgl_surat di tahun & bidang yg sama)
-        // Kita cek MAX tgl_surat yang ada
-        $qMax = mysqli_query($config, "SELECT MAX(tgl_surat) as max_date FROM tbl_surat_keluar WHERE YEAR(tgl_surat) = $year AND bidang = '$bidang'");
+        // 1. Hitung Day Of Year (1-366)
+        $ts = strtotime($tgl_surat);
+        $dayOfYear = (int)date('z', $ts) + 1;
+
+        // 2. Hitung jumlah surat yang SUDAH ADA pada tanggal tersebut untuk bidang & jenis yang sama
+        //    Gunakan logika COUNT + 1 untuk mendapatkan nomor berikutnya.
+        //    Ini otomatis menangani tanggal maju (0 surat -> no 1) maupun mundur (ada 5 surat -> no 6).
+        $qCount = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar 
+                                         WHERE tgl_surat = '$tgl_surat' 
+                                         AND bidang = '$bidang' 
+                                         AND jenis = '$jenis'");
         
-        $is_backdated = false;
-        if ($qMax && mysqli_num_rows($qMax) > 0) {
-            $dMax = mysqli_fetch_assoc($qMax);
-            if (!empty($dMax['max_date']) && $dMax['max_date'] > $tgl_surat) {
-                $is_backdated = true;
-            }
+        $nextSeq = 1;
+        if ($qCount && mysqli_num_rows($qCount) > 0) {
+            $d = mysqli_fetch_assoc($qCount);
+            $nextSeq = (int)$d['c'] + 1;
         }
 
-        // Jika backdated, cari induk untuk disisipkan
-        if ($is_backdated) {
-            // Cari surat terakhir yang terbit pada tanggal <= tgl_surat
-            // Urutkan berdasarkan tanggal DESC, dan ID DESC (untuk dapat yang paling akhir diinput pada tgl itu)
-            $qRef = mysqli_query($config, "SELECT no_surat FROM tbl_surat_keluar 
-                                           WHERE YEAR(tgl_surat) = $year AND bidang = '$bidang' AND tgl_surat <= '$tgl_surat'
-                                           ORDER BY tgl_surat DESC, id_surat DESC LIMIT 1");
-            
-            $baseCode = "0000"; // Default jika menyisip di paling awal (sebelum surat pertama)
-            
-            if ($qRef && mysqli_num_rows($qRef) > 0) {
-                $dRef = mysqli_fetch_assoc($qRef);
-                $refNo = $dRef['no_surat'];
-                // Format asumsi: KODE/POS/BIDANG/TAHUN
-                $parts = explode('/', $refNo);
-                if (count($parts) >= 4) {
-                    $baseCode = $parts[1]; // Ambil bagian POS (misal 0101 atau 0101.A)
-                    // Ambil root utamanya (angka saja) agar konsisten
-                    $baseCodeRaw = preg_replace('/[^0-9]/', '', $baseCode); 
-                    $baseCode = str_pad($baseCodeRaw, 4, '0', STR_PAD_LEFT);
-                }
-            }
-            
-            // Sekarang cari pos terbesar yang menggunakan baseCode ini di tahun yg sama untuk menentukan suffix berikutnya
-            // Pola: %/baseCode%/%
-            $qSibs = mysqli_query($config, "SELECT no_surat FROM tbl_surat_keluar 
-                                            WHERE YEAR(tgl_surat) = $year AND bidang = '$bidang' 
-                                            AND no_surat LIKE '%/$baseCode%/$bidang/$year'");
-            
-            $usedSuffixes = [];
-            while ($row = mysqli_fetch_assoc($qSibs)) {
-                $p = explode('/', $row['no_surat']);
-                if (count($p) >= 4) {
-                    $codeVal = $p[1]; // misal 0101, 0101.A, 0101.B
-                    if (strpos($codeVal, '.') !== false) {
-                        $suf = substr($codeVal, strpos($codeVal, '.') + 1);
-                        $usedSuffixes[] = strtoupper($suf);
-                    } else {
-                        // Jika exact match dengan baseCode, suffix dianggap kosong (nilai 0 / @)
-                        if ($codeVal === $baseCode) {
-                            $usedSuffixes[] = '@'; // ASCII 64, sebelum A (65)
-                        }
-                    } 
-                }
-            }
-            
-            // Tentukan suffix berikutnya
-            // Logic: Cari max existing suffix (numeric), lalu +1
-            $nextSuffix = '1';
-            if (!empty($usedSuffixes)) {
-                $maxVal = 0;
-                foreach ($usedSuffixes as $sx) {
-                    if (is_numeric($sx)) {
-                        $v = (int)$sx;
-                        if ($v > $maxVal) $maxVal = $v;
-                    }
-                }
-                $nextSuffix = (string)($maxVal + 1);
-            }
-            
-            return $baseCode . '.' . $nextSuffix;
-
-        } else {
-            // Normal - Generate Next Sequence
-            // Panggil fungsi asli yang meng-increment counter DB
-            $seq = next_position_sequence_for_year_and_bidang($config, $year, $bidang, $jenis);
-            return page_line_label_from_seq($seq, 40);
-        }
+        // 3. Format Output: [DayOfYear][Sequence]
+        //    DayOfYear: Tidak di-pad (1, 13, 365)
+        //    Sequence: Pad 2 digit (01, 05, 10, 99, 100...)
+        $seqStr = sprintf('%02d', $nextSeq);
+        
+        return $dayOfYear . $seqStr;
     }
 }
 

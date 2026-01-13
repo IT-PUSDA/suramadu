@@ -23,10 +23,10 @@ if (file_exists($envFile)) {
 }
 
 // Database defaults (can be overridden via .env)
-$host = getenv('DB_HOST') ?: 'localhost';
-$username = getenv('DB_USERNAME') ?: 'root';
-$password = getenv('DB_PASSWORD') ?: '';
-$database = getenv('DB_DATABASE') ?: 'ams_native';
+$host = getenv('DB_HOST') ?: '10.242.100.200';
+$username = getenv('DB_USERNAME') ?: 'sekretariat_psda';
+$password = getenv('DB_PASSWORD') ?: 'p5d4m3ndun14';
+$database = getenv('DB_DATABASE') ?: 'sekretariat_suramaduv2';
 
 // TEMP DEBUG: enable error display and logging for local development (remove in production)
 @ini_set('display_errors', 1);
