@@ -130,6 +130,10 @@ if (empty($_SESSION['admin'])) {
     </div>
   </form>
 </div>
+<style>
+    #kode-suggest .collection-item.active { background-color: #e3f2fd !important; color: #212121 !important; }
+    #kode-suggest .collection-item.active .blue-text { color: #1565c0 !important; }
+</style>
 <script>
 (function(){
   const input = document.getElementById('kode');

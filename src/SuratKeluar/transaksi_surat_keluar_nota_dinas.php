@@ -203,7 +203,7 @@ if ($filterKey && isset($map[$filterKey])) {
                     </a>
                     <br/><small class="grey-text text-darken-1 nowrap"><?php echo indoDate($row['tgl_surat']); ?></small>
                   </td>
-                  <td class="center-align"><?php echo $row['nama_pembuat'] ?? ''; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : ''; ?></small></td>
+                  <td class="center-align"><?php echo $row['nama_pembuat'] ?? ''; ?><br/><small class="grey-text text-darken-1 nowrap"><?php echo isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'] . ' UTC')) : ''; ?></small></td>
                   <?php // Status icon
                     $status_raw = isset($row['status']) ? $row['status'] : (!empty($row['file']) ? 'finished':'draft');
                     $icon_file = ($status_raw=='finished') ? 'finished.png' : 'draft.png';

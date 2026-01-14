@@ -400,7 +400,7 @@ if (empty($_SESSION['admin'])) {
                                                         </a>
                                                         <br/><small class="grey-text text-darken-1 nowrap">' . indoDate($row['tgl_surat']) . '</small>
                                                     </td>
-                                                    <td class="center-align">' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'])) : '') . '</small></td>';
+                                                    <td class="center-align">' . $row['nama_pembuat'] . '<br/><small class="grey-text text-darken-1 nowrap">' . (isset($row['tgl_dibuat']) ? date('d M Y, H:i', strtotime($row['tgl_dibuat'] . ' UTC')) : '') . '</small></td>';
 
                                                 // Kolom Status (contoh logika: jika ada file -> Selesai, else Draft)
                                                 // Status dari DB (fallback: jika kolom lama, gunakan file presence)
