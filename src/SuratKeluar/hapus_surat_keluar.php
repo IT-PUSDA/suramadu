@@ -13,15 +13,32 @@
     if (!$is_super_admin) {
         $is_operator = ((int)$_SESSION['admin'] === 3);
         $is_bidang   = ((int)$_SESSION['admin'] === 4);
-        $q_owner = mysqli_query($config, "SELECT id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
-        list($owner_id) = mysqli_fetch_array($q_owner);
+        $q_owner = mysqli_query($config, "SELECT id_user, bidang FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
+        $fetched = mysqli_fetch_assoc($q_owner);
+        $owner_id = $fetched['id_user'];
+        $row_bidang = isset($fetched['bidang']) ? $fetched['bidang'] : '';
         $is_owner = ((int)$owner_id === (int)$_SESSION['id_user']);
+        
         // Centralized operator access
         if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
         $operator_group_access = false;
         if ($is_operator) {
             $opInfo = operator_access_info($config, $_SESSION, (int)$owner_id);
             $operator_group_access = $opInfo['operator_group_access'];
+            
+            // START FIX: Cek juga match via kolom 'bidang' (untuk data migrasi)
+            if (!$operator_group_access) {
+                if (!function_exists('resolve_bidang_code_from_session')) { @include_once __DIR__ . '/../include/bidang_mapping.php'; }
+                $myBidangCode = resolve_bidang_code_from_session(); 
+                if ($myBidangCode) {
+                    if ($row_bidang === $myBidangCode) { 
+                        $operator_group_access = true; 
+                    } elseif ($myBidangCode === '104.6.05' && stripos($row_bidang, 'BOJONEGORO') !== false) { 
+                        $operator_group_access = true; 
+                    }
+                }
+            }
+            // END FIX
         }
         // Bidang wajib pemilik; operator wajib dalam group; jika tidak, butuh tiket (PIN) yang diset saat verifikasi
         if ($is_bidang && !$is_owner) {

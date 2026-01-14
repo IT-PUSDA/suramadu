@@ -230,7 +230,23 @@ if (empty($_SESSION['admin'])) {
                                             $operator_allowed_ids = $opInfo['allowed_ids'];
                                             if (empty($operator_allowed_ids)) { $operator_allowed_ids[] = (int)$id_user; }
                                             $idListAllowed = implode(',', array_map('intval', $operator_allowed_ids));
-                                            $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . " id_user IN ($idListAllowed)";
+                                            
+                                            // FIX: Perluas filter agar mencakup data dengan kolom 'bidang' yang sesuai (untuk data lama/migrasi)
+                                            if (!function_exists('resolve_bidang_code_from_session')) { @include_once __DIR__ . '/../include/bidang_mapping.php'; }
+                                            $myBidangCode = resolve_bidang_code_from_session(); // e.g. '104.6.05'
+                                            
+                                            $filterExpression = "id_user IN ($idListAllowed)";
+                                            
+                                            if ($myBidangCode) {
+                                                $escC = mysqli_real_escape_string($config, $myBidangCode);
+                                                $filterExpression .= " OR bidang='$escC'";
+                                                // Tambahan khusus Bojonegoro untuk menangkap variasi teks 'BOJONEGORO' di kolom bidang
+                                                if ($escC === '104.6.05') {
+                                                    $filterExpression .= " OR bidang LIKE '%BOJONEGORO%'";
+                                                }
+                                            }
+                                            
+                                            $where_clause .= ($where_clause ? ' AND ' : ' WHERE ') . "($filterExpression)";
                                         } elseif ($is_admin_user) {
                                             // Level Bidang (4): Tampilkan berdasarkan kode bidang (prioritas) atau id_user
                                             if (isset($_SESSION['kode_bidang']) && !empty($_SESSION['kode_bidang'])) {
@@ -339,7 +355,17 @@ if (empty($_SESSION['admin'])) {
                                                 $hasAnyFile = (!empty($row['file']) || !empty($driveMarker));
                                                 if ($hasAnyFile) {
                                                     echo '<br/><br/><strong>File : </strong>';
-                                                    $is_operator_file = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true);
+                                                    
+                                                    // START FIX: Perbaiki deteksi hak akses operator (tambahkan cek bidang untuk data migrasi)
+                                                    $row_bidang = isset($row['bidang']) ? $row['bidang'] : '';
+                                                    $is_bidang_match = false;
+                                                    if ($is_operator && isset($myBidangCode) && $myBidangCode) {
+                                                        if ($row_bidang === $myBidangCode) { $is_bidang_match = true; }
+                                                        elseif ($myBidangCode === '104.6.05' && stripos($row_bidang, 'BOJONEGORO') !== false) { $is_bidang_match = true; }
+                                                    }
+                                                    $is_operator_file = $is_operator && ( (!empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true)) || $is_bidang_match );
+                                                    // END FIX
+                                                    
                                                     // Teks tautan: prefer Drive marker name; otherwise show local filename
                                                     $linkText = !empty($row['file']) ? $row['file'] : '';
                                                     if (!empty($driveMarker)) {
@@ -411,7 +437,18 @@ if (empty($_SESSION['admin'])) {
                                                 // 2. Batasi Tombol: Super Admin & Operator (bidangnya), Bidang (milik sendiri)
                                                 $can_manage = in_array($_SESSION['admin'], [1]);
                                                 $is_owner = ($row['id_user'] == $_SESSION['id_user']);
-                                                $is_operator_owner = $is_operator && !empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true);
+                                                
+                                                // START FIX: Perbaiki deteksi hak akses operator (tambahkan cek bidang untuk data migrasi)
+                                                // Re-use logic $is_bidang_match calculated above in file section, or recalculate if needed
+                                                $row_bidang_act = isset($row['bidang']) ? $row['bidang'] : '';
+                                                $is_bidang_match_act = false;
+                                                if ($is_operator && isset($myBidangCode) && $myBidangCode) {
+                                                    if ($row_bidang_act === $myBidangCode) { $is_bidang_match_act = true; }
+                                                    elseif ($myBidangCode === '104.6.05' && stripos($row_bidang_act, 'BOJONEGORO') !== false) { $is_bidang_match_act = true; }
+                                                }
+                                                $is_operator_owner = $is_operator && ( (!empty($operator_allowed_ids) && in_array((int)$row['id_user'], $operator_allowed_ids, true)) || $is_bidang_match_act );
+                                                // END FIX
+                                                
                                                 if ($_SESSION['admin'] == 2) {
                                                     echo '<div class="grey-text" style="padding-top: 15px;">-</div>';
                                                 } elseif ($can_manage || $is_owner || $is_operator_owner) {

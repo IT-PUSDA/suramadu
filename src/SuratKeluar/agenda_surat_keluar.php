@@ -82,14 +82,29 @@
                     $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar 
                     WHERE $sqlUser and tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal' $extraSql");
                 } else if ($_SESSION['admin'] == 3) { // Level Operator
-                    $BIDANG_USERNAMES = ['sekretariat'=>['SEKRETARIAT','TU'],'psda'=>['PSDA'],'irigasi'=>['IRIGASI'],'swp'=>['SWP'],'binfat'=>['BINFAT'],'upt-kediri'=>['KEDIRI'],'korwil-malang'=>['MALANG'],'korwil-surabaya'=>['SURABAYA'],'upt-bojonegoro'=>['BOJONEGORO'],'korwil-madiun'=>['MADIUN'],'upt-bondowoso'=>['BONDOWOSO'],'upt-lumajang'=>['LUMAJANG'],'upt-pasuruan'=>['PASURUAN'],'upt-madura'=>['MADURA']];
-                    $uname=strtoupper($_SESSION['username']); $namaUpper=isset($_SESSION['nama'])?strtoupper($_SESSION['nama']):''; $foundGroup=null;
-                    foreach($BIDANG_USERNAMES as $gKey=>$arrU){ foreach($arrU as $uChk){ $token=strtoupper($uChk); if($uname===$token||strpos($uname,$token)!==false||($namaUpper&&strpos($namaUpper,$token)!==false)){ $foundGroup=$gKey; break 2; } } }
-                    if($foundGroup===null){ $unameFlat=str_replace(['_',' '], '', $uname); foreach($BIDANG_USERNAMES as $gKey=>$arrU){ foreach($arrU as $uChk){ $tokenFlat=str_replace(['_',' '], '', strtoupper($uChk)); if(strpos($unameFlat,$tokenFlat)!==false){ $foundGroup=$gKey; break 2; } } } }
-                    $idsOperator=[]; if($foundGroup!==null){ $names=array_map('strtoupper',$BIDANG_USERNAMES[$foundGroup]); $esc=[]; foreach($names as $n){ $esc[]="'".mysqli_real_escape_string($config,$n)."'"; } $ru=mysqli_query($config, "SELECT id_user FROM tbl_user WHERE UPPER(username) IN (".implode(',', $esc).")"); if($ru){ while($r=mysqli_fetch_assoc($ru)){ $idsOperator[]=(int)$r['id_user']; } } }
-                    if(empty($idsOperator)){ $idsOperator[]=(int)$_SESSION['id_user']; }
-                    $idList=implode(',', array_map('intval',$idsOperator));
-                    $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE id_user IN ($idList) AND tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal' $extraSql");
+                    // Gunakan logika akses operator terpusat + perbaikan filter bidang
+                    if (!function_exists('operator_access_info')) { @include_once __DIR__ . '/../include/operator_access.php'; }
+                    $opInfo = operator_access_info($config, $_SESSION);
+                    $operator_allowed_ids = $opInfo['allowed_ids'];
+                    if (empty($operator_allowed_ids)) { $operator_allowed_ids[] = (int)$_SESSION['id_user']; }
+                    $idList = implode(',', array_map('intval', $operator_allowed_ids));
+                    
+                    // Filter: ID user (grup) OR Bidang (Code/Text)
+                    if (!function_exists('resolve_bidang_code_from_session')) { @include_once __DIR__ . '/../include/bidang_mapping.php'; }
+                    $myBidangCode = resolve_bidang_code_from_session(); 
+                    
+                    $filterExpression = "id_user IN ($idList)";
+                    if ($myBidangCode) {
+                        $escC = mysqli_real_escape_string($config, $myBidangCode);
+                        $filterExpression .= " OR bidang='$escC'";
+                        // Khusus Bojonegoro (104.6.05), tambahkan juga pencarian text 'BOJONEGORO'
+                        if ($escC === '104.6.05') {
+                            $filterExpression .= " OR bidang LIKE '%BOJONEGORO%'";
+                        }
+                    }
+                    
+                    $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar 
+                        WHERE ($filterExpression) AND tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal' $extraSql");
                 } else {
                     $query = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE tgl_surat BETWEEN '$dari_tanggal' AND '$sampai_tanggal' $extraSql");
                 }

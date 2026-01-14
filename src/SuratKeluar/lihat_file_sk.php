@@ -36,7 +36,7 @@ $is_operator = (isset($_SESSION['admin']) && (int)$_SESSION['admin'] === 3);
 $operator_group_access = false;
 
 // Mengambil data file dan (opsional) marker Drive dari database
-$query = mysqli_query($config, "SELECT file, file_drive, id_user FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
+$query = mysqli_query($config, "SELECT file, file_drive, id_user, bidang FROM tbl_surat_keluar WHERE id_surat='$id_surat'");
 
 if (mysqli_num_rows($query) == 0) {
     die('ERROR: Data surat tidak ditemukan.');
@@ -46,6 +46,7 @@ $row = mysqli_fetch_array($query);
 $file = isset($row['file']) ? $row['file'] : '';
 $file_drive = isset($row['file_drive']) ? $row['file_drive'] : '';
 $owner_id = isset($row['id_user']) ? $row['id_user'] : 0;
+$row_bidang = isset($row['bidang']) ? $row['bidang'] : '';
 
 // Jangan langsung redirect ke Drive di sini — lakukan pemeriksaan akses terlebih dahulu.
 // Simpan marker Drive ke variabel lokal untuk diproses setelah validasi akses.
@@ -55,6 +56,20 @@ $fileDriveMarker = $file_drive;
 if ($is_operator && function_exists('operator_access_info')) {
     $opInfo = operator_access_info($config, $_SESSION, (int)$owner_id);
     $operator_group_access = $opInfo['operator_group_access'];
+    
+    // START FIX: Cek juga match via kolom 'bidang' jika owner check gagal (untuk data migrasi)
+    if (!$operator_group_access) {
+        if (!function_exists('resolve_bidang_code_from_session')) { @include_once __DIR__ . '/../include/bidang_mapping.php'; }
+        $myBidangCode = resolve_bidang_code_from_session(); 
+        if ($myBidangCode) {
+            if ($row_bidang === $myBidangCode) { 
+                $operator_group_access = true; 
+            } elseif ($myBidangCode === '104.6.05' && stripos($row_bidang, 'BOJONEGORO') !== false) { 
+                $operator_group_access = true; 
+            }
+        }
+    }
+    // END FIX
 }
 
 // Pimpinan (2) juga boleh melihat file tanpa PIN
