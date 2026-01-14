@@ -68,8 +68,8 @@ if (isset($_POST['submit_dokumen'])) {
 
         if ($ext !== 'pdf' || !$mime_valid) {
             $_SESSION['err'] = 'Hanya file PDF yang diperbolehkan!';
-        } elseif ($ukuran > 5242880) { // 5MB
-            $_SESSION['err'] = 'Ukuran file terlalu besar! Maksimal 5MB.';
+        } elseif ($ukuran > 10485760) { // 10MB
+            $_SESSION['err'] = 'Ukuran file terlalu besar! Maksimal 10MB.';
         } else {
             $upload_dir = BASE_PATH . '/upload/bank_dokumen/' . $id_kat . '/';
             if (!is_dir($upload_dir)) {
@@ -255,9 +255,9 @@ if (isset($_SESSION['succ'])) {
                 <input type="text" id="pembuat_file_modal" name="pembuat_file" required placeholder="Masukkan nama pembuat dokumen" value="<?php echo htmlspecialchars($default_pembuat, ENT_QUOTES); ?>">
             </div>
             <div class="form-group">
-                <label for="file_dokumen_modal">Pilih Dokumen (PDF maks 5MB) *</label>
+                <label for="file_dokumen_modal">Pilih Dokumen (PDF maks 10MB) *</label>
                 <input type="file" id="file_dokumen_modal" name="file_dokumen" accept="application/pdf" required>
-                <div class="panduan">Hanya file PDF dengan ukuran maksimal 5MB yang dapat diunggah.</div>
+                <div class="panduan">Hanya file PDF dengan ukuran maksimal 10MB yang dapat diunggah.</div>
             </div>
             <button type="submit" name="submit_dokumen" class="btn-submit">💾 Simpan Dokumen</button>
         </form>
