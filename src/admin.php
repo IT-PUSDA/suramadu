@@ -125,8 +125,8 @@ if (!isset($_SESSION['admin'])) {
                             }
                             break;
                         case 'bank_dok':
-                            // Bank Dokumen - hanya untuk Super Admin (1) dan Operator Sekretariat (3)
-                            if (!in_array((int)$_SESSION['admin'], [1, 3])) {
+                            // Bank Dokumen - Super Admin (1), Operator Sekretariat (3), User Bidang (4) [Read Only]
+                            if (!in_array((int)$_SESSION['admin'], [1, 3, 4])) {
                                 $_SESSION['err'] = 'Anda tidak memiliki akses ke fitur ini!';
                                 echo '<div class="card red lighten-5"><div class="card-content"><span class="red-text">' . $_SESSION['err'] . '</span></div></div>';
                                 unset($_SESSION['err']);
@@ -361,9 +361,9 @@ if (!isset($_SESSION['admin'])) {
                                     </div>
                                 </a>
                             </div>
-                            <?php if (in_array((int)$_SESSION['admin'], [1,2,3], true)) { ?>
+                            <?php if (in_array((int)$_SESSION['admin'], [1, 2, 3, 4], true)) { ?>
                             <div class="col s12 m6 l3">
-                                    <?php if (in_array((int)$_SESSION['admin'], [1,2], true)) { ?>
+                                    <?php if (in_array((int)$_SESSION['admin'], [1, 2], true)) { ?>
                                         <a href="index.php?page=admin&act=arsip" class="hs-link">
                                     <?php } elseif ((int)$_SESSION['admin'] === 3) { ?>
                                         <a href="index.php?page=admin&act=arsip_op" class="hs-link">

@@ -7,7 +7,7 @@ if (empty($_SESSION['admin'])) {
     die();
 }
 
-$allowed_roles = [1, 3];
+$allowed_roles = [1, 3, 4];
 if (!in_array((int)$_SESSION['admin'], $allowed_roles)) {
     $_SESSION['err'] = '<center>Anda tidak memiliki akses!</center>';
     header('Location: index.php');
@@ -30,8 +30,17 @@ $jenis_data = mysqli_fetch_assoc($jenis_check);
 
 $search_term = trim($_GET['cari'] ?? '');
 
+// Cek jika POST content overflow (file terlalu besar melebihi post_max_size PHP)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > 0) {
+    $max_post = ini_get('post_max_size');
+    $_SESSION['err'] = "Gagal upload! Ukuran file total melebihi batas server (post_max_size: $max_post).";
+    // Redirect agar pesan tampil
+    header("Location: index.php?page=admin&act=bank_dok&sub=list_dokumen&id_jenis=$id_jenis&id_kat=$id_kat");
+    die();
+}
+
 // Proses upload dokumen
-if (isset($_POST['submit_dokumen'])) {
+if (isset($_POST['submit_dokumen']) && in_array((int)$_SESSION['admin'], [1, 3])) {
     $nama_file_input = trim($_POST['nama_file'] ?? '');
     $pembuat_input = trim($_POST['pembuat_file'] ?? $nama_user);
     $file = $_FILES['file_dokumen'] ?? null;
@@ -45,7 +54,15 @@ if (isset($_POST['submit_dokumen'])) {
     if ($nama_file_input === '' || $pembuat_input === '') {
         $_SESSION['err'] = 'Nama dokumen dan pembuat wajib diisi!';
     } elseif (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-        $_SESSION['err'] = 'Pilih file PDF untuk diunggah!';
+        $errCode = $file['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($errCode === UPLOAD_ERR_NO_FILE) {
+            $_SESSION['err'] = 'Pilih file PDF untuk diunggah!';
+        } elseif ($errCode === UPLOAD_ERR_INI_SIZE || $errCode === UPLOAD_ERR_FORM_SIZE) {
+            $max_upload = ini_get('upload_max_filesize');
+            $_SESSION['err'] = "Ukuran file terlalu besar (Max Server: $max_upload)!";
+        } else {
+            $_SESSION['err'] = 'Gagal upload! Error code: ' . $errCode;
+        }
     } else {
         $ukuran = (int)($file['size'] ?? 0);
         $tmp_path = $file['tmp_name'] ?? '';
@@ -270,7 +287,9 @@ if (isset($_SESSION['succ'])) {
             <div class="card-content">
                 <div class="bank-dok-card-header">
                     <h3>Daftar Dokumen</h3>
+                    <?php if (in_array((int)$_SESSION['admin'], [1, 3])): ?>
                     <button id="openUpload" class="btn blue btn-pill" style="height:40px; line-height:40px; padding:0 18px;"><i class="material-icons" style="vertical-align:middle;">file_upload</i>&nbsp;Upload Dokumen</button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="bank-dok-info">Kelola dokumen untuk jenis berkas ini. Klik tombol upload untuk menambahkan file baru.</div>

@@ -7,7 +7,7 @@ if(empty($_SESSION['admin'])){
     die();
 }
 
-$allowed_roles = [1, 3];
+$allowed_roles = [1, 3, 4];
 if (!in_array((int)$_SESSION['admin'], $allowed_roles)) {
     $_SESSION['err'] = '<center>Anda tidak memiliki akses!</center>';
     header("Location: index.php");
@@ -27,7 +27,7 @@ if (mysqli_num_rows($kat_check) === 0) {
 $kat_data = mysqli_fetch_assoc($kat_check);
 
 // Process form tambah jenis
-if (isset($_REQUEST['submit_jenis'])) {
+if (isset($_REQUEST['submit_jenis']) && in_array((int)$_SESSION['admin'], [1, 3])) {
     $nama_jenis = mysqli_real_escape_string($config, $_REQUEST['nama_jenis'] ?? '');
     $desc_jenis = mysqli_real_escape_string($config, $_REQUEST['desc_jenis'] ?? '');
     
@@ -46,7 +46,7 @@ if (isset($_REQUEST['submit_jenis'])) {
 }
 
 // Process form edit jenis
-if (isset($_REQUEST['submit_edit'])) {
+if (isset($_REQUEST['submit_edit']) && in_array((int)$_SESSION['admin'], [1, 3])) {
     $edit_id = isset($_REQUEST['edit_id']) ? (int)$_REQUEST['edit_id'] : 0;
     $nama_jenis = mysqli_real_escape_string($config, $_REQUEST['nama_jenis'] ?? '');
     $desc_jenis = mysqli_real_escape_string($config, $_REQUEST['desc_jenis'] ?? '');

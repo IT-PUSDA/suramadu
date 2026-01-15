@@ -7,8 +7,8 @@ if(empty($_SESSION['admin'])){
     die();
 }
 
-// Cek akses: hanya Super Admin (1) dan Operator Sekretariat (3) yang bisa akses
-$allowed_roles = [1, 3];
+// Cek akses: hanya Super Admin (1), Operator Sekretariat (3), User Bidang (4) [Read Only] yang bisa akses
+$allowed_roles = [1, 3, 4];
 if (!in_array((int)$_SESSION['admin'], $allowed_roles)) {
     $_SESSION['err'] = '<center>Anda tidak memiliki akses ke fitur ini!</center>';
     header("Location: index.php");
