@@ -126,8 +126,9 @@
 									} else {
                                             // Batasi hanya PDF saat edit (maks 2MB)
                                             $ekstensi = array('pdf');
-                                            $file = $_FILES['file']['name'];
-											$x = explode('.', $file);
+                                            // Sanitize filename: remove special chars that break Windows paths
+                                            $file = preg_replace('/[^a-zA-Z0-9.\-_ ]/', '', basename($_FILES['file']['name']));
+                                            $x = explode('.', $file);
 											$eks = strtolower(end($x));
 											$ukuran = $_FILES['file']['size'];
                                             $target_dir = BASE_PATH . "/upload/surat_keluar/";
@@ -196,8 +197,13 @@
                                                                 }
                                                             } else {
                                                                 if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
-                                                                move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$labeledName);
-                                                                $nfile = $labeledName;
+                                                                if (move_uploaded_file($_FILES['file']['tmp_name'], $target_dir.$labeledName)) {
+                                                                    $nfile = $labeledName;
+                                                                } else {
+                                                                    $_SESSION['errSize'] = 'Gagal menyimpan file ke server (Permission denied or Disk full)!';
+                                                                    echo '<script language="javascript">window.history.back();</script>';
+                                                                    exit();
+                                                                }
                                                             }
 
                                                             $fileNoClause = ($hasFileNo? ", file_no='".$num."'" : "");
@@ -273,8 +279,13 @@
                                                                 } else {
                                                                     if (is_file($target_dir.$files)) { @unlink($target_dir.$files); }
                                                                     if (!is_dir($target_dir)) { @mkdir($target_dir, 0775, true); }
-                                                                    move_uploaded_file($tmpPath, $target_dir.$labeledName);
-                                                                    $nfile = $labeledName;
+                                                                    if (move_uploaded_file($tmpPath, $target_dir.$labeledName)) {
+                                                                        $nfile = $labeledName;
+                                                                    } else {
+                                                                        $_SESSION['errSize'] = 'Gagal menyimpan file ke server (Error move upload)!';
+                                                                        echo '<script language="javascript">window.history.back();</script>';
+                                                                        exit();
+                                                                    }
                                                                 }
                                                             }
 
