@@ -1,0 +1,23 @@
+1. CURL untuk Membuat Surat Keluar Produk Hukum
+curl -X POST "https://pusda.dpuair.jatimprov.go.id/suramadu/api/create_surat_keluar_produk_hukum.php" ^
+  -H "X-API-Key: A3f9vN7qZsK2mP8xT0bL4uY6wR1cH5jD9sG2kV7pQ8zM4nR6uB1yF0wX" ^
+  -F "kode=180" ^
+  -F "perihal=Surat Tanpa File" ^
+  -F "tujuan=Dinas Terkait" ^
+  -F "tgl_surat=2026-02-06" ^
+  -F "isi=Ini adalah tes input tanpa lampiran file PDF" ^
+  -F "nama_pembuat=Admin" ^
+  -F "pin=123456" ^
+  -F "bidang=1"
+
+2. CURL untuk Membuat Surat Keluar Keuangan
+curl -X POST "https://pusda.dpuair.jatimprov.go.id/suramadu/api/create_surat_keluar_keuangan.php" ^
+  -H "X-API-Key: A3f9vN7qZsK2mP8xT0bL4uY6wR1cH5jD9sG2kV7pQ8zM4nR6uB1yF0wX" ^
+  -F "kode=900" ^
+  -F "perihal=Laporan Kosong" ^
+  -F "tujuan=Internal" ^
+  -F "tgl_surat=2026-02-06" ^
+  -F "isi=Tes tanpa upload" ^
+  -F "nama_pembuat=Bendahara" ^
+  -F "pin=123456" ^
+  -F "bidang=1"

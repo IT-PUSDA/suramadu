@@ -4,6 +4,55 @@ if (!isset($_SESSION['admin']) || (int)$_SESSION['admin'] !== 1) {
     return;
 }
 
+// Helper: Parse Basic User Agent
+function get_browser_name($user_agent)
+{
+    if (strpos($user_agent, 'Opera') || strpos($user_agent, 'OPR/')) return 'Opera';
+    elseif (strpos($user_agent, 'Edge')) return 'Edge';
+    elseif (strpos($user_agent, 'Chrome')) return 'Chrome';
+    elseif (strpos($user_agent, 'Safari')) return 'Safari';
+    elseif (strpos($user_agent, 'Firefox')) return 'Firefox';
+    elseif (strpos($user_agent, 'MSIE') || strpos($user_agent, 'Trident/7')) return 'Internet Explorer';
+    
+    return 'Lainnya';
+}
+
+function get_os_name($user_agent) {
+    if (preg_match('/linux/i', $user_agent)) return 'Linux';
+    elseif (preg_match('/macintosh|mac os x/i', $user_agent)) return 'Mac OS';
+    elseif (preg_match('/windows|win32/i', $user_agent)) return 'Windows';
+    
+    return 'Lainnya';
+}
+
+// Helper: Check if IP is Private (Internal)
+function get_network_status($ip) {
+    // 10.0.0.0 - 10.255.255.255
+    // 172.16.0.0 - 172.31.255.255
+    // 192.168.0.0 - 192.168.255.255
+    // 127.0.0.1
+    
+    $long = ip2long($ip);
+    if ($long != -1) {
+        $private_ips = array(
+            array('10.0.0.0', '10.255.255.255'),
+            array('172.16.0.0', '172.31.255.255'),
+            array('192.168.0.0', '192.168.255.255'),
+            array('127.0.0.0', '127.255.255.255')
+        );
+        
+        foreach ($private_ips as $r) {
+            $min = ip2long($r[0]);
+            $max = ip2long($r[1]);
+            if ($long >= $min && $long <= $max) {
+                 return ['label' => 'Internal (Aman)', 'color' => '#1b5e20', 'icon' => 'shield']; // Green
+            }
+        }
+    }
+    return ['label' => 'Eksternal / Publik', 'color' => '#f57f17', 'icon' => 'public']; // Orange
+}
+
+
 $perPage = 50;
 $logPage = isset($_GET['log_page']) ? max(1, (int)$_GET['log_page']) : 1;
 $offset = ($logPage - 1) * $perPage;
@@ -176,9 +225,9 @@ $roleLabels = [
                                     <th style="width:140px;">Pengguna</th>
                                     <th style="width:120px;">Role</th>
                                     <th class="col-action">Aksi</th>
-                                    <th class="col-meta">Detail</th>
-                                    <th style="width:100px;">Metode</th>
-                                    <th style="width:120px;">IP Address</th>
+                                    <th style="width:140px;">Perangkat</th>
+                                    <th style="width:80px;">Metode</th>
+                                    <th style="width:180px;">Status Jaringan</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -196,7 +245,11 @@ $roleLabels = [
                                             if (!empty($log['role_level']) && isset($roleLabels[(int)$log['role_level']])) {
                                                 $roleText = $roleLabels[(int)$log['role_level']];
                                             }
-                                            $detail = $log['detail'] ?? '';
+                                            $userAgent = $log['user_agent'] ?? '';
+                                            $browser = get_browser_name($userAgent);
+                                            $os = get_os_name($userAgent);
+                                            $ip = $log['ip_address'] ?? '0.0.0.0';
+                                            $netStatus = get_network_status($ip);
                                         ?>
                                         <tr>
                                             <td><span class="timestamp"><?php echo htmlspecialchars($time, ENT_QUOTES); ?></span></td>
@@ -206,9 +259,20 @@ $roleLabels = [
                                                 <div style="font-weight:600; color:#1e3a8a;"><?php echo htmlspecialchars($log['action'] ?? '-', ENT_QUOTES); ?></div>
                                                 <div style="font-size:12px; color:#607d8b;">Halaman: <?php echo htmlspecialchars($log['page'] ?? '-', ENT_QUOTES); ?><?php echo !empty($log['act']) ? ' / ' . htmlspecialchars($log['act'], ENT_QUOTES) : ''; ?><?php echo !empty($log['sub']) ? ' / ' . htmlspecialchars($log['sub'], ENT_QUOTES) : ''; ?></div>
                                             </td>
-                                            <td><?php echo $detail !== '' ? htmlspecialchars($detail, ENT_QUOTES) : '-'; ?></td>
+                                            <td>
+                                                <div style="font-weight:600; font-size:13px;"><?php echo htmlspecialchars($browser); ?></div>
+                                                <div style="font-size:11px; color:#78909c;"><?php echo htmlspecialchars($os); ?></div>
+                                            </td>
                                             <td><?php echo htmlspecialchars($log['request_method'] ?? '-', ENT_QUOTES); ?></td>
-                                            <td><?php echo htmlspecialchars($log['ip_address'] ?? '-', ENT_QUOTES); ?></td>
+                                            <td>
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <i class="material-icons tiny" style="color:<?php echo $netStatus['color']; ?>; font-size:18px;"><?php echo $netStatus['icon']; ?></i>
+                                                    <div>
+                                                        <div style="font-weight:600; color:#37474f; font-size:12px;"><?php echo htmlspecialchars($ip); ?></div>
+                                                        <div style="font-size:10px; color:<?php echo $netStatus['color']; ?>; font-weight:bold; letter-spacing:0.3px;"><?php echo strtoupper($netStatus['label']); ?></div>
+                                                    </div>
+                                                </div>
+                                            </td>
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
