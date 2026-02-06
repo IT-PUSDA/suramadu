@@ -1,4 +1,14 @@
 <?php
+// Debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Define BASE_PATH to Project Root (ams/)
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', dirname(__DIR__));
+}
+
 header('Content-Type: application/json; charset=utf-8');
 // Fix CORS
 header("Access-Control-Allow-Origin: *");
@@ -16,9 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+try {
+
 session_start();
-ini_set('display_errors', 0);
-error_reporting(E_ALL);
 
 require_once __DIR__ . '/../src/include/config.php';
 require_once __DIR__ . '/../src/include/bidang_mapping.php';
@@ -245,5 +255,15 @@ if ($ok) {
     echo json_encode([
         'status' => 'error', 
         'message' => 'Database insert failed: ' . mysqli_error($config)
+    ]);
+}
+
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Internal Server Error: ' . $e->getMessage(),
+        'line' => $e->getLine(),
+        'file' => $e->getFile()
     ]);
 }

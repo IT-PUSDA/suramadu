@@ -1,6 +1,16 @@
 <?php
+// Debugging: Show errors to diagnose "Empty Response"
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Define BASE_PATH to Project Root (ams/) BEFORE including config
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', dirname(__DIR__));
+}
+
 header('Content-Type: application/json; charset=utf-8');
-// Fix CORS if needed
+// Fix CORS
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, X-API-Key, Authorization");
@@ -16,9 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Wrap in try-catch to ensure we get JSON error output
+try {
+
 session_start();
-ini_set('display_errors', 0); // Hide HTML errors in API
-error_reporting(E_ALL);
 
 require_once __DIR__ . '/../src/include/config.php';
 require_once __DIR__ . '/../src/include/bidang_mapping.php';
@@ -263,5 +274,15 @@ if ($ok) {
     echo json_encode([
         'status' => 'error', 
         'message' => 'Database insert failed: ' . mysqli_error($config)
+    ]);
+}
+
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Internal Server Error: ' . $e->getMessage(),
+        'line' => $e->getLine(),
+        'file' => $e->getFile()
     ]);
 }
