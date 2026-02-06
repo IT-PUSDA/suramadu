@@ -31,6 +31,20 @@ try {
 
 session_start();
 
+// MANUALLY LOAD ENV if config.php fails to find it (Fix for path issues)
+$envPath = BASE_PATH . '/.env';
+if (file_exists($envPath)) {
+    $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        if (strpos($line, '=') !== false) {
+            list($name, $value) = explode('=', $line, 2);
+            $name = trim($name); $value = trim($value);
+            if (!getenv($name)) { putenv("$name=$value"); $_ENV[$name] = $value; }
+        }
+    }
+}
+
 require_once __DIR__ . '/../src/include/config.php';
 require_once __DIR__ . '/../src/include/bidang_mapping.php';
 require_once __DIR__ . '/../src/include/file_sequence.php';
@@ -61,18 +75,13 @@ function isAuthenticated() {
         }
     }
 
-    if (defined('API_REQUEST_NOMOR_KEY') && API_REQUEST_NOMOR_KEY !== '' && hash_equals(API_REQUEST_NOMOR_KEY, $apiKeyHeader)) {
-        // If using API key, we might need a default user ID if not in session?
-        // For now, let's assume the API user must provide user_id or we pick a default, 
-        // BUT logic relies on $_SESSION['id_user'] and $_SESSION['admin'].
-        // For strict compatibility with the logic that uses $_SESSION['id_user'], 
-        // an API-only call without session might fail if we don't mock the session.
-        // Let's set a default system user or require session for full functionality if code depends heavily on session.
-        
-        // However, the original code uses $_SESSION['id_user'] extensively. 
-        // We'll set a dummy admin session if API key is valid to allow logic to proceed.
+    // Get expected key
+    $expectedKey = '';
+    if (defined('API_REQUEST_NOMOR_KEY')) { $expectedKey = API_REQUEST_NOMOR_KEY; }
+    else { $expectedKey = getenv('API_REQUEST_NOMOR_KEY') ?: ($_ENV['API_REQUEST_NOMOR_KEY'] ?? ''); }
+
+    if ($expectedKey !== '' && $apiKeyHeader !== '' && hash_equals($expectedKey, $apiKeyHeader)) {
         if (empty($_SESSION['id_user'])) {
-             // Try to find a 'system' or 'api' user or just use ID 1 (Admin)
              $_SESSION['id_user'] = 1; 
              $_SESSION['admin'] = 1; 
              $_SESSION['nama'] = 'API User';
