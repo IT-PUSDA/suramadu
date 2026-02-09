@@ -102,13 +102,14 @@ if (empty($_SESSION['admin'])) {
                     header("Location: index.php?page=admin&act=tsk&sub=add");
                     die();
                 } else {
-                    if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $perihal)) {
-                        $_SESSION['perihal'] = 'Form Perihal Surat mengandung karakter terlarang.';
+                    // Regex Fix: Move hyphen to end to avoid range interpretation, and fix Session Keys
+                    if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $perihal)) {
+                        $_SESSION['perihalk'] = 'Form Perihal Surat mengandung karakter terlarang.';
                         header("Location: index.php?page=admin&act=tsk&sub=add");
                         die();
                     } else {
-                        if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $tujuan)) {
-                            $_SESSION['tujuan'] = 'Form Tujuan Surat mengandung karakter terlarang.';
+                        if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $tujuan)) {
+                            $_SESSION['tujuan_surat'] = 'Form Tujuan Surat mengandung karakter terlarang.';
                             header("Location: index.php?page=admin&act=tsk&sub=add");
                             die();
                         } else {
@@ -117,7 +118,7 @@ if (empty($_SESSION['admin'])) {
                                 header("Location: index.php?page=admin&act=tsk&sub=add");
                                 die();
                             } else {
-                                if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $isi)) {
+                                if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $isi)) {
                                     $_SESSION['isik'] = 'Form Isi Ringkas mengandung karakter terlarang.';
                                     header("Location: index.php?page=admin&act=tsk&sub=add");
                                     die();
