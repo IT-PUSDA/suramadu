@@ -51,6 +51,32 @@ if (empty($_SESSION['admin'])) {
                         </div>';
         unset($_SESSION['errEmpty']);
     }
+    if (isset($_SESSION['errDup'])) {
+        $errDup = $_SESSION['errDup'];
+        echo '<div id="alert-message" class="row">
+                            <div class="col m12">
+                                <div class="card red lighten-5">
+                                    <div class="card-content notif">
+                                        <span class="card-title red-text"><i class="material-icons md-36">clear</i> ' . $errDup . '</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>';
+        unset($_SESSION['errDup']);
+    }
+    if (isset($_SESSION['no_suratk'])) {
+        $no_suratk = $_SESSION['no_suratk'];
+        echo '<div id="alert-message" class="row">
+                            <div class="col m12">
+                                <div class="card red lighten-5">
+                                    <div class="card-content notif">
+                                        <span class="card-title red-text"><i class="material-icons md-36">clear</i> ' . $no_suratk . '</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>';
+        unset($_SESSION['no_suratk']);
+    }
     ?>
 
     <!-- Row form Start -->
