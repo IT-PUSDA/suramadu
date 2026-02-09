@@ -55,12 +55,12 @@ if (empty($_SESSION['admin'])) {
             header("Location: index.php?page=admin&act=tsk&sub=add");
             die();
         } else {
-            $tglx = $_REQUEST['tgl_surat'];
-            $nkode = $_REQUEST['kode'];
-            $perihal = $_REQUEST['perihal'];
-            $tujuan = $_REQUEST['tujuan'];
-            $tgl_surat = $_REQUEST['tgl_surat'];
-            $isi = $_REQUEST['isi'];
+            $tglx = mysqli_real_escape_string($config, trim($_REQUEST['tgl_surat']));
+            $nkode = mysqli_real_escape_string($config, trim($_REQUEST['kode']));
+            $perihal = mysqli_real_escape_string($config, trim($_REQUEST['perihal']));
+            $tujuan = mysqli_real_escape_string($config, trim($_REQUEST['tujuan']));
+            $tgl_surat = mysqli_real_escape_string($config, trim($_REQUEST['tgl_surat']));
+            $isi = mysqli_real_escape_string($config, trim($_REQUEST['isi']));
             $id_user = $_SESSION['id_user'];
             $bidang_input = $_REQUEST['bidang'] ?? '';
             // Resolve default bidang for locked roles (3 & 4). If the form submitted
@@ -119,34 +119,35 @@ if (empty($_SESSION['admin'])) {
             // ===========================================================================
 
             // Validasi input data (regex)
-            if (!preg_match("/^[0-9.]*$/", $nkode)) {
-                $_SESSION['kodek'] = 'Form Kode Klasifikasi hanya boleh mengandung karakter angka';
+            // Allow numbers, dots, spaces, hyphens for classification code
+            if (!preg_match("/^[0-9.\s-]*$/", $nkode)) {
+                $_SESSION['kodek'] = 'Form Kode Klasifikasi hanya boleh karakter angka/titik. Input: ' . htmlspecialchars($nkode);
                 header("Location: index.php?page=admin&act=tsk&sub=add");
                 die();
             } else {
                 if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $no_surat)) {
-                    $_SESSION['no_suratk'] = 'Form No Surat mengandung karakter terlarang.';
+                    $_SESSION['no_suratk'] = 'Form No Surat mengandung karakter terlarang. Input: ' . htmlspecialchars($no_surat);
                     header("Location: index.php?page=admin&act=tsk&sub=add");
                     die();
                 } else {
                     // Regex Fix: Move hyphen to end to avoid range interpretation, and fix Session Keys
                     if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $perihal)) {
-                        $_SESSION['perihalk'] = 'Form Perihal Surat mengandung karakter terlarang.';
+                        $_SESSION['perihalk'] = 'Form Perihal Surat mengandung karakter terlarang. Input: ' . htmlspecialchars($perihal);
                         header("Location: index.php?page=admin&act=tsk&sub=add");
                         die();
                     } else {
                         if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $tujuan)) {
-                            $_SESSION['tujuan_surat'] = 'Form Tujuan Surat mengandung karakter terlarang.';
+                            $_SESSION['tujuan_surat'] = 'Form Tujuan Surat mengandung karakter terlarang. Input: ' . htmlspecialchars($tujuan);
                             header("Location: index.php?page=admin&act=tsk&sub=add");
                             die();
                         } else {
                             if (!preg_match("/^[0-9.-]*$/", $tgl_surat)) {
-                                $_SESSION['tgl_suratk'] = 'Form Tanggal Surat hanya boleh mengandung angka dan minus(-)';
+                                $_SESSION['tgl_suratk'] = 'Form Tanggal Surat hanya boleh mengandung angka dan minus(-). Input: ' . htmlspecialchars($tgl_surat);
                                 header("Location: index.php?page=admin&act=tsk&sub=add");
                                 die();
                             } else {
                                 if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $isi)) {
-                                    $_SESSION['isik'] = 'Form Isi Ringkas mengandung karakter terlarang.';
+                                    $_SESSION['isik'] = 'Form Isi Ringkas mengandung karakter terlarang. Input: ' . htmlspecialchars($isi);
                                     header("Location: index.php?page=admin&act=tsk&sub=add");
                                     die();
                                 } else {
@@ -234,7 +235,10 @@ if (empty($_SESSION['admin'])) {
                                             // FIX: Pastikan nama_pembuat dan pin terisi, atau gunakan default
                                             $final_nama_pembuat = !empty($nama_pembuat) ? mysqli_real_escape_string($config, $nama_pembuat) : '-';
                                             $final_pin = !empty($pin) ? $pin : '';
-
+                                            
+                                            // Variable already escaped at top of file, using them directly in string is safe now
+                                            // NO NEED to re-escape variables that are already escaped at start of file
+                                            
                                             // Pastikan kolom jenis ada (default 'umum')
                                             $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
                                             if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
