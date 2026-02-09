@@ -11,12 +11,39 @@ require_once __DIR__ . '/../include/file_sequence.php';
 // Opsional: client Drive sederhana bila penyimpanan GDrive diaktifkan
 @include_once __DIR__ . '/../Utils/GoogleDriveClient.php';
 
+// DEBUGGING: Cek apakah data sampai ke server
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Cek jika POST kosong (indikasi file terlalu besar melebihi post_max_size)
+    if (empty($_POST) && empty($_FILES)) {
+        die("<h1>ERROR: Data POST Kosong!</h1><p>Kemungkinan ukuran file melebihi batas <b>post_max_size</b> di konfigurasi PHP.</p>");
+    }
+
+    /* UNCOMMENT UNTUK MELIHAT DATA MENTAH
+    echo "<pre>";
+    print_r($_POST);
+    print_r($_FILES);
+    echo "</pre>";
+    // die(); 
+    */
+}
+
 if (empty($_SESSION['admin'])) {
     $_SESSION['err'] = '<center>Anda harus login terlebih dahulu!</center>';
     header("Location: index.php");
     die();
 } else {
-    if (isset($_REQUEST['submit1'])) {
+
+    // Cek apakah tombol submit ditekan
+    if (!isset($_REQUEST['submit1'])) {
+       // Fallback: Jika submit1 tidak terdeteksi tapi ini request POST, mungkin masalah browser submit handling
+       if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+           // Lanjut saja, asumsikan valid
+       } else {
+           die("<h1>ERROR: Tombol submit tidak terdeteksi.</h1>");
+       }
+    }
+
+    // if (isset($_REQUEST['submit1'])) { <-- diganti logic flow di atas
 
         // Validasi form kosong
         if (
@@ -203,6 +230,11 @@ if (empty($_SESSION['admin'])) {
                                             }
 
                                             // Query INSERT hanya satu kali
+                                            // ----------------------------------------------------------------------------------------------------
+                                            // FIX: Pastikan nama_pembuat dan pin terisi, atau gunakan default
+                                            $final_nama_pembuat = !empty($nama_pembuat) ? mysqli_real_escape_string($config, $nama_pembuat) : '-';
+                                            $final_pin = !empty($pin) ? $pin : '';
+
                                             // Pastikan kolom jenis ada (default 'umum')
                                             $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
                                             if ($resJenis && mysqli_num_rows($resJenis) === 1) { $hasJenis = true; }
@@ -212,19 +244,23 @@ if (empty($_SESSION['admin'])) {
                                                 if ($resJenis2 && mysqli_num_rows($resJenis2) === 1) { $hasJenis = true; }
                                             }
 
+                                            // Buat query string dulu untuk debugging
+                                            $sql = "";
                                             if ($hasJenis && $hasFileNo) {
-                                                $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,file_no,id_user,bidang,nama_pembuat,pin,jenis)
-                                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile',".($file_no===null?"NULL":"'".intval($file_no)."'").",'$id_user','$bidang', '$nama_pembuat', '$pin','umum')");
+                                                $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,file_no,id_user,bidang,nama_pembuat,pin,jenis)
+                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile',".($file_no===null?"NULL":"'".intval($file_no)."'").",'$id_user','$bidang', '$final_nama_pembuat', '$final_pin','umum')";
                                             } elseif ($hasJenis) {
-                                                $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin,jenis)
-                                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang', '$nama_pembuat', '$pin','umum')");
+                                                $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin,jenis)
+                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang', '$final_nama_pembuat', '$final_pin','umum')";
                                             } elseif ($hasFileNo) {
-                                                $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,file_no,id_user,bidang,nama_pembuat,pin)
-                                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile',".($file_no===null?"NULL":"'".intval($file_no)."'").",'$id_user','$bidang', '$nama_pembuat', '$pin')");
+                                                $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,file_no,id_user,bidang,nama_pembuat,pin)
+                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile',".($file_no===null?"NULL":"'".intval($file_no)."'").",'$id_user','$bidang', '$final_nama_pembuat', '$final_pin')";
                                             } else {
-                                                $query = mysqli_query($config, "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin)
-                                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang', '$nama_pembuat', '$pin')");
+                                                $sql = "INSERT INTO tbl_surat_keluar(id_surat,no_agenda,perihal,no_surat,tujuan,kode,tgl_surat,isi,file,id_user,bidang,nama_pembuat,pin)
+                                                        VALUES('$id_surat','$no_agenda','$perihal','$no_surat','$tujuan','$nkode','$tgl_surat','$isi','$nfile','$id_user','$bidang', '$final_nama_pembuat', '$final_pin')";
                                             }
+                                            
+                                            $query = mysqli_query($config, $sql);
 
                                             if ($query == true) {
                                                 $_SESSION['succAdd'] = 'SUKSES! Data berhasil ditambahkan';
@@ -232,8 +268,11 @@ if (empty($_SESSION['admin'])) {
                                                 die();
                                             } else {
                                                 $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query: ' . mysqli_error($config);
-                                                header("Location: index.php?page=admin&act=tsk&sub=add");
+                                                // Tampilkan SQL error detail jika debug mode
+                                                echo "Query Error: " . mysqli_error($config) . "<br>SQL: " . htmlspecialchars($sql);
                                                 die();
+                                                // header("Location: index.php?page=admin&act=tsk&sub=add");
+                                                // die();
                                             }
                                         }
                                     }
