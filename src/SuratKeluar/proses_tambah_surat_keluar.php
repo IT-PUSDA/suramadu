@@ -97,18 +97,18 @@ if (empty($_SESSION['admin'])) {
                 header("Location: index.php?page=admin&act=tsk&sub=add");
                 die();
             } else {
-                if (!preg_match("/^[a-zA-Z0-9.\/ -]*$/", $no_surat)) {
-                    $_SESSION['no_suratk'] = 'Form No Surat hanya boleh mengandung karakter huruf, angka, spasi, titik(.), minus(-) dan garis miring(/)';
+                if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $no_surat)) {
+                    $_SESSION['no_suratk'] = 'Form No Surat mengandung karakter terlarang.';
                     header("Location: index.php?page=admin&act=tsk&sub=add");
                     die();
                 } else {
-                    if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/", $perihal)) {
-                        $_SESSION['perihal'] = 'Form Perihal Surat hanya boleh mengandung karakter huruf, angka, spasi, titik(.), koma(,), minus(-), garis miring(/), kurung(), underscore(_), dan(&) persen(%) dan at(@)';
+                    if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $perihal)) {
+                        $_SESSION['perihal'] = 'Form Perihal Surat mengandung karakter terlarang.';
                         header("Location: index.php?page=admin&act=tsk&sub=add");
                         die();
                     } else {
-                        if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/", $tujuan)) {
-                            $_SESSION['tujuan'] = 'Form Tujuan Surat hanya boleh mengandung karakter huruf, angka, spasi, titik(.), koma(,), minus(-), garis miring(/), kurung(), underscore(_), dan(&) persen(%) dan at(@)';
+                        if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $tujuan)) {
+                            $_SESSION['tujuan'] = 'Form Tujuan Surat mengandung karakter terlarang.';
                             header("Location: index.php?page=admin&act=tsk&sub=add");
                             die();
                         } else {
@@ -117,8 +117,8 @@ if (empty($_SESSION['admin'])) {
                                 header("Location: index.php?page=admin&act=tsk&sub=add");
                                 die();
                             } else {
-                                if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/", $isi)) {
-                                    $_SESSION['isik'] = 'Form Isi Ringkas hanya boleh mengandung karakter huruf, angka, spasi, titik(.), koma(,), minus(-), garis miring(/), kurung(), underscore(_), dan(&) persen(%) dan at(@)';
+                                if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $isi)) {
+                                    $_SESSION['isik'] = 'Form Isi Ringkas mengandung karakter terlarang.';
                                     header("Location: index.php?page=admin&act=tsk&sub=add");
                                     die();
                                 } else {
