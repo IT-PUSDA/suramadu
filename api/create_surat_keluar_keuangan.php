@@ -166,18 +166,40 @@ $d1 = mysqli_fetch_array($q1);
 $id_surat = ($d1['urut'] ?? 0) + 1;
 
 // 3. Generate No Surat
+$retry_count = 0;
+$is_unique = false;
 $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, $jenis, $tgl_surat);
 $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
+
+while (!$is_unique && $retry_count < 20) {
+     $q_cek = mysqli_query($config, "SELECT id_surat FROM tbl_surat_keluar WHERE no_surat = '$no_surat'");
+     if ($q_cek && mysqli_num_rows($q_cek) > 0) {
+         // Conflict -> Bump sequence manually
+         $prefix = substr($pos_code, 0, -2); 
+         $suffix = (int)substr($pos_code, -2);
+         $suffix++;
+         $pos_code = $prefix . sprintf('%02d', $suffix);
+         $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
+         $retry_count++;
+     } else {
+         $is_unique = true;
+     }
+}
+if (!$is_unique) {
+    // Fallback if loop gets exhausted
+    $pos_code .= "a";
+    $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
+}
 
 if (!preg_match('/^[a-zA-Z0-9.\/ -]*$/', $no_surat)) {
     http_response_code(400); echo json_encode(['status' => 'error', 'message' => 'Generated No Surat is invalid format']); exit;
 }
 
-// Check Duplicate
+// Check Duplicate (Double Check after loop)
 $dup = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
 if (mysqli_num_rows($dup) > 0) {
     http_response_code(409); 
-    echo json_encode(['status' => 'error', 'message' => 'Nomor Surat sudah terpakai', 'no_surat' => $no_surat]); 
+    echo json_encode(['status' => 'error', 'message' => 'Nomor Surat masih terdeteksi duplicate setelah retry', 'no_surat' => $no_surat]); 
     exit;
 }
 

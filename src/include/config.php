@@ -1,6 +1,7 @@
 <?php
 // Load .env into environment (simple parser)
-$projectRoot = dirname(__DIR__, 1);
+// Fix path: src/include -> src -> root
+$projectRoot = dirname(__DIR__, 2);
 // Ensure application uses local timezone (GMT+7)
 date_default_timezone_set('Asia/Jakarta');
 $envFile = $projectRoot . '/.env';
@@ -23,10 +24,10 @@ if (file_exists($envFile)) {
 }
 
 // Database defaults (can be overridden via .env)
-$host = getenv('DB_HOST') ?: '10.242.100.200';
-$username = getenv('DB_USERNAME') ?: 'sekretariat_psda';
-$password = getenv('DB_PASSWORD') ?: 'p5d4m3ndun14';
-$database = getenv('DB_DATABASE') ?: 'sekretariat_suramaduv2';
+$host =      (getenv('DB_HOST') !== false)     ? getenv('DB_HOST')     : '10.242.100.200';
+$username =  (getenv('DB_USERNAME') !== false) ? getenv('DB_USERNAME') : 'sekretariat_psda';
+$password =  (getenv('DB_PASSWORD') !== false) ? getenv('DB_PASSWORD') : 'p5d4m3ndun14';
+$database =  (getenv('DB_DATABASE') !== false) ? getenv('DB_DATABASE') : 'sekretariat_suramaduv2';
 
 // TEMP DEBUG: enable error display and logging for local development (remove in production)
 @ini_set('display_errors', 1);
