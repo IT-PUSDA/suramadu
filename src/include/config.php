@@ -29,6 +29,16 @@ $username =  (getenv('DB_USERNAME') !== false) ? getenv('DB_USERNAME') : 'sekret
 $password =  (getenv('DB_PASSWORD') !== false) ? getenv('DB_PASSWORD') : 'p5d4m3ndun14';
 $database =  (getenv('DB_DATABASE') !== false) ? getenv('DB_DATABASE') : 'sekretariat_suramaduv2';
 
+// --- FORCE PRODUCTION SETTINGS IF ON OFFICIAL DOMAIN ---
+// Ini untuk pengaman jika ada file .env yang salah di server (misal setting localhost terbawa)
+if (isset($_SERVER['SERVER_NAME']) && stripos($_SERVER['SERVER_NAME'], 'dpuair.jatimprov.go.id') !== false) {
+    // Kita berada di server kantor, paksa gunakan setting IP Server
+    $host = '10.242.100.200';
+    $username = 'sekretariat_psda';
+    $password = 'p5d4m3ndun14';
+    $database = 'sekretariat_suramaduv2';
+}
+
 // TEMP DEBUG: enable error display and logging for local development (remove in production)
 @ini_set('display_errors', 1);
 @ini_set('display_startup_errors', 1);
