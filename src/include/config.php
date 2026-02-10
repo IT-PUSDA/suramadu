@@ -109,7 +109,9 @@ if ($config) {
 // API key for programmatic requests (read from env when available)
 if (!defined('API_REQUEST_NOMOR_KEY')) {
     $envKey = getenv('API_REQUEST_NOMOR_KEY');
-    define('API_REQUEST_NOMOR_KEY', $envKey !== false ? $envKey : '');
+    // Fallback: Use hardcoded key if .env is missing on server
+    $defaultKey = 'A3f9vN7qZsK2mP8xT0bL4uY6wR1cH5jD9sG2kV7pQ8zM4nR6uB1yF0wX'; 
+    define('API_REQUEST_NOMOR_KEY', ($envKey !== false && $envKey !== '') ? $envKey : $defaultKey);
 }
 
 require_once __DIR__ . '/activity_logger.php';
