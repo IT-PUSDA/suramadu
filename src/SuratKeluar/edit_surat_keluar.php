@@ -100,30 +100,9 @@
                     echo '<script language="javascript">window.history.back();</script>';
                 }  else {
 
-                    if(!preg_match("/^[a-zA-Z0-9.\/ -]*$/", $no_surat)){
-                        $_SESSION['no_suratk'] = 'Form No Surat hanya boleh mengandung karakter huruf, angka, spasi, titik(.), minus(-) dan garis miring(/)';
-                        echo '<script language="javascript">window.history.back();</script>';
-                    } else {
 
-                        if(!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/", $perihal)){
-                            $_SESSION['perihal'] = 'Form Perihal Surat hanya boleh mengandung karakter huruf, angka, spasi, titik(.), koma(,), minus(-), garis miring(/), kurung(), underscore(_), dan(&) persen(%) dan at(@)';
-                            echo '<script language="javascript">window.history.back();</script>';
-                        } else {
-
-                            if(!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/", $tujuan)){
-								$_SESSION['tujuan_surat'] = 'Form Tujuan Surat hanya boleh mengandung karakter huruf, angka, spasi, titik(.), koma(,), minus(-), garis miring(/), kurung(), underscore(_), dan(&) persen(%) dan at(@)';
-								echo '<script language="javascript">window.history.back();</script>';
-							} else {
-
-                                if(!preg_match("/^[0-9.-]*$/", $tgl_surat)){
-									$_SESSION['tgl_suratk'] = 'Form Tanggal Surat hanya boleh mengandung angka dan minus(-)';
-                                    echo '<script language="javascript">window.history.back();</script>';
-                                }  else {
-
-                                    if(!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/", $isi)){
-										$_SESSION['isik'] = 'Form Isi Ringkas hanya boleh mengandung karakter huruf, angka, spasi, titik(.), koma(,), minus(-), garis miring(/), kurung(), underscore(_), dan(&) persen(%) dan at(@)';
-										echo '<script language="javascript">window.history.back();</script>';
-									} else {
+                    // Character validation removed as per user request (and matched with create process)
+                    
                                             // Batasi hanya PDF saat edit (maks 2MB)
                                             $ekstensi = array('pdf');
                                             // Sanitize filename: remove special chars that break Windows paths
@@ -334,13 +313,10 @@
                                                     $_SESSION['errQ'] = 'ERROR! Ada masalah dengan query';
                                                     echo '<script language="javascript">window.history.back();</script>';
                                                 }
+
                                             }
                                         
-                                    }
-                                }
-                            }
-                        }
-                    }
+            
                 }
             }
         } else {

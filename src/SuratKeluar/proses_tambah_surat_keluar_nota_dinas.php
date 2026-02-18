@@ -67,15 +67,9 @@ if (isset($_REQUEST['submit1'])) {
     // $pos_code = page_line_label_from_seq($pos_seq, 40);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
-    // Validasi input
-    if (!preg_match('/^[0-9.]*$/', $nkode)) { $_SESSION['kodek']='Form Kode Klasifikasi hanya boleh mengandung karakter angka'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
-    if (!preg_match('/^[a-zA-Z0-9.\/ -]*$/', $no_surat)) { $_SESSION['no_suratk']='Form No Surat hanya boleh mengandung karakter huruf, angka, spasi, titik(.), minus(-) dan garis miring(/)'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
-    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $perihal)) { $_SESSION['perihal']='Form Perihal tidak valid'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
-    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $tujuan)) { $_SESSION['tujuan']='Form Tujuan tidak valid'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
-    if (!preg_match('/^[0-9.-]*$/', $tgl_surat)) { $_SESSION['tgl_suratk']='Form Tanggal Surat tidak valid'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
-    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n -]*$/', $isi)) { $_SESSION['isik']='Form Isi Ringkas tidak valid'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
-    if (!preg_match('/^[0-9.]*$/', $bidang)) { $_SESSION['bidangk']='Form Bidang hanya boleh angka & titik(.)'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
 
+    // Validasi input
+    // Character validation removed as per user request
     $cek = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
     if (mysqli_num_rows($cek) > 0) { $_SESSION['errDup']='Nomor Surat sudah terpakai, gunakan yang lain!'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
 
