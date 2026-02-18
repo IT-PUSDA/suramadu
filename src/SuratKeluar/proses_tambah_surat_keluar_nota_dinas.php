@@ -7,7 +7,16 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../include/config.php';
 require_once __DIR__ . '/../include/bidang_mapping.php';
 require_once __DIR__ . '/../include/file_sequence.php';
+
 @include_once __DIR__ . '/../Utils/GoogleDriveClient.php';
+
+// DETEKSI ERROR UPLOAD / POST SIZE LIMIT
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST) && empty($_FILES)) {
+        echo "<script>alert('ERROR FATAL: Data POST kosong! Ukuran file mungkin melebihi batas upload server (post_max_size). Coba file yang lebih kecil.'); window.history.back();</script>";
+        die();
+    }
+}
 
 if (empty($_SESSION['admin'])) {
     $_SESSION['err'] = '<center>Anda harus login terlebih dahulu!</center>';
@@ -15,14 +24,18 @@ if (empty($_SESSION['admin'])) {
     die();
 }
 
-if (isset($_REQUEST['submit1'])) {
+
+if (isset($_REQUEST['submit1']) || ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file']))) {
+    // FALLBACK: Kadang tombol submit1 tidak terdeteksi di server tertentu jika form terlalu besar, kita anggap submit jika POST & ada file
     if (empty($_REQUEST['kode']) || empty($_REQUEST['perihal']) || empty($_REQUEST['tujuan']) || empty($_REQUEST['tgl_surat']) || empty($_REQUEST['isi']) || empty($_REQUEST['nama_pembuat']) || empty($_REQUEST['pin'])) {
         $_SESSION['errEmpty'] = 'ERROR! Semua form wajib diisi';
     header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
         die();
+
     }
 
     $nkode = $_REQUEST['kode'];
+    // $nkode = !empty($_REQUEST['kode']) ? $_REQUEST['kode'] : ''; 
     $perihal = $_REQUEST['perihal'];
     $tujuan = $_REQUEST['tujuan'];
     $tgl_surat = $_REQUEST['tgl_surat'];
@@ -60,30 +73,89 @@ if (isset($_REQUEST['submit1'])) {
     $data1 = mysqli_fetch_array($q1);
     $id_surat = ($data1['urut'] ?? 0) + 1;
 
+
     // Use per-jenis counter for nota_dinas to keep it separate from other types
     // KODE BARU: Support penomoran sisipan jika tanggal surat mundur.
+    // DITAMBAHKAN: Penecekan duplikasi manual dan retry jika nomor tabrakan
+    $is_unique = false;
+    $retry_count = 0;
     $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'nota_dinas', $tgl_surat);
-    // $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'nota_dinas');
-    // $pos_code = page_line_label_from_seq($pos_seq, 40);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
+    while (!$is_unique && $retry_count < 20) {
+        $q_cek = mysqli_query($config, "SELECT id_surat FROM tbl_surat_keluar WHERE no_surat = '$no_surat'");
+        if ($q_cek && mysqli_num_rows($q_cek) > 0) {
+            // Tabrakan! Naikkan sequence manual
+            $prefix = substr($pos_code, 0, -2); // misal '00' dari '0001'
+            $suffix = (int)substr($pos_code, -2); // misal 1
+            $suffix++;
+            $pos_code = $prefix . sprintf('%02d', $suffix);
+            $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
+            $retry_count++;
+        } else {
+            $is_unique = true;
+        }
+   }
+   if (!$is_unique) {
+       $pos_code = $pos_code . "a"; 
+       $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
+   }
 
-    // Validasi input
-    // Character validation removed as per user request
+
+
+    // Cek duplikasi sekali lagi di dalam blok aman
     $cek = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
     if (mysqli_num_rows($cek) > 0) { $_SESSION['errDup']='Nomor Surat sudah terpakai, gunakan yang lain!'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+
 
     // Pastikan kolom file_no tersedia
     $hasFileNo = ensure_file_no_column($config);
 
+
     // Upload file & simpan nomor file
+    // KODE BARU: DETEKSI ERROR UPLOAD PHP LEBIH AWAL
+    if (!isset($_FILES['file']) || $_FILES['file']['error'] === UPLOAD_ERR_NO_FILE) {
+         // Tidak ada file diupload
+         // Logic asli mengharuskan file pdf, jadi kita reject
+         // KECUALI jika edit mode dan file lama ada (tapi ini CREATE mode)
+         // Jadi ini wajib
+         // TAPI... block asli code di bawah menggunakan `if (!empty($name))`.
+         // Mari kita ikuti block asli, namun tambahkan warning jika POST size ok tapi file gagal.
+    } elseif (isset($_FILES['file']['error']) && $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        $uploadError = $_FILES['file']['error'];
+        $msg = 'Unknown Error';
+        switch ($uploadError) {
+            case UPLOAD_ERR_INI_SIZE: $msg = 'Ukuran file melebihi upload_max_filesize di php.ini'; break;
+            case UPLOAD_ERR_FORM_SIZE: $msg = 'Ukuran file melebihi MAX_FILE_SIZE di form HTML'; break;
+            case UPLOAD_ERR_PARTIAL: $msg = 'File hanya terupload sebagian. Coba lagi.'; break;
+            case UPLOAD_ERR_NO_TMP_DIR: $msg = 'Folder temporary server hilang. Hubungi Admin Server.'; break;
+            case UPLOAD_ERR_CANT_WRITE: $msg = 'Gagal menulis file ke disk server.'; break;
+            case UPLOAD_ERR_EXTENSION: $msg = 'Upload dihentikan oleh ekstensi PHP.'; break;
+        }
+        $_SESSION['errQ'] = 'ERROR UPLOAD: ' . $msg;
+        header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
+        die();
+    }
+
     $nfile = ''; $file_no = null;
-    if (!empty($_FILES['file']['name'])) {
-        $ekstensi = ['pdf'];
-        $file = $_FILES['file']['name'];
+    
+
+    // REMOVED: if (!empty($file)) check that wrapped everything.
+    // Instead we do flat logic: if no file, error. if file, process.
+    if (!isset($_FILES['file']['name']) || empty($_FILES['file']['name'])) {
+         $_SESSION['errEmpty'] = 'ERROR! File surat (PDF) wajib diupload.';
+         header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas');
+         die();
+    }
+    
+    // Now we know file is present
+    $ekstensi = ['pdf'];
+    $file = $_FILES['file']['name'];
         $x = explode('.', $file);
         $eks = strtolower(end($x));
         $ukuran = $_FILES['file']['size'];
+
+        // KODE BARU: Support Google Drive
         $target_dir = BASE_PATH . "/upload/surat_keluar/";
         $max_size = 2097152; // 2MB
         if (in_array($eks, $ekstensi) === true) {
@@ -117,8 +189,10 @@ if (isset($_REQUEST['submit1'])) {
                     }
                 }
             } else { $_SESSION['errSize']='Ukuran file terlalu besar! Maks 2 MB.'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
+
         } else { $_SESSION['errFormat']='Format file yang diperbolehkan hanya *.PDF!'; header('Location: index.php?page=admin&act=tsk_nd&sub=add_nota_dinas'); die(); }
-    }
+    
+    // } // END IF !empty file (Removed this brace because we removed the if wrapper)
 
     // Tambahkan kolom jenis bila tersedia
     $hasJenis = false; $resJenis = mysqli_query($config, "SHOW COLUMNS FROM tbl_surat_keluar LIKE 'jenis'");
