@@ -55,17 +55,10 @@ if (isset($_REQUEST['submit1'])) {
     // $pos_code = page_line_label_from_seq($pos_seq, 40);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
-    // Validasi standar
-    if (!preg_match('/^[0-9.]*$/', $nkode)) { $_SESSION['kodek']='Form Kode Klasifikasi hanya angka & titik'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
-    if (!preg_match('/^[a-zA-Z0-9.\/ \'\"!:;?-]*$/', $no_surat)) { $_SESSION['no_suratk']='No Surat tidak valid (karakter terlarang)'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
-    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n \'\"!:;?-]*$/', $perihal)) { $_SESSION['perihal']='Perihal tidak valid (karakter terlarang)'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
-    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n \'\"!:;?-]*$/', $tujuan)) { $_SESSION['tujuan']='Tujuan tidak valid (karakter terlarang)'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
-    if (!preg_match('/^[0-9.-]*$/', $tgl_surat)) { $_SESSION['tgl_suratk']='Tanggal tidak valid'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
-    if (!preg_match('/^[a-zA-Z0-9.,_()%&@\/\r\n \'\"!:;?-]*$/', $isi)) { $_SESSION['isik']='Isi ringkas tidak valid (karakter terlarang)'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
-    if (!preg_match('/^[0-9.]*$/', $bidang)) { $_SESSION['bidangk']='Bidang tidak valid'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
-    $allowed = get_allowed_bidang_codes();
-    if (!in_array($bidang, $allowed, true)) { $_SESSION['bidangk'] = 'Form Bidang tidak valid'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
 
+    // Validasi standar - Removed by request
+    // Character validation blocks removed to prevent form clearing on submit
+    
     $dup = mysqli_query($config, "SELECT 1 FROM tbl_surat_keluar WHERE no_surat='$no_surat' LIMIT 1");
     if (mysqli_num_rows($dup) > 0) { $_SESSION['errDup']='Nomor Surat sudah terpakai, gunakan yang lain!'; header('Location: index.php?page=admin&act=tsk_keu&sub=add_keuangan'); die(); }
 

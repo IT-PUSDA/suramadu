@@ -145,46 +145,12 @@ if (empty($_SESSION['admin'])) {
             // AKHIR BLOK KODE YANG DIPERBAIKI
             // ===========================================================================
 
-            // Validasi input data (regex)
-            // Allow numbers, dots, spaces, hyphens for classification code
-            if (!preg_match("/^[0-9.\s-]*$/", $nkode)) {
-                $_SESSION['kodek'] = 'Form Kode Klasifikasi hanya boleh karakter angka/titik. Input: ' . htmlspecialchars($nkode);
-                header("Location: index.php?page=admin&act=tsk&sub=add");
-                die();
-            } else {
-                if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n -'\"!:;?]*$/", $no_surat)) {
-                    $_SESSION['no_suratk'] = 'Form No Surat mengandung karakter terlarang. Input: ' . htmlspecialchars($no_surat);
-                    header("Location: index.php?page=admin&act=tsk&sub=add");
-                    die();
-                } else {
-                    // Regex Fix: Move hyphen to end to avoid range interpretation, and fix Session Keys
-                    if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $perihal)) {
-                        $_SESSION['perihalk'] = 'Form Perihal Surat mengandung karakter terlarang. Input: ' . htmlspecialchars($perihal);
-                        header("Location: index.php?page=admin&act=tsk&sub=add");
-                        die();
-                    } else {
-                        if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $tujuan)) {
-                            $_SESSION['tujuan_surat'] = 'Form Tujuan Surat mengandung karakter terlarang. Input: ' . htmlspecialchars($tujuan);
-                            header("Location: index.php?page=admin&act=tsk&sub=add");
-                            die();
-                        } else {
-                            if (!preg_match("/^[0-9.-]*$/", $tgl_surat)) {
-                                $_SESSION['tgl_suratk'] = 'Form Tanggal Surat hanya boleh mengandung angka dan minus(-). Input: ' . htmlspecialchars($tgl_surat);
-                                header("Location: index.php?page=admin&act=tsk&sub=add");
-                                die();
-                            } else {
-                                if (!preg_match("/^[a-zA-Z0-9.,_()%&@\/\r\n '\"!:;?-]*$/", $isi)) {
-                                    $_SESSION['isik'] = 'Form Isi Ringkas mengandung karakter terlarang. Input: ' . htmlspecialchars($isi);
-                                    header("Location: index.php?page=admin&act=tsk&sub=add");
-                                    die();
-                                } else {
-                                    // KODE YANG DIPERBAIKI: Regex untuk bidang sekarang memperbolehkan titik.
-                                    if (!preg_match("/^[0-9.]*$/", $bidang)) {
-                                        $_SESSION['bidangk'] = 'Form Bidang hanya boleh mengandung karakter angka dan titik(.)';
-                                        header("Location: index.php?page=admin&act=tsk&sub=add");
-                                        die();
-                                    } else {
-                                        $cek = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE no_surat='$no_surat'");
+
+            // Validasi input data (regex) - Removed by request
+            // Character validation blocks removed to prevent form clearing on submit
+            // Start of duplicate check
+            $cek = mysqli_query($config, "SELECT * FROM tbl_surat_keluar WHERE no_surat='$no_surat'");
+
                                         $result = mysqli_num_rows($cek);
 
                                         if ($result > 0) {
@@ -302,16 +268,8 @@ if (empty($_SESSION['admin'])) {
                                                 // Tampilkan SQL error detail jika debug mode
                                                 echo "Query Error: " . mysqli_error($config) . "<br>SQL: " . htmlspecialchars($sql);
                                                 die();
+
                                                 // header("Location: index.php?page=admin&act=tsk&sub=add");
                                                 // die();
                                             }
                                         }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
