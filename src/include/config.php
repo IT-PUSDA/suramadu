@@ -123,6 +123,21 @@ if ($config) {
     if (!$ok || mysqli_num_rows($ok) === 0) {
         @mysqli_query($config, "ALTER TABLE tbl_surat_keluar ADD COLUMN file_drive VARCHAR(255) NULL");
     }
+    // ------------------------------------------------------------------
+    // Ensure numbering helper structures exist so duplicates cannot slip in.
+    // These simple migrations run on every request but are safe/effectively
+    // no-ops after the first execution.
+    @mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
+        tgl_surat DATE NOT NULL,
+        bidang VARCHAR(50) NOT NULL,
+        jenis VARCHAR(50) NOT NULL,
+        seq INT NOT NULL,
+        PRIMARY KEY (tgl_surat, bidang, jenis)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // add unique index on no_surat if missing (silent failure if already exists)
+    @mysqli_query($config, "ALTER TABLE tbl_surat_keluar
+        ADD CONSTRAINT uq_no_surat UNIQUE (no_surat)");
 }
 
 // API key for programmatic requests (read from env when available)

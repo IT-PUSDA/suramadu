@@ -210,49 +210,40 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
         // ensure index safety
         ensure_no_surat_unique_index($config);
 
-        // 2. Dapatkan sequence untuk tanggal/bidang/jenis secara atomik
-        //    membuat tabel pendukung bila belum ada.
+        // 2. Dapatkan sequence untuk tanggal secara atomik (global per hari).
+        //    Jika tabel lama dengan kolom bidang/jenis ada, ulangi migrasi agar tidak
+        //    dipakai lagi.
+        $chk = mysqli_query($config, "SHOW COLUMNS FROM tbl_date_sequence LIKE 'bidang'");
+        if ($chk && mysqli_num_rows($chk) > 0) {
+            @mysqli_query($config, "RENAME TABLE tbl_date_sequence TO tbl_date_sequence_old");
+        }
         mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
-            tgl_surat DATE NOT NULL,
-            bidang VARCHAR(50) NOT NULL,
-            jenis VARCHAR(50) NOT NULL,
-            seq INT NOT NULL,
-            PRIMARY KEY (tgl_surat, bidang, jenis)
+            tgl_surat DATE NOT NULL PRIMARY KEY,
+            seq INT NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
         $nextSeq = 1;
         mysqli_begin_transaction($config);
         try {
-            $qr = mysqli_query($config,
-                "SELECT seq FROM tbl_date_sequence
-                   WHERE tgl_surat = '$tgl_surat'
-                     AND bidang = '$bidang'
-                     AND jenis = '$jenis' FOR UPDATE");
-            if ($qr && mysqli_num_rows($qr) > 0) {
-                $ro = mysqli_fetch_assoc($qr);
-                $current = (int)($ro['seq'] ?? 0);
-                $nextSeq = $current + 1;
-                mysqli_query($config,
-                    "UPDATE tbl_date_sequence
-                        SET seq = " . intval($nextSeq) . "
-                      WHERE tgl_surat = '$tgl_surat'
-                        AND bidang = '$bidang'
-                        AND jenis = '$jenis'");
-            } else {
-                // initialize for this date
-                $nextSeq = 1;
-                mysqli_query($config,
-                    "INSERT INTO tbl_date_sequence(tgl_surat,bidang,jenis,seq)
-                        VALUES ('$tgl_surat','$bidang','$jenis',1)");
+            $insSql = "INSERT INTO tbl_date_sequence(tgl_surat,seq) \
+                       VALUES ('$tgl_surat',1) \
+                       ON DUPLICATE KEY UPDATE seq = seq + 1";
+            $qr = mysqli_query($config, $insSql);
+            if ($qr) {
+                $qr2 = mysqli_query($config,
+                    "SELECT seq FROM tbl_date_sequence
+                       WHERE tgl_surat = '$tgl_surat'");
+                if ($qr2 && mysqli_num_rows($qr2) > 0) {
+                    $ro = mysqli_fetch_assoc($qr2);
+                    $nextSeq = (int)($ro['seq'] ?? 1);
+                }
             }
             mysqli_commit($config);
         } catch (Exception $e) {
             mysqli_rollback($config);
-            // fallback: hitung berdasarkan data yang sudah ada
+            // fallback: hitung berdasarkan jumlah surat pada tanggal tersebut
             $qCount = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar 
-                                             WHERE tgl_surat = '$tgl_surat' 
-                                             AND bidang = '$bidang' 
-                                             AND jenis = '$jenis'");
+                                             WHERE tgl_surat = '$tgl_surat'");
             if ($qCount && mysqli_num_rows($qCount) > 0) {
                 $d = mysqli_fetch_assoc($qCount);
                 $nextSeq = (int)$d['c'] + 1;
