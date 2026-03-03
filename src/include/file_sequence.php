@@ -211,20 +211,37 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
         ensure_no_surat_unique_index($config);
 
         // 2. Dapatkan sequence untuk tanggal secara atomik (global per hari).
-        //    Jika tabel lama dengan kolom bidang/jenis ada, ulangi migrasi agar tidak
-        //    dipakai lagi.
+        //    Jika tabel lama dengan kolom bidang/jenis ada, rename lalu migrasi data
+        //    agar urutan tidak mundur. Kita tak ingin kehilangan jumlah surat
+        //    lama karena berbagai test/perubahan.
         $chk = mysqli_query($config, "SHOW COLUMNS FROM tbl_date_sequence LIKE 'bidang'");
         if ($chk && mysqli_num_rows($chk) > 0) {
+            // compute highest seq stored in old table (just in case)
+            $r0 = mysqli_query($config, "SELECT MAX(seq) AS m FROM tbl_date_sequence_old");
+            $maxold = 0;
+            if ($r0 && ($row0 = mysqli_fetch_assoc($r0))) { $maxold = (int)($row0['m'] ?? 0); }
             @mysqli_query($config, "RENAME TABLE tbl_date_sequence TO tbl_date_sequence_old");
+            // create new empty table below; we'll transfer counts shortly
         }
         mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
             tgl_surat DATE NOT NULL PRIMARY KEY,
             seq INT NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+        // make sure the counter starts at least equal to number of existing surat
+        // for this date so we never re-use a number when going backwards/migrating.
+        $actualCountQ = mysqli_query($config,
+            "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE tgl_surat = '$tgl_surat'");
+        $actualCount = 0;
+        if ($actualCountQ && mysqli_num_rows($actualCountQ) > 0) {
+            $rct = mysqli_fetch_assoc($actualCountQ);
+            $actualCount = (int)($rct['c'] ?? 0);
+        }
+
         $nextSeq = 1;
         mysqli_begin_transaction($config);
         try {
+            // Atomically insert or bump the stored counter
             $insSql = "INSERT INTO tbl_date_sequence(tgl_surat,seq) \
                        VALUES ('$tgl_surat',1) \
                        ON DUPLICATE KEY UPDATE seq = seq + 1";
@@ -241,13 +258,18 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
             mysqli_commit($config);
         } catch (Exception $e) {
             mysqli_rollback($config);
-            // fallback: hitung berdasarkan jumlah surat pada tanggal tersebut
-            $qCount = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar 
-                                             WHERE tgl_surat = '$tgl_surat'");
-            if ($qCount && mysqli_num_rows($qCount) > 0) {
-                $d = mysqli_fetch_assoc($qCount);
-                $nextSeq = (int)$d['c'] + 1;
-            }
+            // fallback: gunakan jumlah nyata kalau transaksi gagal
+            $nextSeq = $actualCount + 1;
+        }
+
+        // reconciliation: pastikan $nextSeq tidak lebih kecil dari jumlah nyata
+        if ($nextSeq <= $actualCount) {
+            $nextSeq = $actualCount + 1;
+            // update table so future calls start from this corrected value
+            mysqli_query($config,
+                "INSERT INTO tbl_date_sequence(tgl_surat,seq)
+                    VALUES('$tgl_surat',".intval($nextSeq).")
+                  ON DUPLICATE KEY UPDATE seq=".intval($nextSeq));
         }
 
         // 3. Format Output: [DayOfYear][Sequence]
