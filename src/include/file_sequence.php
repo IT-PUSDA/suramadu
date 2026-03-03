@@ -159,12 +159,43 @@ if (!function_exists('next_position_sequence_for_year_and_bidang_global')) {
     }
 }
 
+if (!function_exists('ensure_no_surat_unique_index')) {
+    /**
+     * Checks that a unique index exists on tbl_surat_keluar.no_surat and creates it
+     * if missing. This acts as a safety net to prevent duplicates during races.
+     *
+     * The function is intentionally idempotent; the ALTER statement will be
+     * executed only once the first time it runs, thereafter it has no effect.
+     */
+    function ensure_no_surat_unique_index(mysqli $config): void {
+        // MySQL does not have an "IF NOT EXISTS" clause for ALTER INDEX, so we
+        // detect presence via INFORMATION_SCHEMA and create conditionally.
+        $res = mysqli_query($config, "SELECT COUNT(*) AS c
+            FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE()
+              AND table_name = 'tbl_surat_keluar'
+              AND index_name = 'uq_no_surat'");
+        if ($res) {
+            $row = mysqli_fetch_assoc($res);
+            if (((int)$row['c']) === 0) {
+                mysqli_query($config, "ALTER TABLE tbl_surat_keluar
+                    ADD CONSTRAINT uq_no_surat UNIQUE (no_surat)");
+            }
+        }
+    }
+}
+
 if (!function_exists('get_sequence_code_with_sisipan')) {
     /**
      * REVISI: Menggunakan format HariKe+SequenceHarian (misal 1301 untuk Hari ke-13, urutan 01).
      * Format: [DayOfYear][Sequence2digit]
      * Logika ini menggantikan sistem halaman/baris dan sistem sisipan sebelumnya.
      * Jika backdated, otomatis urut karena hanya menghitung jumlah hari itu.
+     *
+     * Untuk menjaga konsistensi ketika dua pengguna melakukan pencatatan
+     * bersamaan, perhitungan sequence dilakukan secara atomik dengan memanfaatkan
+     * tabel penampung (`tbl_date_sequence`) dan transaksi InnoDB. Fallback ke
+     * perhitungan hitung() hanya terjadi jika terjadi error pada transaksi.
      */
     function get_sequence_code_with_sisipan(mysqli $config, int $year, string $bidang, string $jenis, string $tgl_surat): string {
         $year = (int)$year;
@@ -176,18 +207,56 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
         $ts = strtotime($tgl_surat);
         $dayOfYear = (int)date('z', $ts) + 1;
 
-        // 2. Hitung jumlah surat yang SUDAH ADA pada tanggal tersebut untuk bidang & jenis yang sama
-        //    Gunakan logika COUNT + 1 untuk mendapatkan nomor berikutnya.
-        //    Ini otomatis menangani tanggal maju (0 surat -> no 1) maupun mundur (ada 5 surat -> no 6).
-        $qCount = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar 
-                                         WHERE tgl_surat = '$tgl_surat' 
-                                         AND bidang = '$bidang' 
-                                         AND jenis = '$jenis'");
-        
+        // ensure index safety
+        ensure_no_surat_unique_index($config);
+
+        // 2. Dapatkan sequence untuk tanggal/bidang/jenis secara atomik
+        //    membuat tabel pendukung bila belum ada.
+        mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
+            tgl_surat DATE NOT NULL,
+            bidang VARCHAR(50) NOT NULL,
+            jenis VARCHAR(50) NOT NULL,
+            seq INT NOT NULL,
+            PRIMARY KEY (tgl_surat, bidang, jenis)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $nextSeq = 1;
-        if ($qCount && mysqli_num_rows($qCount) > 0) {
-            $d = mysqli_fetch_assoc($qCount);
-            $nextSeq = (int)$d['c'] + 1;
+        mysqli_begin_transaction($config);
+        try {
+            $qr = mysqli_query($config,
+                "SELECT seq FROM tbl_date_sequence
+                   WHERE tgl_surat = '$tgl_surat'
+                     AND bidang = '$bidang'
+                     AND jenis = '$jenis' FOR UPDATE");
+            if ($qr && mysqli_num_rows($qr) > 0) {
+                $ro = mysqli_fetch_assoc($qr);
+                $current = (int)($ro['seq'] ?? 0);
+                $nextSeq = $current + 1;
+                mysqli_query($config,
+                    "UPDATE tbl_date_sequence
+                        SET seq = " . intval($nextSeq) . "
+                      WHERE tgl_surat = '$tgl_surat'
+                        AND bidang = '$bidang'
+                        AND jenis = '$jenis'");
+            } else {
+                // initialize for this date
+                $nextSeq = 1;
+                mysqli_query($config,
+                    "INSERT INTO tbl_date_sequence(tgl_surat,bidang,jenis,seq)
+                        VALUES ('$tgl_surat','$bidang','$jenis',1)");
+            }
+            mysqli_commit($config);
+        } catch (Exception $e) {
+            mysqli_rollback($config);
+            // fallback: hitung berdasarkan data yang sudah ada
+            $qCount = mysqli_query($config, "SELECT COUNT(*) AS c FROM tbl_surat_keluar 
+                                             WHERE tgl_surat = '$tgl_surat' 
+                                             AND bidang = '$bidang' 
+                                             AND jenis = '$jenis'");
+            if ($qCount && mysqli_num_rows($qCount) > 0) {
+                $d = mysqli_fetch_assoc($qCount);
+                $nextSeq = (int)$d['c'] + 1;
+            }
         }
 
         // 3. Format Output: [DayOfYear][Sequence]

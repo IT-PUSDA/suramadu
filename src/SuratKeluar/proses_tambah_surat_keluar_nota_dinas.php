@@ -73,6 +73,10 @@ if (isset($_REQUEST['submit1']) || ($_SERVER['REQUEST_METHOD'] === 'POST' && iss
     $data1 = mysqli_fetch_array($q1);
     $id_surat = ($data1['urut'] ?? 0) + 1;
 
+    // safety: make sure no_surat uniqueness constraint exists
+    if (function_exists('ensure_no_surat_unique_index')) {
+        ensure_no_surat_unique_index($config);
+    }
 
     // Use per-jenis counter for nota_dinas to keep it separate from other types
     // KODE BARU: Support penomoran sisipan jika tanggal surat mundur.

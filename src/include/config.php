@@ -29,6 +29,7 @@ $username =  (getenv('DB_USERNAME') !== false) ? getenv('DB_USERNAME') : 'sekret
 $password =  (getenv('DB_PASSWORD') !== false) ? getenv('DB_PASSWORD') : 'p5d4m3ndun14';
 $database =  (getenv('DB_DATABASE') !== false) ? getenv('DB_DATABASE') : 'sekretariat_suramaduv2';
 
+
 // --- FORCE PRODUCTION SETTINGS IF ON OFFICIAL DOMAIN ---
 // Ini untuk pengaman jika ada file .env yang salah di server (misal setting localhost terbawa)
 if (isset($_SERVER['SERVER_NAME']) && stripos($_SERVER['SERVER_NAME'], 'dpuair.jatimprov.go.id') !== false) {
@@ -102,6 +103,14 @@ if (!defined('GDRIVE_DELETE_REMOTE_ON_REMOVE')) {
 
 $config = mysqli_connect($host, $username, $password, $database);
 
+// set connection charset explicitly to avoid unknown charset warning
+// and ensure proper UTF-8 handling (use utf8mb4 for full Unicode support)
+if ($config) {
+    if (!mysqli_set_charset($config, 'utf8mb4')) {
+        // fallback: attempt utf8
+        @mysqli_set_charset($config, 'utf8');
+    }
+}
 
 if (!$config) {
     die("Koneksi database gagal: " . mysqli_connect_error());

@@ -107,6 +107,11 @@ if (empty($_SESSION['admin'])) {
             $data1 = mysqli_fetch_array($q1);
             $id_surat = ($data1['urut'] ?? 0) + 1;
 
+            // make sure database enforces uniqueness
+            if (function_exists('ensure_no_surat_unique_index')) {
+                ensure_no_surat_unique_index($config);
+            }
+
             // 4. Buat format nomor surat: gunakan posisi page+line per bidang dan per jenis
             //    Posisi dihitung per tahun, per bidang, dan per jenis agar setiap kombinasi terpisah.
             //    KODE BARU: Support penomoran sisipan jika tanggal surat mundur.

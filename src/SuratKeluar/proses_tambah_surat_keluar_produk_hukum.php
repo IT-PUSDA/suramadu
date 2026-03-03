@@ -47,6 +47,11 @@ if (isset($_REQUEST['submit1'])) {
 
     $q1 = mysqli_query($config, "SELECT max(id_surat) as urut FROM tbl_surat_keluar"); $d1 = mysqli_fetch_array($q1); $id_surat = ($d1['urut'] ?? 0) + 1;
 
+    // ensure index
+    if (function_exists('ensure_no_surat_unique_index')) {
+        ensure_no_surat_unique_index($config);
+    }
+
     // FORMAT PRODUK HUKUM: kode/pageLine/bidang/tahun dengan counter per jenis
     // KODE BARU: Support penomoran sisipan jika tanggal surat mundur.
     $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'produk_hukum', $tgl_surat);
