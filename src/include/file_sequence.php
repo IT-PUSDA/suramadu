@@ -210,28 +210,27 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
         // ensure index safety
         ensure_no_surat_unique_index($config);
 
-        // 2. Dapatkan sequence untuk tanggal secara atomik (global per hari).
-        //    Jika tabel lama dengan kolom bidang/jenis ada, rename lalu migrasi data
-        //    agar urutan tidak mundur. Kita tak ingin kehilangan jumlah surat
-        //    lama karena berbagai test/perubahan.
-        $chk = mysqli_query($config, "SHOW COLUMNS FROM tbl_date_sequence LIKE 'bidang'");
-        if ($chk && mysqli_num_rows($chk) > 0) {
-            // compute highest seq stored in old table (just in case)
-            $r0 = mysqli_query($config, "SELECT MAX(seq) AS m FROM tbl_date_sequence_old");
-            $maxold = 0;
-            if ($r0 && ($row0 = mysqli_fetch_assoc($r0))) { $maxold = (int)($row0['m'] ?? 0); }
+        // 2. Dapatkan sequence untuk tanggal+jenis secara atomik (per-jenis per-hari).
+        //    Setiap jenis surat memiliki counter terpisah untuk hari yang sama.
+        //    Menggunakan locking atomik agar tidak ada duplikat saat concurrent access.
+        //
+        //    Jika tabel lama (hanya tgl_surat PRIMARY KEY) ada, rename lalu buat tabel baru.
+        $chk = mysqli_query($config, "SHOW COLUMNS FROM tbl_date_sequence LIKE 'jenis'");
+        if (!$chk || mysqli_num_rows($chk) === 0) {
+            // old table structure (global per-date only) atau tabel kosong; migrate
             @mysqli_query($config, "RENAME TABLE tbl_date_sequence TO tbl_date_sequence_old");
-            // create new empty table below; we'll transfer counts shortly
         }
         mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
-            tgl_surat DATE NOT NULL PRIMARY KEY,
-            seq INT NOT NULL
+            tgl_surat DATE NOT NULL,
+            jenis VARCHAR(50) NOT NULL,
+            seq INT NOT NULL,
+            PRIMARY KEY (tgl_surat, jenis)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-        // make sure the counter starts at least equal to number of existing surat
-        // for this date so we never re-use a number when going backwards/migrating.
+        // Count actual surat pada tanggal+jenis ini untuk reconciliation
         $actualCountQ = mysqli_query($config,
-            "SELECT COUNT(*) AS c FROM tbl_surat_keluar WHERE tgl_surat = '$tgl_surat'");
+            "SELECT COUNT(*) AS c FROM tbl_surat_keluar 
+             WHERE tgl_surat = '$tgl_surat' AND jenis = '$jenis'");
         $actualCount = 0;
         if ($actualCountQ && mysqli_num_rows($actualCountQ) > 0) {
             $rct = mysqli_fetch_assoc($actualCountQ);
@@ -241,15 +240,16 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
         $nextSeq = 1;
         mysqli_begin_transaction($config);
         try {
-            // Atomically insert or bump the stored counter
-            $insSql = "INSERT INTO tbl_date_sequence(tgl_surat,seq) \
-                       VALUES ('$tgl_surat',1) \
+            // Atomic INSERT...ON DUPLICATE KEY: ensures no duplicate seq even with
+            // concurrent requests. MySQL serializes these internally per primary key.
+            $insSql = "INSERT INTO tbl_date_sequence(tgl_surat,jenis,seq)
+                       VALUES ('$tgl_surat','$jenis',1)
                        ON DUPLICATE KEY UPDATE seq = seq + 1";
             $qr = mysqli_query($config, $insSql);
             if ($qr) {
                 $qr2 = mysqli_query($config,
                     "SELECT seq FROM tbl_date_sequence
-                       WHERE tgl_surat = '$tgl_surat'");
+                       WHERE tgl_surat = '$tgl_surat' AND jenis = '$jenis'");
                 if ($qr2 && mysqli_num_rows($qr2) > 0) {
                     $ro = mysqli_fetch_assoc($qr2);
                     $nextSeq = (int)($ro['seq'] ?? 1);
@@ -258,17 +258,17 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
             mysqli_commit($config);
         } catch (Exception $e) {
             mysqli_rollback($config);
-            // fallback: gunakan jumlah nyata kalau transaksi gagal
+            // fallback: gunakan jumlah nyata
             $nextSeq = $actualCount + 1;
         }
 
-        // reconciliation: pastikan $nextSeq tidak lebih kecil dari jumlah nyata
+        // Reconciliation: pastikan counter selalu >= actual count.
+        // Menangani kasus migrasi/reset tabel.
         if ($nextSeq <= $actualCount) {
             $nextSeq = $actualCount + 1;
-            // update table so future calls start from this corrected value
             mysqli_query($config,
-                "INSERT INTO tbl_date_sequence(tgl_surat,seq)
-                    VALUES('$tgl_surat',".intval($nextSeq).")
+                "INSERT INTO tbl_date_sequence(tgl_surat,jenis,seq)
+                    VALUES('$tgl_surat','$jenis',".intval($nextSeq).")
                   ON DUPLICATE KEY UPDATE seq=".intval($nextSeq));
         }
 

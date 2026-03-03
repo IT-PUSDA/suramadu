@@ -129,10 +129,9 @@ if ($config) {
     // no-ops after the first execution.
     @mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
         tgl_surat DATE NOT NULL,
-        bidang VARCHAR(50) NOT NULL,
         jenis VARCHAR(50) NOT NULL,
         seq INT NOT NULL,
-        PRIMARY KEY (tgl_surat, bidang, jenis)
+        PRIMARY KEY (tgl_surat, jenis)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     // add unique index on no_surat if missing (silent failure if already exists)
