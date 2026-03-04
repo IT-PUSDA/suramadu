@@ -78,32 +78,12 @@ if (isset($_REQUEST['submit1']) || ($_SERVER['REQUEST_METHOD'] === 'POST' && iss
         ensure_no_surat_unique_index($config);
     }
 
-    // Use per-jenis counter for nota_dinas to keep it separate from other types
-    // KODE BARU: Support penomoran sisipan jika tanggal surat mundur.
-    // DITAMBAHKAN: Penecekan duplikasi manual dan retry jika nomor tabrakan
-    $is_unique = false;
-    $retry_count = 0;
-    $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'nota_dinas', $tgl_surat);
+    // Use per-jenis atomic counter for nota_dinas so its sequence is separate
+    // from other `jenis`. This prevents duplication while keeping numbering
+    // contiguous per jenis.
+    $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'nota_dinas');
+    $pos_code = page_line_label_from_seq($pos_seq, 40);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
-
-    while (!$is_unique && $retry_count < 20) {
-        $q_cek = mysqli_query($config, "SELECT id_surat FROM tbl_surat_keluar WHERE no_surat = '$no_surat'");
-        if ($q_cek && mysqli_num_rows($q_cek) > 0) {
-            // Tabrakan! Naikkan sequence manual
-            $prefix = substr($pos_code, 0, -2); // misal '00' dari '0001'
-            $suffix = (int)substr($pos_code, -2); // misal 1
-            $suffix++;
-            $pos_code = $prefix . sprintf('%02d', $suffix);
-            $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
-            $retry_count++;
-        } else {
-            $is_unique = true;
-        }
-   }
-   if (!$is_unique) {
-       $pos_code = $pos_code . "a"; 
-       $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
-   }
 
 
 

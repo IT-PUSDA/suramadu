@@ -53,10 +53,9 @@ if (isset($_REQUEST['submit1'])) {
     }
 
     // FORMAT PRODUK HUKUM: kode/pageLine/bidang/tahun dengan counter per jenis
-    // KODE BARU: Support penomoran sisipan jika tanggal surat mundur.
-    $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'produk_hukum', $tgl_surat);
-    // $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'produk_hukum');
-    // $pos_code = page_line_label_from_seq($pos_seq, 40);
+    // Use per-(year,bidang,jenis) atomic counter to avoid duplicates across jenis
+    $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'produk_hukum');
+    $pos_code = page_line_label_from_seq($pos_seq, 40);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
 
