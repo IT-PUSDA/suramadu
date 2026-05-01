@@ -69,10 +69,13 @@ function isAuthenticated() {
         }
     }
 
-    // Get expected key
+    // Get expected key for Keuangan
     $expectedKey = '';
-    if (defined('API_REQUEST_NOMOR_KEY')) { $expectedKey = API_REQUEST_NOMOR_KEY; }
-    else { $expectedKey = getenv('API_REQUEST_NOMOR_KEY') ?: ($_ENV['API_REQUEST_NOMOR_KEY'] ?? ''); }
+    if (defined('API_REQUEST_KEUANGAN_KEY')) { $expectedKey = API_REQUEST_KEUANGAN_KEY; }
+    else { $expectedKey = getenv('API_REQUEST_KEUANGAN_KEY') ?: ($_ENV['API_REQUEST_KEUANGAN_KEY'] ?? ''); }
+    if ($expectedKey === '') {
+        $expectedKey = defined('API_REQUEST_NOMOR_KEY') ? API_REQUEST_NOMOR_KEY : (getenv('API_REQUEST_NOMOR_KEY') ?: ($_ENV['API_REQUEST_NOMOR_KEY'] ?? ''));
+    }
 
     if ($expectedKey !== '' && $apiKeyHeader !== '' && hash_equals($expectedKey, $apiKeyHeader)) {
         if (empty($_SESSION['id_user'])) {

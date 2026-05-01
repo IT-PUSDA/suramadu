@@ -12,7 +12,7 @@ curl -X POST "http://ams.test/api/create_surat_keluar_produk_hukum.php" ^
 
 2. CURL untuk Membuat Surat Keluar Keuangan
 curl -X POST "http://ams.test/api/create_surat_keluar_keuangan.php" ^
-  -H "X-API-Key: A3f9vN7qZsK2mP8xT0bL4uY6wR1cH5jD9sG2kV7pQ8zM4nR6uB1yF0wX" ^
+  -H "X-API-Key: 4Nf7xP9vS2qR6zY1uK8dH0wT3cL5bM6jF" ^
   -F "kode=900" ^
   -F "perihal=Laporan Kosong" ^
   -F "tujuan=Internal" ^
@@ -21,3 +21,4 @@ curl -X POST "http://ams.test/api/create_surat_keluar_keuangan.php" ^
   -F "nama_pembuat=Bendahara" ^
   -F "pin=123456" ^
   -F "bidang=1"
+  

@@ -147,5 +147,15 @@ if (!defined('API_REQUEST_NOMOR_KEY')) {
     define('API_REQUEST_NOMOR_KEY', ($envKey !== false && $envKey !== '') ? $envKey : $defaultKey);
 }
 
+if (!defined('API_REQUEST_PRODUK_HUKUM_KEY')) {
+    $envKey = getenv('API_REQUEST_PRODUK_HUKUM_KEY');
+    define('API_REQUEST_PRODUK_HUKUM_KEY', ($envKey !== false && $envKey !== '') ? $envKey : API_REQUEST_NOMOR_KEY);
+}
+
+if (!defined('API_REQUEST_KEUANGAN_KEY')) {
+    $envKey = getenv('API_REQUEST_KEUANGAN_KEY');
+    define('API_REQUEST_KEUANGAN_KEY', ($envKey !== false && $envKey !== '') ? $envKey : API_REQUEST_NOMOR_KEY);
+}
+
 require_once __DIR__ . '/activity_logger.php';
 activity_log_request($config);
