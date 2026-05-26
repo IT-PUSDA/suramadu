@@ -69,6 +69,11 @@ function isAuthenticated() {
         }
     }
 
+    // Cek jika API Key dari client/Postman kosong sama sekali
+    if (empty(trim($apiKeyHeader))) {
+        return "API Key is missing or empty in Headers / Authorization Bearer.";
+    }
+
     // Get expected key for Keuangan
     $expectedKey = '';
     if (defined('API_REQUEST_KEUANGAN_KEY')) { $expectedKey = API_REQUEST_KEUANGAN_KEY; }
@@ -77,7 +82,13 @@ function isAuthenticated() {
         $expectedKey = defined('API_REQUEST_NOMOR_KEY') ? API_REQUEST_NOMOR_KEY : (getenv('API_REQUEST_NOMOR_KEY') ?: ($_ENV['API_REQUEST_NOMOR_KEY'] ?? ''));
     }
 
-    if ($expectedKey !== '' && $apiKeyHeader !== '' && hash_equals($expectedKey, $apiKeyHeader)) {
+    // Cek jika Kunci Jawaban di server malah kosong/gagal ke-load (.env error)
+    if (empty($expectedKey)) {
+        return "Server Error: API configuration key is not defined or failed to load from .env on production server.";
+    }
+
+    // Cek kecocokan menggunakan hash_equals
+    if (hash_equals($expectedKey, $apiKeyHeader)) {
         if (empty($_SESSION['id_user'])) {
              $_SESSION['id_user'] = 1; 
              $_SESSION['admin'] = 1; 
@@ -85,12 +96,21 @@ function isAuthenticated() {
         }
         return true;
     }
-    return false;
+
+    // Jika sampai baris ini berarti key ada, config ada, tapi TIDAK COCOK
+    return "Invalid API Key. Please check character cases (e.g., 'm' vs 'M') and ensure it matches the server configuration.";
 }
 
-if (!isAuthenticated()) {
+// --- PROSES MENAMPILKAN REASON DINAMIS ---
+$authResult = isAuthenticated();
+
+if ($authResult !== true) {
     http_response_code(401);
-    echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+    echo json_encode([
+        'status' => 'error', 
+        'message' => 'Unauthorized', 
+        'reason' => $authResult // <--- Teks alasan otomatis masuk ke sini secara dinamis
+    ]);
     exit;
 }
 
