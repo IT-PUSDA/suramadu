@@ -194,7 +194,7 @@ $is_unique = false;
 $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, $jenis, $tgl_surat);
 $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
-while (!$is_unique && $retry_count < 20) {
+while (!$is_unique && $retry_count < 5) {
      $q_cek = mysqli_query($config, "SELECT id_surat FROM tbl_surat_keluar WHERE no_surat = '$no_surat'");
      if ($q_cek && mysqli_num_rows($q_cek) > 0) {
          // Conflict -> Bump sequence manually
@@ -207,11 +207,6 @@ while (!$is_unique && $retry_count < 20) {
      } else {
          $is_unique = true;
      }
-}
-if (!$is_unique) {
-    // Fallback if loop gets exhausted
-    $pos_code .= "a";
-    $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 }
 
 if (!preg_match('/^[a-zA-Z0-9.\/ -]*$/', $no_surat)) {

@@ -78,11 +78,7 @@ if (isset($_REQUEST['submit1']) || ($_SERVER['REQUEST_METHOD'] === 'POST' && iss
         ensure_no_surat_unique_index($config);
     }
 
-    // Use per-jenis atomic counter for nota_dinas so its sequence is separate
-    // from other `jenis`. This prevents duplication while keeping numbering
-    // contiguous per jenis.
-    $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'nota_dinas');
-    $pos_code = page_line_label_from_seq($pos_seq, 40);
+    $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'nota_dinas', $tgl_surat);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
 

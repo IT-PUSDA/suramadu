@@ -52,10 +52,7 @@ if (isset($_REQUEST['submit1'])) {
         ensure_no_surat_unique_index($config);
     }
 
-    // FORMAT PRODUK HUKUM: kode/pageLine/bidang/tahun dengan counter per jenis
-    // Use per-(year,bidang,jenis) atomic counter to avoid duplicates across jenis
-    $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'produk_hukum');
-    $pos_code = page_line_label_from_seq($pos_seq, 40);
+    $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'produk_hukum', $tgl_surat);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
 

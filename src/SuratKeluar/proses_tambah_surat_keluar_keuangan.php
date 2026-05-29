@@ -53,12 +53,9 @@ if (isset($_REQUEST['submit1'])) {
         ensure_no_surat_unique_index($config);
     }
 
-    // Use a sequence per (year,bidang,jenis) so numbering continues per
-    // `jenis` (keuangan) and is independent of `kode`. This prevents
-    // duplicate numbers within the same `jenis` while allowing different
-    // jenis to have their own sequences (0101, 0101, ... across jenis).
-    $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'keuangan');
-    $pos_code = page_line_label_from_seq($pos_seq, 40);
+    // Format dengan page+line per (tahun,bidang,jenis): kode/<pageLine>/bidang/tahun
+    // KODE BARU: Support penomoran sisipan jika tanggal surat mundur.
+    $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'keuangan', $tgl_surat);
     $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
 

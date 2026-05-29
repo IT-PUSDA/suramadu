@@ -31,10 +31,7 @@
                 $bidang_code = resolve_bidang_code_from_label($asal_notdin) ?? '104.1';
                 // Year of nota dinas
                 $year_notdin = date('Y', strtotime($tgl_notdin));
-                // Use per-jenis counter so nota dinas has separate sequence from other types
-                $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year_notdin, $bidang_code, 'nota_dinas');
-                $pos_code = page_line_label_from_seq($pos_seq, 40); // ex: '0101'
-                // Build nomor nota dinas to include page/line + bidang + year
+                $pos_code = get_sequence_code_with_sisipan($config, (int)$year_notdin, $bidang_code, 'nota_dinas', \tgl_notdin);
                 $no_notdin = $pos_code . '/' . $bidang_code . '/' . $year_notdin;
                 //validasi input data
                         if(!preg_match("/^[a-zA-Z0-9.,() \/ -]*$/", $asal_notdin)){

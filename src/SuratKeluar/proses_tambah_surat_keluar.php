@@ -112,18 +112,11 @@ if (empty($_SESSION['admin'])) {
                 ensure_no_surat_unique_index($config);
             }
 
-            // 4. Buat format nomor surat: gunakan posisi page+line per bidang dan per jenis
-            //    Gunakan counter atomik per (year, bidang, jenis) agar setiap `jenis`
-            //    memiliki urutan sendiri dan mencegah duplikasi pada kondisi concurrent.
-            $pos_seq = next_position_sequence_for_year_and_bidang($config, (int)$year, $bidang, 'umum');
-            $pos_code = page_line_label_from_seq($pos_seq, 40);
+            $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'umum', $tgl_surat);
             $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
 
-            // $pos_seq = next_sequence_number_loop... (diganti loop di atas)
-            // $pos_code = get_sequence_code_with_sisipan($config, (int)$year, $bidang, 'umum', $tgl_surat);
-            // $no_surat = $nkode . '/' . $pos_code . '/' . $bidang . '/' . $year;
             // ===========================================================================
-            // AKHIR BLOK KODE YANG DIPERBAIKI
+            // SISTEM PENOMORAN GLOBAL SEQUENTIAL
             // ===========================================================================
 
 

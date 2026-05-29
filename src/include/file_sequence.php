@@ -1,6 +1,44 @@
 <?php
 // Utility functions for yearly file numbering (zero-padded, resets each year)
 
+if (!function_exists('get_next_global_surat_number')) {
+    /**
+     * Get next GLOBAL sequential surat number.
+     * Finds the maximum number from all no_surat and increments by 1.
+     * This ensures continuous numbering across all document types (umum, keuangan, produk_hukum, nota_dinas).
+     * 
+     * Format preserved: kode / [NUMBER] / bidang / year
+     * Where [NUMBER] = sequential counter (10644, 10645, 120101, etc.)
+     */
+    function get_next_global_surat_number(mysqli $config): int {
+        // Get all no_surat entries and extract the numeric part
+        $query = mysqli_query($config, 
+            "SELECT no_surat FROM tbl_surat_keluar ORDER BY id_surat DESC LIMIT 1000");
+        
+        $max_num = 0;
+        if ($query && mysqli_num_rows($query) > 0) {
+            while ($row = mysqli_fetch_assoc($query)) {
+                $no_surat = $row['no_surat'];
+                // Format: kode / nomor / bidang / tahun
+                // Extract the numeric part after first slash and before next slash
+                $parts = explode('/', $no_surat);
+                if (count($parts) >= 2) {
+                    $num_part = $parts[1];
+                    // Remove non-numeric characters (letters, spaces, etc.)
+                    $num_only = (int) preg_replace('/[^0-9]/', '', $num_part);
+                    if ($num_only > $max_num) {
+                        $max_num = $num_only;
+                    }
+                }
+            }
+        }
+        
+        // Return next number
+        $next = $max_num + 1;
+        return ($next < 1) ? 1 : $next;
+    }
+}
+
 if (!function_exists('ensure_file_no_column')) {
     function ensure_file_no_column(mysqli $config): bool {
         $has = false;
