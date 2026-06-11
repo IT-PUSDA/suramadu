@@ -127,12 +127,49 @@ if ($config) {
     // Ensure numbering helper structures exist so duplicates cannot slip in.
     // These simple migrations run on every request but are safe/effectively
     // no-ops after the first execution.
-    @mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
-        tgl_surat DATE NOT NULL,
-        jenis VARCHAR(50) NOT NULL,
-        seq INT NOT NULL,
-        PRIMARY KEY (tgl_surat, jenis)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $seqTableRes = @mysqli_query($config, "SHOW TABLES LIKE 'tbl_date_sequence'");
+    $hasSeqTable = $seqTableRes && mysqli_num_rows($seqTableRes) > 0;
+
+    if (!$hasSeqTable) {
+        @mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
+            tgl_surat DATE NOT NULL,
+            jenis VARCHAR(50) NOT NULL,
+            seq INT NOT NULL,
+            PRIMARY KEY (tgl_surat, jenis)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } else {
+        $seqColsRes = @mysqli_query($config, "SHOW COLUMNS FROM tbl_date_sequence");
+        $hasJenisCol = false;
+        $pkCols = [];
+        if ($seqColsRes) {
+            while ($col = mysqli_fetch_assoc($seqColsRes)) {
+                if (($col['Field'] ?? '') === 'jenis') {
+                    $hasJenisCol = true;
+                }
+            }
+        }
+
+        $seqKeysRes = @mysqli_query($config, "SHOW KEYS FROM tbl_date_sequence WHERE Key_name = 'PRIMARY'");
+        if ($seqKeysRes) {
+            while ($key = mysqli_fetch_assoc($seqKeysRes)) {
+                $pkCols[] = $key['Column_name'] ?? '';
+            }
+        }
+
+        $pkUnique = array_values(array_unique(array_filter($pkCols)));
+        $hasCompositePk = count($pkUnique) === 2 && in_array('tgl_surat', $pkUnique, true) && in_array('jenis', $pkUnique, true);
+
+        if (!$hasJenisCol || !$hasCompositePk) {
+            $backupName = 'tbl_date_sequence_old_' . time();
+            @mysqli_query($config, "RENAME TABLE tbl_date_sequence TO " . $backupName);
+            @mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
+                tgl_surat DATE NOT NULL,
+                jenis VARCHAR(50) NOT NULL,
+                seq INT NOT NULL,
+                PRIMARY KEY (tgl_surat, jenis)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+    }
 
     // add unique index on no_surat if missing (silent failure if already exists)
     @mysqli_query($config, "ALTER TABLE tbl_surat_keluar

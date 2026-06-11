@@ -31,7 +31,7 @@
                 $bidang_code = resolve_bidang_code_from_label($asal_notdin) ?? '104.1';
                 // Year of nota dinas
                 $year_notdin = date('Y', strtotime($tgl_notdin));
-                $pos_code = get_sequence_code_with_sisipan($config, (int)$year_notdin, $bidang_code, 'nota_dinas', \tgl_notdin);
+                $pos_code = get_sequence_code_with_sisipan($config, (int)$year_notdin, $bidang_code, 'nota_dinas', $tgl_notdin);
                 $no_notdin = $pos_code . '/' . $bidang_code . '/' . $year_notdin;
                 //validasi input data
                         if(!preg_match("/^[a-zA-Z0-9.,() \/ -]*$/", $asal_notdin)){

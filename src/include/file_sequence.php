@@ -223,6 +223,60 @@ if (!function_exists('ensure_no_surat_unique_index')) {
     }
 }
 
+if (!function_exists('ensure_date_sequence_table')) {
+    function ensure_date_sequence_table(mysqli $config): void {
+        $tableExists = false;
+        $res = mysqli_query($config, "SHOW TABLES LIKE 'tbl_date_sequence'");
+        if ($res && mysqli_num_rows($res) > 0) {
+            $tableExists = true;
+        }
+
+        if (!$tableExists) {
+            mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
+                tgl_surat DATE NOT NULL,
+                jenis VARCHAR(50) NOT NULL,
+                seq INT NOT NULL,
+                PRIMARY KEY (tgl_surat, jenis)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            return;
+        }
+
+        $cols = mysqli_query($config, "SHOW COLUMNS FROM tbl_date_sequence");
+        $hasJenis = false;
+        $pkCols = [];
+
+        if ($cols) {
+            while ($col = mysqli_fetch_assoc($cols)) {
+                if (($col['Field'] ?? '') === 'jenis') {
+                    $hasJenis = true;
+                }
+            }
+        }
+
+        $keys = mysqli_query($config, "SHOW KEYS FROM tbl_date_sequence WHERE Key_name = 'PRIMARY'");
+        if ($keys) {
+            while ($key = mysqli_fetch_assoc($keys)) {
+                $pkCols[] = $key['Column_name'] ?? '';
+            }
+        }
+
+        $hasCompositePk = count(array_unique(array_filter($pkCols))) === 2
+            && in_array('tgl_surat', $pkCols, true)
+            && in_array('jenis', $pkCols, true);
+
+        if (!$hasJenis || !$hasCompositePk) {
+            $backupName = 'tbl_date_sequence_old_' . time();
+            @mysqli_query($config, "RENAME TABLE tbl_date_sequence TO " . $backupName);
+            mysqli_query($config, "CREATE TABLE IF NOT EXISTS tbl_date_sequence (
+                tgl_surat DATE NOT NULL,
+                jenis VARCHAR(50) NOT NULL,
+                seq INT NOT NULL,
+                PRIMARY KEY (tgl_surat, jenis)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+    }
+}
+
 if (!function_exists('get_sequence_code_with_sisipan')) {
     /**
      * REVISI: Menggunakan format HariKe+SequenceHarian (misal 1301 untuk Hari ke-13, urutan 01).
@@ -243,9 +297,13 @@ if (!function_exists('get_sequence_code_with_sisipan')) {
 
         // 1. Hitung Day Of Year (1-366)
         $ts = strtotime($tgl_surat);
+        if ($ts === false) {
+            $ts = strtotime(date('Y-m-d'));
+        }
         $dayOfYear = (int)date('z', $ts) + 1;
 
-        // ensure index safety
+        // ensure structural safety for the sequence table before using it
+        ensure_date_sequence_table($config);
         ensure_no_surat_unique_index($config);
 
         // 2. Dapatkan sequence untuk tanggal+jenis secara atomik (per-jenis per-hari).
