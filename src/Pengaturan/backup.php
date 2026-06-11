@@ -169,7 +169,8 @@ echo '<div class="row"><div class="col s12"><div class="z-depth-1"><nav class="s
 
 // Handle submit backup
 $resultSql = null; $resultZip = null; $sqlName = ''; $zipName = '';
-if (isset($_POST['backup'])) {
+$action = isset($_POST['action']) ? trim($_POST['action']) : '';
+if ($action === 'backup') {
     global $config, $host, $username, $password, $database;
     // Ambil pilihan
     $mode = !empty($_POST['mode']) ? strtolower(trim($_POST['mode'])) : 'both'; // sql | zip | both
@@ -221,7 +222,7 @@ if (isset($_POST['backup'])) {
     $toVal = isset($_POST['to']) ? htmlspecialchars($_POST['to']) : '';
     $groupKeyVal = isset($_POST['group_key']) ? $_POST['group_key'] : '';
     $uploaderIdVal = isset($_POST['uploader_id']) ? (int)$_POST['uploader_id'] : 0;
-    $previewRequested = isset($_POST['preview']);
+    $previewRequested = ($action === 'preview');
 
     echo '<div class="row"><div class="col m12"><div class="card">';
     echo '<div class="card-content">';
@@ -229,7 +230,7 @@ if (isset($_POST['backup'])) {
     echo '<p class="kata">Pilih mode backup. Jika memilih berkas upload (.zip), Anda bisa membatasi berdasarkan tanggal atau bidang/uploader.</p>';
     echo '</div>';
     echo '<div class="card-content" style="padding-top:0;">';
-    echo '<form method="post">';
+    echo '<form method="post" action="index.php?page=admin&act=sett&sub=back">';
 
     // Pilih mode backup (lebih jelas)
     echo '<div class="row" style="margin-bottom: 4px;">
@@ -305,8 +306,8 @@ if (isset($_POST['backup'])) {
     // Tombol di tengah (Preview & Backup)
     echo '<div class="row" style="margin-top:14px;">
             <div class="col s12 center-align" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                <button type="submit" name="preview" class="btn-large grey equal-btn"><i class="material-icons left">search</i>PREVIEW</button>
-                <button type="submit" name="backup" class="btn-large blue equal-btn"><i class="material-icons left">backup</i>BACKUP</button>
+                <button type="submit" name="action" value="preview" class="btn-large grey equal-btn"><i class="material-icons left">search</i>PREVIEW</button>
+                <button type="submit" name="action" value="backup" class="btn-large blue equal-btn"><i class="material-icons left">backup</i>BACKUP</button>
             </div>
         </div>';
 
