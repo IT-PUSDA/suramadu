@@ -51,3 +51,4 @@ php_errors.log
 
 *.pdf
 *. s
+backup/
