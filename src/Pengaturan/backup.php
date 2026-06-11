@@ -10,8 +10,9 @@ if ((int)$_SESSION['admin'] !== 1) {
     die();
 }
 
-// Direktori penyimpanan backup
-$backupDir = 'backup';
+// Direktori penyimpanan backup (selalu di akar project agar konsisten di browser dan CLI)
+$projectRoot = dirname(__DIR__, 2);
+$backupDir = $projectRoot . '/backup';
 if (!is_dir($backupDir)) { @mkdir($backupDir, 0775, true); }
 
 // Helper: unduh file hasil backup (sql/zip)
@@ -82,8 +83,9 @@ function backup_db($host, $user, $pass, $name, $file, $tables = '*') {
 function human_filesize($bytes, $decimals = 2) {
     $size = ['B','KB','MB','GB','TB'];
     if ($bytes <= 0) return '0 B';
-    $factor = floor((strlen($bytes) - 1) / 3);
-    return sprintf('%.' . $decimals . 'f', $bytes / pow(1024, $factor)) . ' ' . $size[$factor];
+    $factor = (int)floor((strlen((string)$bytes) - 1) / 3);
+    $value = (float)($bytes / pow(1024, $factor));
+    return number_format($value, (int)$decimals, ',', '.') . ' ' . $size[$factor];
 }
 
 // Ambil daftar file upload/surat_keluar sesuai filter
@@ -127,10 +129,13 @@ function get_filtered_upload_files($config, $from = null, $to = null, $groupKey 
     $sql = 'SELECT file FROM tbl_surat_keluar WHERE ' . implode(' AND ', $where);
     $rs = mysqli_query($config, $sql);
     $files = [];
+    $uploadDir = dirname(__DIR__, 2) . '/upload/surat_keluar';
     if ($rs) {
         while ($row = mysqli_fetch_assoc($rs)) {
             if (!empty($row['file'])) {
-                $p = 'upload/surat_keluar/' . $row['file'];
+                $fileName = $row['file'];
+                if (strpos($fileName, 'gdrive:') === 0) { continue; }
+                $p = $uploadDir . '/' . ltrim($fileName, '/');
                 if (file_exists($p)) { $files[] = $p; }
             }
         }
@@ -140,6 +145,7 @@ function get_filtered_upload_files($config, $from = null, $to = null, $groupKey 
 
 // Fungsi membuat ZIP berkas upload/surat_keluar terfilter
 function zip_uploads_filtered($config, $destZip, $from = null, $to = null, $groupKey = null, $uploaderId = null) {
+    global $config;
     if (!class_exists('ZipArchive')) {
         // Ekstensi ZIP belum aktif di PHP
         return 'NO_ZIP_EXTENSION';
@@ -150,8 +156,9 @@ function zip_uploads_filtered($config, $destZip, $from = null, $to = null, $grou
     if ($zip->open($destZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) { return false; }
     foreach ($files as $path) { if (file_exists($path)) { $zip->addFile($path, basename($path)); } }
     // Tambah logo instansi jika ada (opsional berguna untuk restore)
-    if (file_exists('upload/lambang-provinsi-jawa-timur.jpg')) {
-        $zip->addFile('upload/lambang-provinsi-jawa-timur.jpg', 'lambang-provinsi-jawa-timur.jpg');
+    $logoPath = dirname(__DIR__, 2) . '/upload/lambang-provinsi-jawa-timur.jpg';
+    if (file_exists($logoPath)) {
+        $zip->addFile($logoPath, 'lambang-provinsi-jawa-timur.jpg');
     }
     $zip->close();
     return true;
@@ -163,6 +170,7 @@ echo '<div class="row"><div class="col s12"><div class="z-depth-1"><nav class="s
 // Handle submit backup
 $resultSql = null; $resultZip = null; $sqlName = ''; $zipName = '';
 if (isset($_POST['backup'])) {
+    global $config, $host, $username, $password, $database;
     // Ambil pilihan
     $mode = !empty($_POST['mode']) ? strtolower(trim($_POST['mode'])) : 'both'; // sql | zip | both
     $doSql = ($mode === 'sql' || $mode === 'both');
@@ -202,9 +210,11 @@ if (isset($_POST['backup'])) {
     if ($resultZip === true) { echo '<a class="btn deep-orange" href="index.php?page=admin&act=sett&sub=back&dl=' . urlencode($zipName) . '"><i class="material-icons left">archive</i>Download ZIP</a>'; }
     echo '</div></div></div></div>';
 } else {
+    global $config;
     // Tampilkan form opsi backup (UI sederhana)
     // Ambil daftar uploader (bidang) untuk pilihan
     $users = mysqli_query($config, "SELECT id_user, username, nama FROM tbl_user ORDER BY username ASC");
+    global $config, $database;
     // State untuk mempertahankan pilihan saat preview
     $modeSel = isset($_POST['mode']) ? strtolower($_POST['mode']) : 'both';
     $fromVal = isset($_POST['from']) ? htmlspecialchars($_POST['from']) : '';

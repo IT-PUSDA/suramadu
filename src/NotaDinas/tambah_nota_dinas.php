@@ -10,6 +10,7 @@
     } else {
 
         if(isset($_REQUEST['submit'])){
+            global $config;
             //validasi form kosong
             if($_REQUEST['asal_notdin'] == "" || $_REQUEST['tuj_notdin'] == "" || $_REQUEST['hal_notdin'] == "" || $_REQUEST['tgl_notdin'] == "" || $_REQUEST['isi_notdin'] ==  "")
 			{
@@ -68,7 +69,8 @@
                                                 } else {
 
                                                     $ekstensi = array('jpg','png','jpeg','doc','docx','pdf');
-                                                $file = $_FILES['file']['name'];
+                                                    $nfile = '';
+                                                    $file = $_FILES['file']['name'];
                                                 $x = explode('.', $file);
                                                 $eks = strtolower(end($x));
                                                 $ukuran = $_FILES['file']['size'];
@@ -192,7 +194,7 @@
                                 <?php
                                     if(isset($_SESSION['hal_notdink'])){
                                         $keterangan = $_SESSION['hal_notdink'];
-                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$hal_notdink.'</div>';
+                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$keterangan.'</div>';
                                         unset($_SESSION['hal_notdink']);
                                     }
                                 ?>
@@ -202,10 +204,10 @@
                             <i class="material-icons prefix md-prefix">place</i>
                             <textarea id="tuj_notdin" class="materialize-textarea validate" name="tuj_notdin" required></textarea>
                                 <?php
-                                    if(isset($_SESSION['tujuank'])){
-                                        $asal_surat = $_SESSION['tujuank'];
-                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$tujuank.'</div>';
-                                        unset($_SESSION['tujuank']);
+                                    if(isset($_SESSION['tuj_notdink'])){
+                                        $tujuan_keterangan = $_SESSION['tuj_notdink'];
+                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$tujuan_keterangan.'</div>';
+                                        unset($_SESSION['tuj_notdink']);
                                     }
                                 ?>
                             <label for="asal_surat">Tujuan</label>
@@ -214,9 +216,9 @@
                             <i class="material-icons prefix md-prefix">date_range</i>
                             <input id="tgl_surat" type="text" name="tgl_notdin" class="datepicker" required>
                                 <?php
-                                    if(isset($_SESSION['tgl_notdin'])){
-                                        $tgl_suratk = $_SESSION['tgl_notdin'];
-                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$tgl_notdink.'</div>';
+                                    if(isset($_SESSION['tgl_notdink'])){
+                                        $tgl_suratk = $_SESSION['tgl_notdink'];
+                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$tgl_suratk.'</div>';
                                         unset($_SESSION['tgl_notdink']);
                                     }
                                 ?>
@@ -236,7 +238,7 @@
                                 <?php
                                     if(isset($_SESSION['asal_notdink'])){
                                         $bidangk = $_SESSION['asal_notdink'];
-                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$asal_notdink.'</div>';
+                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$bidangk.'</div>';
                                         unset($_SESSION['asal_notdink']);
                                     }
                                 ?>
@@ -251,7 +253,7 @@
                                 <?php
                                     if(isset($_SESSION['isi_notdink'])){
                                         $isi = $_SESSION['isi_notdink'];
-                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$isi_notdink.'</div>';
+                                        echo '<div id="alert-message" class="callout bottom z-depth-1 red lighten-4 red-text">'.$isi.'</div>';
                                         unset($_SESSION['isi_notdink']);
                                     }
                                 ?>
